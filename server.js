@@ -115,6 +115,84 @@ async function getPrices(region, currency) {
   return data;
 }
 
+// ── AWS EC2 live pricing via streamed public price file (memory-safe) ──────
+const AWS_FX = 86; // indicative US$1 = ₹86
+// Azure-tier → AWS instance mapping (worker tiers + secondary/system pools)
+const AWS_INSTANCES = ["m5.4xlarge", "r5.4xlarge", "r5.8xlarge", "m5.2xlarge", "t3.large"];
+const AWS_CSV = (region) =>
+  "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/" + region + "/index.csv";
+let awsCache = {}; // region -> { at, data }
+const AWS_TTL = 24 * 60 * 60 * 1000;
+
+function parseCsvLine(line) {
+  const out = []; let cur = "", q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else { if (c === '"') q = true; else if (c === ",") { out.push(cur); cur = ""; } else cur += c; }
+  }
+  out.push(cur); return out;
+}
+
+async function getAwsPrices(region) {
+  if (awsCache[region] && Date.now() - awsCache[region].at < AWS_TTL) return awsCache[region].data;
+
+  const resp = await fetch(AWS_CSV(region));
+  if (!resp.ok || !resp.body) throw new Error("AWS HTTP " + resp.status);
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "", idx = null;
+  const need = new Set(AWS_INSTANCES);
+  const found = {};
+
+  function handle(line) {
+    if (!line) return;
+    if (!idx) { const cols = parseCsvLine(line); if (cols[0] === "SKU") { idx = {}; cols.forEach((c, i) => (idx[c] = i)); } return; }
+    let hit = false; for (const it of need) { if (line.indexOf(it) >= 0) { hit = true; break; } }
+    if (!hit) return;
+    const f = parseCsvLine(line);
+    const itype = f[idx["Instance Type"]];
+    if (!need.has(itype)) return;
+    if (f[idx["TermType"]] !== "OnDemand") return;
+    if (f[idx["Operating System"]] !== "Linux") return;
+    if (f[idx["Tenancy"]] !== "Shared") return;
+    if (f[idx["CapacityStatus"]] !== "Used") return;
+    if ((f[idx["Pre Installed S/W"]] || "") !== "NA") return;
+    const price = parseFloat(f[idx["PricePerUnit"]]);
+    if (!isFinite(price) || price <= 0) return;
+    found[itype] = price;
+    need.delete(itype);
+  }
+
+  let stop = false;
+  while (!stop) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).replace(/\r$/, "");
+      buf = buf.slice(nl + 1);
+      handle(line);
+      if (need.size === 0) { stop = true; try { await reader.cancel(); } catch (e) {} break; }
+    }
+  }
+  if (buf && need.size > 0) handle(buf);
+
+  const awsVm = {};
+  for (const it in found) {
+    const monthly = found[it] * HOURS * AWS_FX;     // INR/month on-demand
+    awsVm[it] = { monthly, savings: monthly * 0.65 }; // ~35% off ≈ 1yr Std No-Upfront (indicative)
+  }
+  const data = {
+    provider: "aws", region, currency: "INR", fx: AWS_FX, hours: HOURS,
+    awsVm, hourlyUSD: found, updated: new Date().toISOString(),
+    source: Object.keys(awsVm).length ? "live" : "empty"
+  };
+  awsCache[region] = { at: Date.now(), data };
+  return data;
+}
+
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost");
   if (u.pathname === "/api/prices") {
@@ -122,6 +200,20 @@ const server = http.createServer(async (req, res) => {
     const currency = u.searchParams.get("currency") || "INR";
     const debug = u.searchParams.get("debug") === "1";
     const list = u.searchParams.get("list") || "";
+    const provider = u.searchParams.get("provider") || "azure";
+
+    // AWS live compute prices (streamed price file; first call is slow, then cached 24h)
+    if (provider === "aws") {
+      try {
+        const data = await getAwsPrices(u.searchParams.get("region") || "ap-south-1");
+        res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(data));
+      } catch (e) {
+        res.writeHead(502, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+        res.end(JSON.stringify({ provider: "aws", source: "error", error: String((e && e.message) || e) }));
+      }
+      return;
+    }
 
     // discovery: GET /api/prices?list=<serviceName> → distinct meters in region
     if (list) {
