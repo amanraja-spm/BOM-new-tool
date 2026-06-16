@@ -120,6 +120,28 @@ const server = http.createServer(async (req, res) => {
     const region = u.searchParams.get("region") || "centralindia";
     const currency = u.searchParams.get("currency") || "INR";
     const debug = u.searchParams.get("debug") === "1";
+    const list = u.searchParams.get("list") || "";
+
+    // discovery: GET /api/prices?list=<serviceName> → distinct meters in region
+    if (list) {
+      try {
+        const items = await azQuery("serviceName eq '" + list + "' and armRegionName eq '" + region + "'", currency);
+        const seen = {}, out = [];
+        items.forEach((it) => {
+          if ((it.type || it.priceType) === "Consumption") {
+            const k = (it.meterName || "") + " | " + (it.productName || "");
+            if (!seen[k]) { seen[k] = 1; out.push({ meter: it.meterName, product: it.productName, price: it.retailPrice, unit: it.unitOfMeasure }); }
+          }
+        });
+        res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ serviceName: list, region, count: out.length, meters: out }));
+      } catch (e) {
+        res.writeHead(502, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+        res.end(JSON.stringify({ error: String((e && e.message) || e) }));
+      }
+      return;
+    }
+
     try {
       const data = await getPrices(region, currency);
       const out = Object.assign({}, data);
