@@ -132,19 +132,41 @@ async function getPrices(region, currency) {
 }
 
 module.exports = async (req, res) => {
-  let region = "centralindia", currency = "INR", debug = false;
+  let region = "centralindia", currency = "INR", debug = false, list = "";
   try {
     if (req.query) {
       region = req.query.region || region;
       currency = req.query.currency || currency;
       debug = String(req.query.debug || "") === "1";
+      list = req.query.list || "";
     } else {
       const u = new URL(req.url, "http://localhost");
       region = u.searchParams.get("region") || region;
       currency = u.searchParams.get("currency") || currency;
       debug = u.searchParams.get("debug") === "1";
+      list = u.searchParams.get("list") || "";
     }
   } catch (e) {}
+
+  // discovery: GET /api/prices?list=<serviceName> → distinct meters in region
+  if (list) {
+    try {
+      const items = await azQuery("serviceName eq '" + list + "' and armRegionName eq '" + region + "'", currency);
+      const seen = {}, out = [];
+      items.forEach((it) => {
+        if ((it.type || it.priceType) === "Consumption") {
+          const k = (it.meterName || "") + " | " + (it.productName || "");
+          if (!seen[k]) { seen[k] = 1; out.push({ meter: it.meterName, product: it.productName, price: it.retailPrice, unit: it.unitOfMeasure }); }
+        }
+      });
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      (res.status ? res.status(200) : res).end(JSON.stringify({ serviceName: list, region, count: out.length, meters: out }));
+    } catch (e) {
+      (res.status ? res.status(502) : res).end(JSON.stringify({ error: String((e && e.message) || e) }));
+    }
+    return;
+  }
 
   try {
     const data = await getPrices(region, currency);
