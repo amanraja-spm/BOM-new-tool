@@ -1,0 +1,12 @@
+{
+  "name": "irame-bom-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Irame Infrastructure Sizing & BOM tool — live Azure pricing",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

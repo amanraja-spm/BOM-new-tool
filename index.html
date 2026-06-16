@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Irame — Infrastructure Sizing & BOM Tool</title>
+<style>
+:root{
+  --brand:#1F4E79; --brand-600:#23588a; --brand-500:#2f6fad;
+  --brand-50:#eef4fb; --brand-100:#dce8f5; --accent:#2dd4bf;
+  --ink:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
+  --line:#e6ecf3; --line-2:#eef2f7; --bg:#f4f7fb; --panel:#fff;
+  --ok:#0f9d58; --ok-bg:#e7f6ee; --warn:#c05600; --warn-bg:#fff3e3;
+  --save:#0f766e; --save-bg:#e6f7f4;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.06);
+  --shadow-sm:0 1px 2px rgba(16,24,40,.06); --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+
+header{background:linear-gradient(120deg,#16395c 0%,var(--brand) 55%,var(--brand-500) 100%);color:#fff;padding:18px 30px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 14px rgba(16,57,92,.25);position:relative;z-index:5}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.13);display:grid;place-items:center;font-weight:800;font-size:17px;letter-spacing:.5px;border:1px solid rgba(255,255,255,.22)}
+header h1{font-size:17px;font-weight:700;letter-spacing:.2px}
+header p{font-size:12px;opacity:.8;margin-top:2px;font-weight:400}
+.live-pill{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;background:rgba(255,255,255,.14);padding:7px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(45,212,191,.6)}70%{box-shadow:0 0 0 7px rgba(45,212,191,0)}100%{box-shadow:0 0 0 0 rgba(45,212,191,0)}}
+
+.layout{display:grid;grid-template-columns:400px 1fr;height:calc(100vh - 77px)}
+.form-panel{background:var(--panel);border-right:1px solid var(--line);padding:24px 22px 40px;overflow-y:auto}
+.form-panel::-webkit-scrollbar,.report-panel::-webkit-scrollbar{width:9px}
+.form-panel::-webkit-scrollbar-thumb,.report-panel::-webkit-scrollbar-thumb{background:#d6dfea;border-radius:9px}
+
+.sec{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;color:var(--brand);margin:26px 0 14px}
+.sec:first-child{margin-top:0}
+.sec::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.sec .ico{width:20px;height:20px;border-radius:7px;background:var(--brand-50);display:grid;place-items:center;color:var(--brand)}
+.sec .ico svg{width:13px;height:13px}
+
+.fg{margin-bottom:18px}
+.lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:650;color:var(--ink);margin-bottom:7px}
+.lbl .sub{font-weight:400;color:var(--ink-3);font-size:11px}
+.hint{font-size:11px;color:var(--ink-3);margin:-3px 0 7px}
+
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:var(--brand-100);outline:none;cursor:pointer;margin:6px 0 2px}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:4px solid var(--brand);box-shadow:0 1px 4px rgba(31,78,121,.4);cursor:pointer;transition:transform .1s}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.12)}
+input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--brand);cursor:pointer}
+.sv{display:inline-block;font-size:12px;font-weight:800;color:var(--brand);background:var(--brand-50);padding:3px 10px;border-radius:7px;margin-top:6px}
+
+input[type="number"],select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+input[type="number"]:focus,select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231F4E79' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.input-prefix{position:relative}
+.input-prefix span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:13px;font-weight:600}
+.input-prefix input{padding-left:26px}
+
+.opt-group{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:11px;font-size:13px;cursor:pointer;padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;background:#fff;transition:all .15s}
+.opt:hover{border-color:var(--brand-100);background:var(--brand-50)}
+.opt.on{border-color:var(--brand);background:var(--brand-50);box-shadow:0 0 0 3px rgba(31,78,121,.06)}
+.opt input{accent-color:var(--brand);width:16px;height:16px;margin-top:1px;flex-shrink:0;cursor:pointer}
+.opt .ttl{font-weight:650;color:var(--ink)}
+.opt .desc{font-size:11px;color:var(--ink-3);margin-top:2px;line-height:1.4}
+
+.reset{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:24px;padding:11px;background:#fff;color:var(--brand);border:1.5px solid var(--brand-100);border-radius:11px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s}
+.reset:hover{background:var(--brand-50);border-color:var(--brand)}
+.reset svg{width:15px;height:15px}
+
+.report-panel{padding:28px 32px 48px;overflow-y:auto;background:var(--bg)}
+.rh{margin-bottom:22px}
+.rh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.rt{font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.3px}
+.rs{font-size:12.5px;color:var(--ink-2);margin-top:7px;display:flex;flex-wrap:wrap;gap:6px 14px}
+.rs b{color:var(--brand);font-weight:700}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;flex-direction:column;gap:2px;background:#fff;border:1px solid var(--line);padding:8px 13px;border-radius:11px;box-shadow:var(--shadow-sm);min-width:120px}
+.chip .k{font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.chip .v{font-size:14px;color:var(--ink);font-weight:800}
+.chip .v .usd{font-size:11px;color:var(--ink-3);font-weight:600}
+.chip.save .v{color:var(--save)}
+
+.mrow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.mc{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);overflow:hidden}
+.mc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand-100)}
+.mc.hi::before{background:linear-gradient(var(--brand),var(--accent))}
+.mc.hi{background:linear-gradient(180deg,#fff,var(--brand-50))}
+.mc-l{font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.6px;font-weight:700;display:flex;align-items:center;gap:7px}
+.mc-l svg{width:14px;height:14px;color:var(--brand)}
+.mc-v{font-size:27px;font-weight:800;color:var(--brand);margin:8px 0 3px;line-height:1;letter-spacing:-.5px}
+.mc-u{font-size:11.5px;color:var(--ink-2)}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;box-shadow:var(--shadow)}
+.ct{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--brand);margin-bottom:8px}
+.ct .ico{width:24px;height:24px;border-radius:8px;background:var(--brand-50);display:grid;place-items:center}
+.ct .ico svg{width:14px;height:14px;color:var(--brand)}
+.ct .spacer{flex:1}
+.ct .tag{font-size:10.5px;font-weight:700;color:var(--ink-3);background:var(--line-2);padding:4px 9px;border-radius:6px;letter-spacing:.3px;text-transform:none}
+.csub{font-size:11.5px;color:var(--ink-3);margin-bottom:14px}
+
+.cur-toggle{display:inline-flex;background:var(--line-2);border-radius:9px;padding:3px;gap:2px}
+.cur-toggle button{border:none;background:transparent;font-family:inherit;font-size:12px;font-weight:700;color:var(--ink-2);padding:5px 13px;border-radius:7px;cursor:pointer;transition:all .15s}
+.cur-toggle button.on{background:#fff;color:var(--brand);box-shadow:var(--shadow-sm)}
+
+.tablewrap{overflow-x:auto;border-radius:10px;border:1px solid var(--line-2)}
+.bom{width:100%;border-collapse:collapse;font-size:12.5px;min-width:920px}
+.bom thead th{text-align:left;padding:10px 12px;background:var(--brand);color:#fff;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;vertical-align:bottom}
+.bom th.num,.bom td.num{text-align:right;white-space:nowrap}
+.bom tbody td{padding:9px 12px;border-bottom:1px solid var(--line-2);vertical-align:top}
+.bom tbody tr:hover td{background:var(--brand-50)}
+.bom .cat{font-weight:700;color:var(--ink-2);white-space:nowrap}
+.bom .stype{font-weight:600;color:var(--ink);white-space:nowrap}
+.bom .cname{color:var(--ink-2);white-space:nowrap}
+.bom .region{color:var(--ink-3);white-space:nowrap;font-size:11.5px}
+.bom .desc-cell{color:var(--ink-2);font-size:11.5px;line-height:1.5;min-width:240px;max-width:320px;white-space:normal}
+.bom td.num.total{font-weight:700;color:var(--ink)}
+.bom td.num.savecol{font-weight:700;color:var(--save)}
+.scaling-tag{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:800;letter-spacing:.4px;color:var(--accent);background:#e6f7f4;padding:1px 6px;border-radius:5px;vertical-align:middle}
+.grand-row td{background:var(--brand);color:#fff;font-weight:800;font-size:13.5px;padding:13px 12px}
+.grand-row td.savecol{color:#9af5e2}
+.grand-row td:first-child{border-radius:0 0 0 9px}
+.grand-row td:last-child{border-radius:0 0 9px 0}
+
+.note{margin-top:14px;padding:11px 15px;border-radius:10px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:9px}
+.note svg{width:17px;height:17px;flex-shrink:0}
+.note.warn{background:var(--warn-bg);color:var(--warn)}
+.note.ok{background:var(--ok-bg);color:var(--ok)}
+.note.save{background:var(--save-bg);color:var(--save);margin-top:10px}
+
+.bbar{height:9px;border-radius:6px;background:var(--line-2);overflow:hidden;margin-top:14px}
+.bbar>div{height:100%;border-radius:6px;transition:width .4s ease}
+.bbar-l{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-2);margin-top:7px}
+.bbar-l b{color:var(--ink)}
+
+.fbox{background:#0f2336;color:#cfe2f3;border-radius:11px;padding:18px 20px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.95;white-space:pre-wrap;overflow-x:auto}
+.fbox .fstep{color:var(--accent);font-weight:700}
+.fbox .fres{color:#8fffd9}
+.fbox .fdim{color:#7f9bb3}
+
+.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+.dt th{background:var(--brand-50);padding:9px 12px;text-align:left;color:var(--brand);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.dt th.num,.dt td.num{text-align:right}
+.dt td{padding:9px 12px;border-bottom:1px solid var(--line-2)}
+.dt tr:last-child td{border-bottom:none}
+.dt tr.off td{color:var(--ink-3)}
+.dt tr.star td{background:var(--brand-50)}
+.star-mark{color:var(--accent);font-weight:800}
+
+.al{list-style:none;font-size:13px;color:var(--ink-2)}
+.al li{padding:9px 0 9px 26px;position:relative;border-bottom:1px solid var(--line-2);line-height:1.5}
+.al li:last-child{border-bottom:none}
+.al li::before{content:"";position:absolute;left:2px;top:13px;width:14px;height:14px;border-radius:5px;background:var(--brand-50);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%231F4E79' stroke-width='3'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
+.al li b{color:var(--ink);font-weight:700}
+.foot{font-size:11px;color:var(--ink-3);text-align:center;margin-top:6px;line-height:1.6}
+
+@media (max-width:1100px){
+  .layout{grid-template-columns:1fr;height:auto}
+  .form-panel{border-right:none;border-bottom:1px solid var(--line)}
+  .mrow{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">IR</div>
+    <div>
+      <h1>Irame — Infrastructure Sizing & BOM Tool</h1>
+      <p>Configure a workload to instantly generate a recommended setup, a full bill of materials, and a latency projection.</p>
+    </div>
+  </div>
+  <div class="live-pill"><span class="dot"></span> Live</div>
+</header>
+
+<div class="layout">
+
+  <div class="form-panel">
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>Workload Profile</div>
+
+    <div class="fg">
+      <label class="lbl">Document types <span class="sub">select all that apply</span></label>
+      <div class="opt-group" id="docTypes">
+        <label class="opt"><input type="checkbox" id="cb_light" checked><span><span class="ttl">Lightweight Excel / CSV</span><span class="desc">Clean tabular data, simple headers</span></span></label>
+        <label class="opt"><input type="checkbox" id="cb_complex"><span><span class="ttl">Complex Excel / CSV</span><span class="desc">Merged cells, multi-row / complex headers</span></span></label>
+        <label class="opt"><input type="checkbox" id="cb_digital"><span><span class="ttl">Digital PDF</span><span class="desc">Standard headers, selectable text</span></span></label>
+        <label class="opt"><input type="checkbox" id="cb_scanned"><span><span class="ttl">Scanned PDF</span><span class="desc">OCR required, complex headers</span></span></label>
+      </div>
+    </div>
+
+    <div class="fg"><label class="lbl">Typical file size</label><input type="range" id="sl_typical" min="0" max="100" value="50"><div class="sv" id="lbl_typical"></div></div>
+    <div class="fg"><label class="lbl">Max file size <span class="sub">sets worker tier</span></label><input type="range" id="sl_max" min="0" max="100" value="75"><div class="sv" id="lbl_max"></div></div>
+    <div class="fg"><label class="lbl">Peak parallel submissions</label><div class="hint">Jobs arriving simultaneously at peak</div><input type="range" id="sl_peak" min="1" max="500" value="40" step="1"><div class="sv" id="lbl_peak"></div></div>
+
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg></span>Infrastructure</div>
+
+    <div class="fg">
+      <label class="lbl">Cloud provider</label>
+      <select id="sel_cloud">
+        <option value="azure">Azure — Central India</option>
+        <option value="aws">AWS — ap-south-1 (Mumbai)</option>
+        <option value="gcp">GCP — asia-south1 (Mumbai)</option>
+      </select>
+    </div>
+
+    <div class="fg"><label class="lbl">Monthly budget <span class="sub">₹ / month</span></label><div class="input-prefix"><span>₹</span><input type="number" id="inp_budget" value="200000" min="10000" max="9000000" step="10000"></div></div>
+
+    <div class="fg">
+      <label class="lbl">Capacity strategy</label>
+      <div class="opt-group" id="latGroup">
+        <label class="opt on"><input type="radio" name="latmode" value="realtime" id="rb_rt" checked><span><span class="ttl">Real-time preferred</span><span class="desc">Size the worker pool to clear all peak jobs at once. More nodes, ~no queue.</span></span></label>
+        <label class="opt"><input type="radio" name="latmode" value="queue" id="rb_q"><span><span class="ttl">Queue OK</span><span class="desc">Fewer worker nodes; jobs may wait in a queue. Lower cost.</span></span></label>
+      </div>
+    </div>
+
+    <button class="reset" id="reset_btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9 9 0 00-7 3.3L3 8"/><path d="M3 3v5h5"/></svg>Reset to baseline</button>
+  </div>
+
+  <div class="report-panel" id="report"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var FX = 86;            // indicative: US$1 = ₹86
+  var CUR = "INR";        // active display currency
+
+  // ── Worker tiers (vcpu/ram + per-provider instance label + Azure SKU) ──
+  var TIERS = {
+    standard:   { vcpu:16, ram:64,  sku:"Standard_D16ads_v5", az:"D16ads v5", aws:"m5.4xlarge", gcp:"n2-standard-16" },
+    heavy:      { vcpu:16, ram:128, sku:"Standard_E16ads_v5", az:"E16ads v5", aws:"r5.4xlarge", gcp:"n2-highmem-16" },
+    superheavy: { vcpu:32, ram:256, sku:"Standard_E32ads_v5", az:"E32ads v5", aws:"r5.8xlarge", gcp:"n2-highmem-32" }
+  };
+  var SKU_POOL2 = "Standard_D8ads_v5";   // userpool 2 (×2 nodes)
+  var SKU_SYS   = "Standard_D2as_v4";    // systempool (×1 node)
+
+  // Baseline per-node monthly / 1-yr-savings (INR). Used offline, and reproduces
+  // the original Azure estimate exactly. Live prices override PRICES.vm when fetched.
+  var PRICES_BASE = { vm: {
+    "Standard_D16ads_v5": { monthly:46545.75,  savings:31535.90  },
+    "Standard_E16ads_v5": { monthly:75200.40,  savings:50945.70  },
+    "Standard_E32ads_v5": { monthly:150400.80, savings:101891.40 },
+    "Standard_D8ads_v5":  { monthly:19341.06,  savings:13546.55  },
+    "Standard_D2as_v4":   { monthly:4668.38,   savings:3319.47   }
+  }};
+  var PRICES = { vm:{}, source:"baseline", updated:null };
+
+  // Resolve a SKU's per-node monthly + savings (live if present, else baseline;
+  // if a live entry has no savings-plan price, derive it from the baseline ratio).
+  function getVM(sku){
+    var live = PRICES.vm[sku], base = PRICES_BASE.vm[sku] || {monthly:0,savings:0};
+    if(live && typeof live.monthly === "number"){
+      var sv = (live.savings != null && !isNaN(live.savings))
+        ? live.savings
+        : live.monthly * (base.monthly ? base.savings/base.monthly : 0.7);
+      return { monthly:live.monthly, savings:sv };
+    }
+    return { monthly:base.monthly, savings:base.savings };
+  }
+
+  // ── Provider meta ──
+  var PROV = {
+    azure: { label:"Azure", region:"Central India",            aiRegion:"East US",   factor:1.00 },
+    aws:   { label:"AWS",   region:"ap-south-1 (Mumbai)",       aiRegion:"us-east-1", factor:1.04 },
+    gcp:   { label:"GCP",   region:"asia-south1 (Mumbai)",      aiRegion:"us-east1",  factor:0.97 }
+  };
+
+  // service-type names by role per provider
+  var SVC = {
+    storage:  { azure:"Storage Accounts",               aws:"Amazon S3",                  gcp:"Cloud Storage" },
+    k8s:      { azure:"Azure Kubernetes Service (AKS)",  aws:"Amazon EKS",                 gcp:"Google Kubernetes Engine" },
+    network:  { azure:"Virtual Network",                 aws:"Amazon VPC",                 gcp:"Virtual Private Cloud" },
+    database: { azure:"Azure Database for PostgreSQL",   aws:"Amazon RDS for PostgreSQL",  gcp:"Cloud SQL for PostgreSQL" },
+    registry: { azure:"Azure Container Registry",        aws:"Amazon ECR",                 gcp:"Artifact Registry" },
+    monitor:  { azure:"Azure Monitor",                   aws:"Amazon CloudWatch",          gcp:"Cloud Monitoring" },
+    secrets:  { azure:"Key Vault",                       aws:"AWS Secrets Manager",        gcp:"Secret Manager" },
+    ai:       { azure:"Azure OpenAI",                    aws:"Amazon Bedrock",             gcp:"Vertex AI" }
+  };
+  // secondary / system pool instance label per provider
+  var POOL2 = { azure:"D8ads v5", aws:"m5.2xlarge", gcp:"n2-standard-8" };
+  var POOLS = { azure:"D2as v4",  aws:"t3.large",   gcp:"e2-standard-2" };
+
+  // T(S) = base + rate * S_mb (seconds)
+  var DTYPES = {
+    light:   { label:"Lightweight Excel / CSV", base:3,  rate:0.10, cpu:0.5, mem:2.5 },
+    complex: { label:"Complex Excel / CSV",     base:5,  rate:0.50, cpu:1.0, mem:3.0 },
+    digital: { label:"Digital PDF",             base:5,  rate:0.30, cpu:1.0, mem:3.0 },
+    scanned: { label:"Scanned PDF (OCR)",       base:15, rate:2.00, cpu:2.0, mem:3.5 }
+  };
+
+  // ── helpers ──
+  function posToMB(p){ return Math.round(Math.pow(10, p/25)); }
+  function fmtMB(mb){ if(mb>=10000)return(mb/1024).toFixed(0)+" GB"; if(mb>=1024)return(mb/1024).toFixed(1)+" GB"; return mb+" MB"; }
+  function fmtDur(s){ if(s<60)return Math.round(s)+" sec"; if(s<3600)return(s/60).toFixed(1)+" min"; if(s<86400)return(s/3600).toFixed(1)+" hrs"; return(s/86400).toFixed(1)+" days"; }
+  function inr(n){ return "₹"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function usd(n){ return "$"+Math.round(n/FX).toLocaleString("en-US"); }
+  function money(n){ return CUR==="INR" ? inr(n) : usd(n); }
+  function both(n){ return inr(n)+" · "+usd(n); }
+  function today(){ return new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); }
+  function $(id){ return document.getElementById(id); }
+  function ico(p){ return "<span class='ico'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>"+p+"</svg></span>"; }
+
+  // ── core calculation ──
+  function calculate(){
+    var typMB = posToMB(+$("sl_typical").value);
+    var maxMB = posToMB(+$("sl_max").value);
+    var peakN = +$("sl_peak").value;
+    var budget= +$("inp_budget").value || 0;
+    var pKey  = $("sel_cloud").value;
+    var chk   = document.querySelector("input[name='latmode']:checked");
+    var realtime = chk ? chk.value==="realtime" : true;
+
+    var sel=[];
+    if($("cb_light").checked)sel.push("light");
+    if($("cb_complex").checked)sel.push("complex");
+    if($("cb_digital").checked)sel.push("digital");
+    if($("cb_scanned").checked)sel.push("scanned");
+    if(sel.length===0)sel=["light"];
+    var worst=sel.reduce(function(a,b){return DTYPES[a].rate>DTYPES[b].rate?a:b;});
+    var spec=DTYPES[worst];
+
+    var prov=PROV[pKey], factor=prov.factor;
+    var tierKey = maxMB>5000?"superheavy":maxMB>1000?"heavy":"standard";
+    var tier=TIERS[tierKey];
+    var workerLabel = tier[pKey==="azure"?"az":pKey==="aws"?"aws":"gcp"];
+    var workerVM = getVM(tier.sku);
+
+    // concurrency per node
+    var ramPerJob=Math.max(0.5,(typMB*spec.mem)/1024);
+    var cpuCap=Math.floor(tier.vcpu/spec.cpu);
+    var ramCap=Math.floor(tier.ram/ramPerJob);
+    var jobsPerNode=Math.max(1,Math.min(cpuCap,ramCap,20));
+
+    // node count — capacity driven
+    var nW = realtime
+      ? Math.max(1, Math.ceil(peakN/jobsPerNode))
+      : Math.max(1, Math.ceil(peakN/(jobsPerNode*3)));
+
+    var totalSlots=nW*jobsPerNode;
+    var running=Math.min(peakN,totalSlots);
+    var queued=Math.max(0,peakN-totalSlots);
+    var T_sec=spec.base+spec.rate*typMB, T_min=T_sec/60;
+    var batches=Math.ceil(peakN/totalSlots);
+    var Tlast=fmtDur(batches*T_sec);
+
+    // ── build BOM line items ──
+    var perNodeM=workerVM.monthly*factor, perNodeS=workerVM.savings*factor;
+    var rows=[];
+    function row(cat,svcRole,name,regionType,desc,m,s){
+      rows.push({
+        cat:cat, type:SVC[svcRole][pKey], name:name,
+        region: regionType==="ai"?prov.aiRegion:prov.region,
+        desc:desc, monthly:m*factor, upfront:0, savings:s*factor
+      });
+    }
+
+    row("Storage","storage","—","local",
+      "Block Blob / object storage, General Purpose v2, LRS redundancy, Hot tier, ~1 TB capacity; standard read / write / list operations; 1,000 GB retrieval + 1,000 GB write.",
+      2069.68, 2069.68);
+
+    // worker pool (SCALES)
+    rows.push({
+      cat:"Compute", type:SVC.k8s[pKey], name:"userpool 1", region:prov.region,
+      desc:"Primary document-processing worker node pool: <b>"+nW+"× "+workerLabel+"</b> ("+tier.vcpu+" vCPUs, "+tier.ram+" GB RAM) × 730 hours, Linux; managed OS disks. ~"+jobsPerNode+" jobs/node.",
+      monthly:nW*perNodeM, upfront:0, savings:nW*perNodeS, scaling:true
+    });
+    var p2=getVM(SKU_POOL2), sysv=getVM(SKU_SYS);
+    row("Compute","k8s","userpool 2","local",
+      "Secondary worker node pool: 2× "+POOL2[pKey]+" (8 vCPUs, 32 GB RAM) × 730 hours, Linux; managed OS disks.",
+      2*p2.monthly, 2*p2.savings);
+    row("Compute","k8s","systempool","local",
+      "System node pool: 1× "+POOLS[pKey]+" (2 vCPUs, 8 GB RAM) × 730 hours, Linux; runs cluster system services.",
+      sysv.monthly, sysv.savings);
+
+    row("Networking","network","—","local",
+      "Virtual network + 2 subnets; ~200 GB outbound data transfer / month.",
+      382.77, 382.77);
+
+    row("Databases","database","irame-pg","local",
+      "Managed PostgreSQL, General Purpose; 1× 2-vCore instance × 730 hours; Premium SSD, 200 GiB storage + 200 GiB backup (LRS); no High Availability.",
+      21160.48, 17793.45);
+
+    row("Containers","registry","—","local",
+      "Container registry, Basic tier, 1 registry × 30 days; build minutes; ~5 GB outbound transfer.",
+      516.55, 516.55);
+
+    row("DevOps","monitor","—","local",
+      "Monitoring & logs: ~5 GB/day basic logs + 1 GB/day processed; 1-month interactive retention; 7 dashboards; 25 alert + 25 recording rules; app health checks.",
+      10650.58, 10650.58);
+
+    row("Security","secrets","—","local",
+      "Secrets / keys vault: ~100,000 advanced operations / month; 1 certificate renewal.",
+      430.62, 430.62);
+
+    row("AI + Machine Learning","ai","GPT-5.4 mini","ai",
+      "Managed LLM API — GPT-5.4-mini class, Standard (on-demand), global: ~65.5M input + 21.8M cached-input tokens / month. Pay-per-token.",
+      14000, 14000);
+    row("AI + Machine Learning","ai","GPT-5.5","ai",
+      "Managed LLM API — GPT-5.5 class (<272k ctx), Standard (on-demand), global: ~5.2M input + 1.4M cached-input tokens / month. Pay-per-token.",
+      6000, 6000);
+
+    var totM=0,totS=0,totU=0;
+    for(var i=0;i<rows.length;i++){ totM+=rows[i].monthly; totS+=rows[i].savings; totU+=rows[i].upfront; }
+
+    return {
+      prov:prov, pKey:pKey, rows:rows, totM:totM, totS:totS, totU:totU,
+      worker:{label:workerLabel,vcpu:tier.vcpu,ram:tier.ram}, tierKey:tierKey,
+      nW:nW, jobsPerNode:jobsPerNode, totalSlots:totalSlots, running:running, queued:queued,
+      peakN:peakN, batches:batches, T_sec:T_sec, T_min:T_min, Tlast:Tlast,
+      spec:spec, worst:worst, sel:sel, typMB:typMB, maxMB:maxMB,
+      ramPerJob:ramPerJob, cpuCap:cpuCap, ramCap:ramCap,
+      budget:budget, realtime:realtime
+    };
+  }
+
+  // ── BOM table ──
+  function buildBOM(r){
+    var out="";
+    for(var i=0;i<r.rows.length;i++){
+      var x=r.rows[i];
+      var tag=x.scaling?"<span class='scaling-tag'>SCALES</span>":"";
+      out+="<tr>"
+        +"<td class='cat'>"+x.cat+"</td>"
+        +"<td class='stype'>"+x.type+tag+"</td>"
+        +"<td class='cname'>"+(x.name||"—")+"</td>"
+        +"<td class='region'>"+x.region+"</td>"
+        +"<td class='desc-cell'>"+x.desc+"</td>"
+        +"<td class='num total'>"+money(x.monthly)+"</td>"
+        +"<td class='num'>"+money(x.upfront)+"</td>"
+        +"<td class='num savecol'>"+money(x.savings)+"</td>"
+        +"</tr>";
+    }
+    out+="<tr class='grand-row'>"
+      +"<td colspan='5'>Total monthly estimate</td>"
+      +"<td class='num'>"+money(r.totM)+"</td>"
+      +"<td class='num'>"+money(r.totU)+"</td>"
+      +"<td class='num savecol'>"+money(r.totS)+"</td>"
+      +"</tr>";
+    return out;
+  }
+
+  function budgetBlock(r){
+    var pct=r.budget>0?Math.min(100,Math.round(r.totM/r.budget*100)):100;
+    var over=r.totM>r.budget;
+    var col=over?"var(--warn)":pct>85?"#e0a200":"var(--ok)";
+    var note=over
+      ? "<div class='note warn'>"+ico("<path d='M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.4 3.9a2 2 0 00-3.4 0z'/>")+"On-demand total exceeds budget by "+money(r.totM-r.budget)+". Reduce worker nodes, raise budget, or commit to the 1-yr savings plan ("+money(r.totS)+"/mo)."+"</div>"
+      : "<div class='note ok'>"+ico("<path d='M22 11.1V12a10 10 0 11-5.9-9.1'/><path d='M22 4L12 14.1l-3-3'/>")+"Within budget — "+money(r.budget-r.totM)+" headroom on the on-demand total."+"</div>";
+    var save=r.totM-r.totS, spct=r.totM>0?Math.round(save/r.totM*100):0;
+    var saveNote="<div class='note save'>"+ico("<path d='M20 12V8H6a2 2 0 010-4h12v4'/><path d='M4 6v12a2 2 0 002 2h14v-4'/><circle cx='16' cy='14' r='1.5'/>")+"Committing to a 1-year savings plan lowers the monthly cost to <b>"+money(r.totS)+"</b> — you save <b>"+money(save)+"/mo ("+spct+"%)</b>.</div>";
+    return note+saveNote
+      +"<div class='bbar'><div style='width:"+pct+"%;background:"+col+"'></div></div>"
+      +"<div class='bbar-l'><span>On-demand: <b>"+money(r.totM)+"</b></span><span>"+pct+"% of budget</span><span>Budget: <b>"+money(r.budget)+"</b></span></div>";
+  }
+
+  function buildFormula(r){
+    function step(s){return "<span class='fstep'>"+s+"</span>";}
+    function res(s){return "<span class='fres'>"+s+"</span>";}
+    function dim(s){return "<span class='fdim'>"+s+"</span>";}
+    var T_str=r.spec.base+" + "+r.spec.rate+" × "+r.typMB+" = "+res(Math.round(r.T_sec)+" sec ≈ "+r.T_min.toFixed(1)+" min");
+    var last="⌈"+r.peakN+" / "+r.totalSlots+"⌉ × "+r.T_min.toFixed(1)+" min = "+r.batches+" × "+r.T_min.toFixed(1)+" min = "+res(r.Tlast);
+    return [
+      step("Step 1 — Processing time per workflow"),
+      "T(S) = α + β × S","",
+      "  α = "+r.spec.base+" sec      "+dim("base time — "+DTYPES[r.worst].label),
+      "  β = "+r.spec.rate+" sec/MB  "+dim("per-MB rate"),
+      "  S = "+r.typMB+" MB        "+dim("typical file size"),"",
+      "  T = "+T_str,"",
+      step("Step 2 — Concurrent worker slots"),
+      "  W = "+r.nW+" nodes × "+r.jobsPerNode+" jobs/node = "+res(r.totalSlots+" total slots"),
+      "  "+dim("CPU cap = "+r.cpuCap+" jobs · RAM cap = floor("+r.worker.ram+" / "+r.ramPerJob.toFixed(1)+") = "+r.ramCap+" jobs"),"",
+      step("Step 3 — Last workflow completion"),
+      "T_last = ⌈N / W⌉ × T_avg","",
+      "  N = "+r.peakN+" peak submissions",
+      "  W = "+r.totalSlots+" concurrent slots · Batches = "+r.batches,"",
+      "  T_last = "+last
+    ].join("\n");
+  }
+
+  function buildDocRows(r){
+    var keys=["light","complex","digital","scanned"], out="";
+    for(var i=0;i<keys.length;i++){
+      var k=keys[i],d=DTYPES[k],T=d.base+d.rate*r.typMB;
+      var on=r.sel.indexOf(k)>=0, cls=r.worst===k?"star":on?"on":"off";
+      var mark=r.worst===k?" <span class='star-mark'>★ sizing</span>":"";
+      out+="<tr class='"+cls+"'><td>"+d.label+mark+"</td><td class='num'>"+d.base+"s</td><td class='num'>"+d.rate+" s/MB</td><td class='num'>"+fmtDur(T)+"</td></tr>";
+    }
+    return out;
+  }
+
+  function buildAssumptions(r){
+    var tl={standard:"Standard",heavy:"Memory-Optimised",superheavy:"High-Memory"};
+    var items=[
+      "Worst-case type used for sizing: <b>"+DTYPES[r.worst].label+"</b>",
+      "Memory per job: "+r.typMB+" MB × "+r.spec.mem+"× buffer = <b>"+r.ramPerJob.toFixed(1)+" GB/pod</b>",
+      "Jobs per node limited by CPU ("+r.cpuCap+") and RAM ("+r.ramCap+") → <b>"+r.jobsPerNode+" concurrent pods/node</b>",
+      "Worker tier <b>"+tl[r.tierKey]+" ("+r.worker.label+")</b> selected for max file size of "+fmtMB(r.maxMB),
+      "Worker pool (<b>userpool 1</b>) is the only line that scales with the form — "+r.nW+" node(s) at peak. Other services are a fixed baseline you can tune per quote.",
+      r.realtime
+        ? "Real-time strategy: sized to clear all peak jobs at once — <b>"+r.running+" run concurrently, "+r.queued+" queued</b>."
+        : "Queue strategy: fewer nodes to cut cost — <b>"+r.running+" run concurrently, "+r.queued+" wait in queue</b>.",
+      "Two cost columns shown: <b>on-demand (PAYG)</b> and <b>1-year savings plan</b> (committed, cheaper).",
+      "AI / LLM lines are pay-per-token and shown at a representative monthly volume; they do not change with the savings plan.",
+      "Pricing is indicative public list pricing in <b>₹</b> (US$ shown at ₹"+FX+"/$). Blob storage grows over time — set a 90-day archive lifecycle policy."
+    ];
+    var out="";for(var i=0;i<items.length;i++)out+="<li>"+items[i]+"</li>";
+    return out;
+  }
+
+  function priceBadge(){
+    if(PRICES.source==="live"){
+      var d=PRICES.updated?new Date(PRICES.updated):null;
+      return "<span style='color:var(--save);font-weight:800'>● Live Azure prices</span>"
+        + (d?" · updated "+d.toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"");
+    }
+    if(PRICES.source==="loading") return "<span style='color:var(--ink-3);font-weight:700'>○ Fetching live prices…</span>";
+    if(PRICES.source==="offline") return "<span style='color:var(--warn);font-weight:800'>● Baseline prices — live fetch unavailable</span>";
+    return "<span style='color:var(--ink-3);font-weight:700'>● Baseline prices</span>";
+  }
+
+  function render(r){
+    var modeStr=r.realtime?"Real-time (zero-queue sizing)":"Queue-tolerant (cost-optimised)";
+    var providerNote = r.pKey==="azure"
+      ? (PRICES.source==="live"
+          ? "Compute lines priced live from the Azure Retail Prices API; platform/AI lines are a fixed baseline."
+          : "Baseline mirrors your Azure Central India estimate; worker pool scales with the workload.")
+      : r.prov.label+" line items are indicative equivalents mapped from the Azure baseline (factor "+r.prov.factor.toFixed(2)+"×).";
+
+    var html=
+      "<div class='rh'><div class='rh-top'>"
+      +"<div><div class='rt'>Infrastructure Sizing & Bill of Materials</div>"
+      +"<div class='rs'>"
+      +"<span>Provider: <b>"+r.prov.label+"</b></span>"
+      +"<span>Region: <b>"+r.prov.region+"</b></span>"
+      +"<span>Strategy: <b>"+modeStr+"</b></span>"
+      +"<span>Generated: <b>"+today()+"</b></span>"
+      +"</div></div>"
+      +"<div class='chips'>"
+      +"<div class='chip'><span class='k'>Monthly · On-demand</span><span class='v'>"+inr(r.totM)+" <span class='usd'>("+usd(r.totM)+")</span></span></div>"
+      +"<div class='chip save'><span class='k'>Monthly · 1-yr savings</span><span class='v'>"+inr(r.totS)+" <span class='usd'>("+usd(r.totS)+")</span></span></div>"
+      +"</div>"
+      +"</div></div>"
+
+      +"<div class='mrow'>"
+      +"<div class='mc'><div class='mc-l'>"+ico("<rect x='2' y='3' width='20' height='14' rx='2'/><path d='M8 21h8M12 17v4'/>")+"Worker Nodes</div><div class='mc-v'>"+r.nW+"</div><div class='mc-u'>"+r.worker.label+" each</div></div>"
+      +"<div class='mc'><div class='mc-l'>"+ico("<path d='M4 11a9 9 0 019 9M4 4a16 16 0 0116 16'/><circle cx='5' cy='19' r='1'/>")+"Capacity</div><div class='mc-v'>"+r.totalSlots+"</div><div class='mc-u'>workflows at once</div></div>"
+      +"<div class='mc'><div class='mc-l'>"+ico("<path d='M12 2v4M12 18v4M2 12h4M18 12h4'/><circle cx='12' cy='12' r='4'/>")+"Queue at Peak</div><div class='mc-v'>"+r.queued+"</div><div class='mc-u'>"+r.running+" running · "+r.queued+" waiting</div></div>"
+      +"<div class='mc hi'><div class='mc-l'>"+ico("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>")+"Last Job Done In</div><div class='mc-v' style='font-size:21px'>"+r.Tlast+"</div><div class='mc-u'>after peak submission</div></div>"
+      +"</div>"
+
+      +"<div class='card'>"
+      +"<div class='ct'>"+ico("<path d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2'/><rect x='9' y='3' width='6' height='4' rx='1'/><path d='M9 12h6M9 16h6'/>")+"Bill of Materials"
+      +"<span class='spacer'></span>"
+      +"<div class='cur-toggle' id='curToggle'><button data-cur='INR' class='"+(CUR==="INR"?"on":"")+"'>₹ INR</button><button data-cur='USD' class='"+(CUR==="USD"?"on":"")+"'>$ USD</button></div>"
+      +"</div>"
+      +"<div class='csub'>"+priceBadge()+" &nbsp;·&nbsp; "+providerNote+" &nbsp;·&nbsp; FX: US$1 = ₹"+FX+" (indicative).</div>"
+      +"<div class='tablewrap'><table class='bom'><thead><tr>"
+      +"<th>Service category</th><th>Service type</th><th>Custom name</th><th>Region</th><th>Description</th>"
+      +"<th class='num'>Est. monthly cost</th><th class='num'>Est. upfront cost</th><th class='num'>Est. monthly cost<br>with 1-yr savings plan</th>"
+      +"</tr></thead><tbody>"+buildBOM(r)+"</tbody></table></div>"
+      +budgetBlock(r)
+      +"</div>"
+
+      +"<div class='card'>"
+      +"<div class='ct'>"+ico("<path d='M4 7V4h16v3M9 20h6M12 4v16'/>")+"Latency Formula &amp; Calculation</div>"
+      +"<div class='fbox'>"+buildFormula(r)+"</div></div>"
+
+      +"<div class='card'>"
+      +"<div class='ct'>"+ico("<rect x='3' y='3' width='18' height='18' rx='2'/><path d='M3 9h18M9 21V9'/>")+"Processing Time by Doc Type<span class='spacer'></span><span class='tag'>at "+fmtMB(r.typMB)+"</span></div>"
+      +"<table class='dt'><thead><tr><th>Type</th><th class='num'>Base (α)</th><th class='num'>Rate (β)</th><th class='num'>Est. time</th></tr></thead><tbody>"+buildDocRows(r)+"</tbody></table></div>"
+
+      +"<div class='card'>"
+      +"<div class='ct'>"+ico("<circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/>")+"Key Assumptions</div>"
+      +"<ul class='al'>"+buildAssumptions(r)+"</ul></div>"
+
+      +"<div class='foot'>Estimates only — indicative public list pricing, subject to change and excluding taxes / negotiated discounts. AI token costs are usage-based. Validate with your cloud account team before procurement.</div>";
+
+    $("report").innerHTML=html;
+
+    // currency toggle binding (re-rendered each pass)
+    var ct=$("curToggle");
+    if(ct){
+      ct.querySelectorAll("button").forEach(function(b){
+        b.addEventListener("click",function(){ CUR=b.getAttribute("data-cur"); refresh(); });
+      });
+    }
+  }
+
+  // ── live wiring ──
+  function updateLabels(){
+    $("lbl_typical").textContent=fmtMB(posToMB(+$("sl_typical").value));
+    $("lbl_max").textContent    =fmtMB(posToMB(+$("sl_max").value));
+    $("lbl_peak").textContent   =$("sl_peak").value+" workflows";
+  }
+  function syncOptStyles(){
+    document.querySelectorAll(".opt").forEach(function(o){ o.classList.toggle("on",o.querySelector("input").checked); });
+  }
+  function refresh(){
+    updateLabels(); syncOptStyles();
+    try{ render(calculate()); }
+    catch(e){ $("report").innerHTML="<div class='card' style='color:#b71c1c'>Error: "+e.message+"</div>"; }
+  }
+
+  // ── Live pricing — no install needed for recipients ───────────────────
+  // 1) call the Azure Retail Prices API directly from the browser
+  // 2) if blocked (CORS/network), try a local backend at /api/prices
+  // 3) otherwise fall back to the baked-in baseline (still fully usable)
+  var LIVE_SKUS = ["Standard_D16ads_v5","Standard_E16ads_v5","Standard_E32ads_v5","Standard_D8ads_v5","Standard_D2as_v4"];
+
+  function azFilter(sku,region){
+    return "armRegionName eq '"+region+"' and serviceName eq 'Virtual Machines'"
+      +" and armSkuName eq '"+sku+"' and priceType eq 'Consumption'";
+  }
+  function fetchSkuDirect(sku,region,currency){
+    var url="https://prices.azure.com/api/retail/prices?api-version=2023-01-01-preview"
+      +"&currencyCode='"+currency+"'&$filter="+encodeURIComponent(azFilter(sku,region));
+    return fetch(url).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){
+      var items=(j.Items||j.items||[]).filter(function(it){
+        var p=it.productName||"", m=it.meterName||"";
+        return !/Windows/i.test(p) && !/Spot|Low Priority/i.test(m);
+      });
+      if(!items.length) return null;
+      items.sort(function(a,b){return a.retailPrice-b.retailPrice;});
+      var it=items[0], monthly=it.retailPrice*730, sav=null;
+      if(Array.isArray(it.savingsPlan)){
+        var o=it.savingsPlan.find(function(s){return /1 Year|P1Y/i.test(s.term||"");});
+        if(o && typeof o.retailPrice==="number") sav=o.retailPrice*730;
+      }
+      return { sku:sku, monthly:monthly, savings:sav };
+    });
+  }
+
+  function applyLive(vm){ PRICES.vm=vm; PRICES.source="live"; PRICES.updated=new Date().toISOString(); refresh(); }
+  function applyOffline(){ PRICES.vm={}; PRICES.source="offline"; PRICES.updated=null; refresh(); }
+
+  function tryBackend(){
+    fetch("/api/prices?region=centralindia&currency=INR",{cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){
+        if(d && d.vm && Object.keys(d.vm).length){ PRICES.vm=d.vm; PRICES.source="live"; PRICES.updated=d.updated; refresh(); }
+        else applyOffline();
+      })
+      .catch(applyOffline);
+  }
+
+  function loadPrices(){
+    var pKey=$("sel_cloud").value;
+    if(pKey!=="azure"){ PRICES.vm={}; PRICES.source="baseline"; PRICES.updated=null; refresh(); return; }
+    PRICES.source="loading"; refresh();
+    Promise.all(LIVE_SKUS.map(function(s){
+      return fetchSkuDirect(s,"centralindia","INR").catch(function(){ return null; });
+    })).then(function(arr){
+      var vm={}; arr.forEach(function(r){ if(r) vm[r.sku]=r; });
+      if(Object.keys(vm).length) applyLive(vm);
+      else tryBackend();
+    }).catch(tryBackend);
+  }
+
+  document.querySelectorAll("#docTypes input, #latGroup input, #sl_typical, #sl_max, #sl_peak, #inp_budget")
+    .forEach(function(el){ el.addEventListener("input",refresh); el.addEventListener("change",refresh); });
+  $("sel_cloud").addEventListener("change", loadPrices);
+
+  $("reset_btn").addEventListener("click",function(){
+    $("sl_typical").value=50; $("sl_max").value=75; $("sl_peak").value=40; $("inp_budget").value=200000;
+    $("sel_cloud").value="azure";
+    $("cb_light").checked=true; $("cb_complex").checked=false; $("cb_digital").checked=false; $("cb_scanned").checked=false;
+    $("rb_rt").checked=true;
+    CUR="INR"; loadPrices();
+  });
+
+  loadPrices();
+})();
+</script>
+</body>
+</html>
