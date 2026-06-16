@@ -65,6 +65,7 @@ async function fetchMeter(filter, currency, extra) {
 // ── Storage / DB / Monitor unit prices ────────────────────────────────────
 async function fetchServices(region, currency) {
   const svc = {}, debug = {};
+  const pgFilter = "serviceName eq 'Azure Database for PostgreSQL' and armRegionName eq '" + region + "'";
 
   // Blob Hot LRS — data stored per GB/month
   try {
@@ -76,34 +77,26 @@ async function fetchServices(region, currency) {
     if (m) { svc.storagePerGB = m.price; debug.storage = m; }
   } catch (e) { debug.storageErr = String(e.message || e); }
 
-  // Log Analytics — pay-as-you-go data ingestion per GB
+  // PostgreSQL Flexible Server, General Purpose Dsv3 (= D2s v3) compute, per vCore/hour
   try {
-    const m = await fetchMeter(
-      "serviceName eq 'Log Analytics' and armRegionName eq '" + region + "'" +
-      " and meterName eq 'Pay-as-you-go Data Ingestion'", currency
-    );
-    if (m) { svc.monitorPerGB = m.price; debug.monitor = m; }
-  } catch (e) { debug.monitorErr = String(e.message || e); }
-
-  // PostgreSQL Flexible Server — D2s v3 General Purpose compute (per hour)
-  try {
-    const m = await fetchMeter(
-      "serviceName eq 'Azure Database for PostgreSQL' and armRegionName eq '" + region + "'", currency,
-      (it) => /Flexible/i.test(it.productName || "") &&
-              /General Purpose/i.test(it.productName || "") &&
-              /D2s? v3|D2ds? v4|2 v[Cc]ore/i.test((it.meterName || "") + (it.productName || ""))
-    );
+    const m = await fetchMeter(pgFilter, currency,
+      (it) => /Flexible Server General Purpose Dsv3 Series Compute/i.test(it.productName || "") && /vCore/i.test(it.meterName || ""));
     if (m) { svc.pgComputeHourly = m.price; debug.pgCompute = m; }
   } catch (e) { debug.pgComputeErr = String(e.message || e); }
 
-  // PostgreSQL Flexible Server — storage per GB/month
+  // PostgreSQL primary storage (Premium SSD v2) per GB/month
   try {
-    const m = await fetchMeter(
-      "serviceName eq 'Azure Database for PostgreSQL' and armRegionName eq '" + region + "'", currency,
-      (it) => /Flexible/i.test(it.productName || "") && /Storage/i.test(it.meterName || "")
-    );
-    if (m) { svc.pgStoragePerGB = m.price; debug.pgStorage = m; }
-  } catch (e) { debug.pgStorageErr = String(e.message || e); }
+    const m = await fetchMeter(pgFilter, currency,
+      (it) => /Flexible Server Storage/i.test(it.productName || "") && /Premium SSD v2 Storage Data Stored/i.test(it.meterName || ""));
+    if (m) { svc.pgPrimaryStorageGB = m.price; debug.pgPrimary = m; }
+  } catch (e) { debug.pgPrimaryErr = String(e.message || e); }
+
+  // PostgreSQL backup storage (LRS) per GB/month
+  try {
+    const m = await fetchMeter(pgFilter, currency,
+      (it) => /Flexible Server Backup Storage/i.test(it.productName || "") && /Backup Storage LRS Data Stored/i.test(it.meterName || ""));
+    if (m) { svc.pgBackupStorageGB = m.price; debug.pgBackup = m; }
+  } catch (e) { debug.pgBackupErr = String(e.message || e); }
 
   return { svc, debug };
 }
