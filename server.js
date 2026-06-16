@@ -97,6 +97,22 @@ async function fetchServices(region, currency) {
   return { svc, debug };
 }
 
+// ── Live USD→INR exchange rate (free, no key), cached 12h ──
+let fxCache = null;
+const FX_TTL = 12 * 60 * 60 * 1000;
+async function getFxRate() {
+  if (fxCache && Date.now() - fxCache.at < FX_TTL) return fxCache.rate;
+  try {
+    const r = await fetch("https://open.er-api.com/v6/latest/USD", { headers: { Accept: "application/json" } });
+    if (r.ok) {
+      const j = await r.json();
+      const inr = j && j.rates && j.rates.INR;
+      if (inr && isFinite(inr)) { fxCache = { at: Date.now(), rate: inr }; return inr; }
+    }
+  } catch (e) {}
+  return fxCache ? fxCache.rate : 94.5; // last known, or sensible current default
+}
+
 async function getPrices(region, currency) {
   const key = region + "|" + currency;
   if (cache[key] && Date.now() - cache[key].at < TTL) return cache[key].data;
@@ -107,8 +123,9 @@ async function getPrices(region, currency) {
   let svc = {}, debug = {};
   try { const s = await fetchServices(region, currency); svc = s.svc; debug = s.debug; }
   catch (e) { debug.svcErr = String(e.message || e); }
+  const fx = await getFxRate();
   const data = {
-    provider: "azure", region, currency, hours: HOURS, vm, svc, debug,
+    provider: "azure", region, currency, hours: HOURS, vm, svc, debug, fx,
     updated: new Date().toISOString(), source: Object.keys(vm).length ? "live" : "empty"
   };
   cache[key] = { at: Date.now(), data };
@@ -179,13 +196,14 @@ async function getAwsPrices(region) {
   }
   if (buf && need.size > 0) handle(buf);
 
+  const fx = await getFxRate();
   const awsVm = {};
   for (const it in found) {
-    const monthly = found[it] * HOURS * AWS_FX;     // INR/month on-demand
+    const monthly = found[it] * HOURS * fx;          // INR/month on-demand (live FX)
     awsVm[it] = { monthly, savings: monthly * 0.65 }; // ~35% off ≈ 1yr Std No-Upfront (indicative)
   }
   const data = {
-    provider: "aws", region, currency: "INR", fx: AWS_FX, hours: HOURS,
+    provider: "aws", region, currency: "INR", fx, hours: HOURS,
     awsVm, hourlyUSD: found, updated: new Date().toISOString(),
     source: Object.keys(awsVm).length ? "live" : "empty"
   };

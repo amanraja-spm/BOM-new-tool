@@ -247,7 +247,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 (function () {
   "use strict";
 
-  var FX = 86;            // indicative: US$1 = ₹86
+  var FX = 94.5;          // live USD→INR (updated from server response when available)
   var CUR = "INR";        // active display currency
 
   // ── Worker tiers (vcpu/ram + per-provider instance label + Azure SKU) ──
@@ -547,7 +547,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         : "Queue strategy: fewer nodes to cut cost — <b>"+r.running+" run concurrently, "+r.queued+" wait in queue</b>.",
       "Two cost columns shown: <b>on-demand (PAYG)</b> and <b>1-year savings plan</b> (committed, cheaper).",
       "AI / LLM lines are pay-per-token and shown at a representative monthly volume; they do not change with the savings plan.",
-      "Pricing is indicative public list pricing in <b>₹</b> (US$ shown at ₹"+FX+"/$). Blob storage grows over time — set a 90-day archive lifecycle policy."
+      "Pricing is indicative public list pricing in <b>₹</b> (US$ shown at live ₹"+FX.toFixed(2)+"/$). Blob storage grows over time — set a 90-day archive lifecycle policy."
     ];
     var out="";for(var i=0;i<items.length;i++)out+="<li>"+items[i]+"</li>";
     return out;
@@ -572,7 +572,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           ? "Compute lines priced live from the Azure Retail Prices API; platform/AI lines are a fixed baseline."
           : "Baseline mirrors your Azure Central India estimate; worker pool scales with the workload.")
       : (r.pKey==="aws" && PRICES.source==="live-aws")
-        ? "Compute (worker / pools) priced live from the AWS EC2 price list, ap-south-1, on-demand (₹ at ₹"+FX+"/$). Savings ≈ 1-yr commit estimate; platform/AI lines are an indicative baseline."
+        ? "Compute (worker / pools) priced live from the AWS EC2 price list, ap-south-1, on-demand (₹ at live ₹"+FX.toFixed(2)+"/$). Savings ≈ 1-yr commit estimate; platform/AI lines are an indicative baseline."
         : r.prov.label+" line items are indicative equivalents mapped from the Azure baseline (factor "+r.prov.factor.toFixed(2)+"×).";
 
     var html=
@@ -604,7 +604,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       +"<span class='spacer'></span>"
       +"<div class='cur-toggle' id='curToggle'><button data-cur='INR' class='"+(CUR==="INR"?"on":"")+"'>₹ INR</button><button data-cur='USD' class='"+(CUR==="USD"?"on":"")+"'>$ USD</button></div>"
       +"</div>"
-      +"<div class='csub'>"+priceBadge()+" &nbsp;·&nbsp; "+providerNote+" &nbsp;·&nbsp; FX: US$1 = ₹"+FX+" (indicative).</div>"
+      +"<div class='csub'>"+priceBadge()+" &nbsp;·&nbsp; "+providerNote+" &nbsp;·&nbsp; FX: US$1 = ₹"+FX.toFixed(2)+" (live).</div>"
       +"<div class='tablewrap'><table class='bom'><thead><tr>"
       +"<th>Service category</th><th>Service type</th><th>Custom name</th><th>Region</th><th>Description</th>"
       +"<th class='num'>Est. monthly cost</th><th class='num'>Est. upfront cost</th><th class='num'>Est. monthly cost<br>with 1-yr savings plan</th>"
@@ -703,6 +703,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       fetch("/api/prices?provider=aws",{cache:"no-store"})
         .then(function(r){ if(!r.ok) throw 0; return r.json(); })
         .then(function(d){
+          if(d && d.fx) FX=d.fx;
           if(d && d.awsVm && Object.keys(d.awsVm).length){ PRICES.awsVm=d.awsVm; PRICES.source="live-aws"; PRICES.updated=d.updated; }
           else { PRICES.source="baseline"; }
           refresh();
@@ -716,6 +717,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     fetch("/api/prices?region=centralindia&currency=INR",{cache:"no-store"})
       .then(function(r){ if(!r.ok) throw 0; return r.json(); })
       .then(function(d){
+        if(d && d.fx) FX=d.fx;
         if(d && d.vm && Object.keys(d.vm).length){
           PRICES.vm=d.vm; PRICES.svc=d.svc||{}; PRICES.source="live"; PRICES.updated=d.updated; refresh();
         } else throw 0;
