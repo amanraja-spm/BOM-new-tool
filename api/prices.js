@@ -123,6 +123,7 @@ async function getPrices(region, currency) {
 
   const data = {
     provider: "azure", region, currency, hours: HOURS,
+    build: "v4-reconnect",
     vm, svc, debug,
     updated: new Date().toISOString(),
     source: Object.keys(vm).length ? "live" : "empty"
