@@ -155,6 +155,26 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
+  // SAFE AWS feasibility check: HEAD only (no download, no parse, cannot OOM)
+  if (u.pathname === "/api/awssize") {
+    const region = u.searchParams.get("region") || "ap-south-1";
+    const urls = {
+      ec2: "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/" + region + "/index.json",
+      ec2csv: "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/" + region + "/index.csv"
+    };
+    const out = {};
+    for (const k in urls) {
+      try {
+        const r = await fetch(urls[k], { method: "HEAD" });
+        const len = parseInt(r.headers.get("content-length") || "0", 10);
+        out[k] = { status: r.status, bytes: len, mb: len ? +(len / 1048576).toFixed(1) : null };
+      } catch (e) { out[k] = { error: String((e && e.message) || e) }; }
+    }
+    res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
+    res.end(JSON.stringify({ region, files: out }));
+    return;
+  }
+
   if (u.pathname === "/" || u.pathname === "/index.html") {
     fs.readFile(HTML, (err, buf) => {
       if (err) { res.writeHead(500); res.end("index.html not found"); return; }
