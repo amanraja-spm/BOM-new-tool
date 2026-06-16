@@ -161,12 +161,22 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   .mrow{grid-template-columns:repeat(2,1fr)}
 }
 
-/* PDF / download button */
+/* PDF / Excel download buttons */
 .pdf-btn{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;border:none;
   border-radius:11px;padding:8px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
   box-shadow:var(--shadow-sm);transition:background .15s;align-self:center}
 .pdf-btn:hover{background:var(--brand-600)}
 .pdf-btn svg{width:15px;height:15px}
+.xls-btn{background:#107c41}
+.xls-btn:hover{background:#0c6234}
+
+/* Collapsible left panel */
+.nav-toggle{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;margin-right:6px;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:10px;color:#fff;cursor:pointer;flex-shrink:0}
+.nav-toggle:hover{background:rgba(255,255,255,.24)}
+.nav-toggle svg{width:18px;height:18px}
+.layout.nav-collapsed{grid-template-columns:1fr}
+.layout.nav-collapsed .form-panel{display:none}
 
 /* Print → Save as PDF: show only the report, full width, keep colors */
 @media print{
@@ -183,11 +193,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
 <header>
   <div class="brand">
+    <button class="nav-toggle no-print" id="toggleNav" title="Show / hide the input panel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
     <div class="logo">IR</div>
     <div>
       <h1>Irame — Infrastructure Sizing & BOM Tool</h1>
@@ -249,6 +263,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
   var FX = 94.5;          // live USD→INR (updated from server response when available)
   var CUR = "INR";        // active display currency
+  var LAST = null;        // last computed report (for Excel export)
 
   // ── Worker tiers (vcpu/ram + per-provider instance label + Azure SKU) ──
   var TIERS = {
@@ -367,29 +382,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     var ramCap=Math.floor(tier.ram/ramPerJob);
     var jobsPerNode=Math.max(1,Math.min(cpuCap,ramCap,20));
 
-    // node count — capacity driven
-    var nW = realtime
-      ? Math.max(1, Math.ceil(peakN/jobsPerNode))
-      : Math.max(1, Math.ceil(peakN/(jobsPerNode*3)));
-
-    var totalSlots=nW*jobsPerNode;
-    var running=Math.min(peakN,totalSlots);
-    var queued=Math.max(0,peakN-totalSlots);
-    var T_sec=spec.base+spec.rate*typMB, T_min=T_sec/60;
-    var batches=Math.ceil(peakN/totalSlots);
-    var Tlast=fmtDur(batches*T_sec);
-
-    // ── build BOM line items ──
+    // ── line inputs (computed before sizing so the budget can cap node count) ──
     var workerNode=nodeCost(tier.sku, tier.aws);
     var perNodeM=workerNode.monthly, perNodeS=workerNode.savings;
-    var rows=[];
-    function row(cat,svcRole,name,regionType,desc,m,s){
-      rows.push({
-        cat:cat, type:SVC[svcRole][pKey], name:name,
-        region: regionType==="ai"?prov.aiRegion:prov.region,
-        desc:desc, monthly:m*factor, upfront:0, savings:s*factor
-      });
-    }
+    var p2=nodeCost(SKU_POOL2, POOL2[pKey]), sysv=nodeCost(SKU_SYS, POOLS[pKey]);
 
     // Live service unit prices (Azure only) → line totals, with sane-band fallback
     var svc = PRICES.svc || {};
@@ -399,18 +395,46 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     var dbM = liveLine(dbLive, 21160.48, 0.3, 3);
     var dbS = (dbM!==21160.48) ? dbM*(17793.45/21160.48) : 17793.45;
 
+    // fixed monthly cost of everything EXCEPT the scaling worker pool (userpool 1)
+    var otherTotal = factor*(storageM + monitorM + dbM + 382.77 + 516.55 + 430.62 + 14000 + 6000)
+                   + 2*p2.monthly + sysv.monthly;
+
+    // nodes needed for capacity, then capped so the total fits the monthly budget
+    var nWneed = realtime
+      ? Math.max(1, Math.ceil(peakN/jobsPerNode))
+      : Math.max(1, Math.ceil(peakN/(jobsPerNode*3)));
+    var maxByBudget = perNodeM>0 ? Math.floor((budget - otherTotal) / perNodeM) : nWneed;
+    var nW = Math.max(1, Math.min(nWneed, Math.max(1, maxByBudget)));
+    var budgetCapped = nW < nWneed;
+
+    var totalSlots=nW*jobsPerNode;
+    var running=Math.min(peakN,totalSlots);
+    var queued=Math.max(0,peakN-totalSlots);
+    var T_sec=spec.base+spec.rate*typMB, T_min=T_sec/60;
+    var batches=Math.ceil(peakN/totalSlots);
+    var Tlast=fmtDur(batches*T_sec);
+
+    // ── build BOM line items ──
+    var rows=[];
+    function row(cat,svcRole,name,regionType,desc,m,s){
+      rows.push({
+        cat:cat, type:SVC[svcRole][pKey], name:name,
+        region: regionType==="ai"?prov.aiRegion:prov.region,
+        desc:desc, monthly:m*factor, upfront:0, savings:s*factor
+      });
+    }
+
     row("Storage","storage","—","local",
       "Block Blob / object storage, General Purpose v2, LRS redundancy, Hot tier, ~1 TB capacity; standard read / write / list operations; 1,000 GB retrieval + 1,000 GB write.",
       storageM, storageM);
 
-    // worker pool (SCALES)
+    // worker pool (SCALES, budget-capped)
     rows.push({
       cat:"Compute", type:SVC.k8s[pKey], name:"userpool 1", region:prov.region,
       desc:"Primary document-processing worker node pool: <b>"+nW+"× "+workerLabel+"</b> ("+tier.vcpu+" vCPUs, "+tier.ram+" GB RAM) × 730 hours, Linux; managed OS disks. ~"+jobsPerNode+" jobs/node.",
       monthly:nW*perNodeM, upfront:0, savings:nW*perNodeS, scaling:true
     });
     // pools: nodeCost returns FINAL per-node; row() re-applies factor, so divide it out
-    var p2=nodeCost(SKU_POOL2, POOL2[pKey]), sysv=nodeCost(SKU_SYS, POOLS[pKey]);
     row("Compute","k8s","userpool 2","local",
       "Secondary worker node pool: 2× "+POOL2[pKey]+" (8 vCPUs, 32 GB RAM) × 730 hours, Linux; managed OS disks.",
       2*p2.monthly/factor, 2*p2.savings/factor);
@@ -451,7 +475,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     return {
       prov:prov, pKey:pKey, rows:rows, totM:totM, totS:totS, totU:totU,
       worker:{label:workerLabel,vcpu:tier.vcpu,ram:tier.ram}, tierKey:tierKey,
-      nW:nW, jobsPerNode:jobsPerNode, totalSlots:totalSlots, running:running, queued:queued,
+      nW:nW, nWneed:nWneed, budgetCapped:budgetCapped, perNodeM:perNodeM, otherTotal:otherTotal,
+      jobsPerNode:jobsPerNode, totalSlots:totalSlots, running:running, queued:queued,
       peakN:peakN, batches:batches, T_sec:T_sec, T_min:T_min, Tlast:Tlast,
       spec:spec, worst:worst, sel:sel, typMB:typMB, maxMB:maxMB,
       ramPerJob:ramPerJob, cpuCap:cpuCap, ramCap:ramCap,
@@ -494,7 +519,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       : "<div class='note ok'>"+ico("<path d='M22 11.1V12a10 10 0 11-5.9-9.1'/><path d='M22 4L12 14.1l-3-3'/>")+"Within budget — "+money(r.budget-r.totM)+" headroom on the on-demand total."+"</div>";
     var save=r.totM-r.totS, spct=r.totM>0?Math.round(save/r.totM*100):0;
     var saveNote="<div class='note save'>"+ico("<path d='M20 12V8H6a2 2 0 010-4h12v4'/><path d='M4 6v12a2 2 0 002 2h14v-4'/><circle cx='16' cy='14' r='1.5'/>")+"Committing to a 1-year savings plan lowers the monthly cost to <b>"+money(r.totS)+"</b> — you save <b>"+money(save)+"/mo ("+spct+"%)</b>.</div>";
-    return note+saveNote
+    var capNote = r.budgetCapped
+      ? "<div class='note warn'>"+ico("<rect x='2' y='3' width='20' height='14' rx='2'/><path d='M8 21h8M12 17v4'/>")+"Budget-capped to <b>"+r.nW+" worker node(s)</b> (<b>"+r.nWneed+"</b> needed for zero queue). To stay within budget, <b>"+r.queued+" job(s) wait in queue</b> — last job finishes in <b>"+r.Tlast+"</b>. Raise the budget to add nodes & cut latency.</div>"
+      : "";
+    return note+capNote+saveNote
       +"<div class='bbar'><div style='width:"+pct+"%;background:"+col+"'></div></div>"
       +"<div class='bbar-l'><span>On-demand: <b>"+money(r.totM)+"</b></span><span>"+pct+"% of budget</span><span>Budget: <b>"+money(r.budget)+"</b></span></div>";
   }
@@ -566,6 +594,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   }
 
   function render(r){
+    LAST=r;
     var modeStr=r.realtime?"Real-time (zero-queue sizing)":"Queue-tolerant (cost-optimised)";
     var providerNote = r.pKey==="azure"
       ? (PRICES.source==="live"
@@ -587,6 +616,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       +"<div class='chips'>"
       +"<div class='chip'><span class='k'>Monthly · On-demand</span><span class='v'>"+inr(r.totM)+" <span class='usd'>("+usd(r.totM)+")</span></span></div>"
       +"<div class='chip save'><span class='k'>Monthly · 1-yr savings</span><span class='v'>"+inr(r.totS)+" <span class='usd'>("+usd(r.totS)+")</span></span></div>"
+      +"<button class='pdf-btn xls-btn no-print' onclick='window.__downloadBOM()' title='Download BOM as Excel (.xlsx)'>"
+      +  "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z'/><path d='M14 2v6h6'/><path d='M9 12l3 4m0-4l-3 4'/></svg> Excel</button>"
       +"<button class='pdf-btn no-print' onclick='window.print()' title='Download / print as PDF'>"
       +  "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 3v12M7 10l5 5 5-5'/><path d='M5 21h14'/></svg> PDF</button>"
       +"</div>"
@@ -728,6 +759,38 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   document.querySelectorAll("#docTypes input, #latGroup input, #sl_typical, #sl_max, #sl_peak, #inp_budget")
     .forEach(function(el){ el.addEventListener("input",refresh); el.addEventListener("change",refresh); });
   $("sel_cloud").addEventListener("change", loadPrices);
+
+  // collapse / expand the left input panel
+  $("toggleNav").addEventListener("click", function(){
+    document.querySelector(".layout").classList.toggle("nav-collapsed");
+  });
+
+  // ── Download BOM as Excel (.xlsx), CSV fallback ──
+  function stripTags(s){ var d=document.createElement("div"); d.innerHTML=String(s==null?"":s); return (d.textContent||d.innerText||"").replace(/\s+/g," ").trim(); }
+  function r2(n){ return Math.round((+n||0)*100)/100; }
+  window.__downloadBOM = function(){
+    var r=LAST; if(!r){ return; }
+    var aoa=[];
+    aoa.push(["Irame — Infrastructure Sizing & Bill of Materials"]);
+    aoa.push(["Provider", r.prov.label, "Region", r.prov.region, "Strategy", r.realtime?"Real-time":"Queue-tolerant", "Generated", today()]);
+    aoa.push(["Budget (INR)", r2(r.budget), "Worker nodes", r.nW, "FX US$1=", r2(FX)]);
+    aoa.push([]);
+    aoa.push(["Service category","Service type","Custom name","Region","Description","Est. monthly cost (INR)","Est. upfront cost (INR)","Est. monthly w/ 1-yr savings (INR)"]);
+    for(var i=0;i<r.rows.length;i++){ var x=r.rows[i];
+      aoa.push([x.cat, stripTags(x.type), x.name||"—", x.region, stripTags(x.desc), r2(x.monthly), r2(x.upfront), r2(x.savings)]);
+    }
+    aoa.push(["TOTAL — monthly estimate","","","","", r2(r.totM), r2(r.totU), r2(r.totS)]);
+    var fname="irame-bom-"+r.prov.label.toLowerCase()+"-"+new Date().toISOString().slice(0,10);
+    if(typeof XLSX!=="undefined"){
+      var ws=XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"]=[{wch:20},{wch:28},{wch:14},{wch:18},{wch:62},{wch:20},{wch:18},{wch:24}];
+      var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"BOM");
+      XLSX.writeFile(wb, fname+".xlsx");
+    } else {
+      var csv=aoa.map(function(row){ return row.map(function(c){ var s=(c==null?"":String(c)); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(","); }).join("\n");
+      var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=fname+".csv"; a.click();
+    }
+  };
 
   $("reset_btn").addEventListener("click",function(){
     $("sl_typical").value=50; $("sl_max").value=75; $("sl_peak").value=40; $("inp_budget").value=200000;
