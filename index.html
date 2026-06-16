@@ -160,6 +160,28 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   .form-panel{border-right:none;border-bottom:1px solid var(--line)}
   .mrow{grid-template-columns:repeat(2,1fr)}
 }
+
+/* PDF / download button */
+.pdf-btn{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;border:none;
+  border-radius:11px;padding:8px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+  box-shadow:var(--shadow-sm);transition:background .15s;align-self:center}
+.pdf-btn:hover{background:var(--brand-600)}
+.pdf-btn svg{width:15px;height:15px}
+
+/* Print → Save as PDF: show only the report, full width, keep colors */
+@media print{
+  @page{margin:14mm}
+  html,body{background:#fff}
+  header,.form-panel,.no-print{display:none !important}
+  .layout{display:block;height:auto}
+  .report-panel{padding:0;overflow:visible;background:#fff}
+  .card,.mc,.fbox{box-shadow:none}
+  .tablewrap{overflow:visible;border:none}
+  .bom{min-width:0;font-size:10.5px}
+  .bom .desc-cell{min-width:0;max-width:none}
+  .card,.mc{break-inside:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
@@ -246,7 +268,13 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     "Standard_D8ads_v5":  { monthly:19341.06,  savings:13546.55  },
     "Standard_D2as_v4":   { monthly:4668.38,   savings:3319.47   }
   }};
-  var PRICES = { vm:{}, source:"baseline", updated:null };
+  var PRICES = { vm:{}, svc:{}, source:"baseline", updated:null };
+
+  // Use a live-derived line value only if it lands within a sane band of the
+  // baseline (guards against a mis-matched meter producing absurd numbers).
+  function liveLine(val, base, lo, hi){
+    return (val!=null && isFinite(val) && val>base*lo && val<base*hi) ? val : base;
+  }
 
   // Resolve a SKU's per-node monthly + savings (live if present, else baseline;
   // if a live entry has no savings-plan price, derive it from the baseline ratio).
@@ -357,9 +385,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       });
     }
 
+    // Live service unit prices (Azure only) → line totals, with sane-band fallback
+    var svc = PRICES.svc || {};
+    var storageM = liveLine(svc.storagePerGB!=null ? svc.storagePerGB*1024 : null, 2069.68, 0.3, 3);
+    var monitorM = liveLine(svc.monitorPerGB!=null ? svc.monitorPerGB*180 : null, 10650.58, 0.3, 3);
+    var dbLive   = svc.pgComputeHourly!=null ? (svc.pgComputeHourly*730 + (svc.pgStoragePerGB!=null?svc.pgStoragePerGB*200:0)) : null;
+    var dbM = liveLine(dbLive, 21160.48, 0.3, 3);
+    var dbS = (dbM!==21160.48) ? dbM*(17793.45/21160.48) : 17793.45;
+
     row("Storage","storage","—","local",
       "Block Blob / object storage, General Purpose v2, LRS redundancy, Hot tier, ~1 TB capacity; standard read / write / list operations; 1,000 GB retrieval + 1,000 GB write.",
-      2069.68, 2069.68);
+      storageM, storageM);
 
     // worker pool (SCALES)
     rows.push({
@@ -381,7 +417,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
     row("Databases","database","irame-pg","local",
       "Managed PostgreSQL, General Purpose; 1× 2-vCore instance × 730 hours; Premium SSD, 200 GiB storage + 200 GiB backup (LRS); no High Availability.",
-      21160.48, 17793.45);
+      dbM, dbS);
 
     row("Containers","registry","—","local",
       "Container registry, Basic tier, 1 registry × 30 days; build minutes; ~5 GB outbound transfer.",
@@ -389,7 +425,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
     row("DevOps","monitor","—","local",
       "Monitoring & logs: ~5 GB/day basic logs + 1 GB/day processed; 1-month interactive retention; 7 dashboards; 25 alert + 25 recording rules; app health checks.",
-      10650.58, 10650.58);
+      monitorM, monitorM);
 
     row("Security","secrets","—","local",
       "Secrets / keys vault: ~100,000 advanced operations / month; 1 certificate renewal.",
@@ -541,6 +577,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       +"<div class='chips'>"
       +"<div class='chip'><span class='k'>Monthly · On-demand</span><span class='v'>"+inr(r.totM)+" <span class='usd'>("+usd(r.totM)+")</span></span></div>"
       +"<div class='chip save'><span class='k'>Monthly · 1-yr savings</span><span class='v'>"+inr(r.totS)+" <span class='usd'>("+usd(r.totS)+")</span></span></div>"
+      +"<button class='pdf-btn no-print' onclick='window.print()' title='Download / print as PDF'>"
+      +  "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 3v12M7 10l5 5 5-5'/><path d='M5 21h14'/></svg> PDF</button>"
       +"</div>"
       +"</div></div>"
 
@@ -633,30 +671,32 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     });
   }
 
-  function applyLive(vm){ PRICES.vm=vm; PRICES.source="live"; PRICES.updated=new Date().toISOString(); refresh(); }
-  function applyOffline(){ PRICES.vm={}; PRICES.source="offline"; PRICES.updated=null; refresh(); }
+  function applyOffline(){ PRICES.vm={}; PRICES.svc={}; PRICES.source="offline"; PRICES.updated=null; refresh(); }
 
-  function tryBackend(){
-    fetch("/api/prices?region=centralindia&currency=INR",{cache:"no-store"})
-      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-      .then(function(d){
-        if(d && d.vm && Object.keys(d.vm).length){ PRICES.vm=d.vm; PRICES.source="live"; PRICES.updated=d.updated; refresh(); }
-        else applyOffline();
-      })
-      .catch(applyOffline);
-  }
-
-  function loadPrices(){
-    var pKey=$("sel_cloud").value;
-    if(pKey!=="azure"){ PRICES.vm={}; PRICES.source="baseline"; PRICES.updated=null; refresh(); return; }
-    PRICES.source="loading"; refresh();
+  // direct browser → Azure (VMs only; usually CORS-blocked, used only when no backend)
+  function directFallback(){
     Promise.all(LIVE_SKUS.map(function(s){
       return fetchSkuDirect(s,"centralindia","INR").catch(function(){ return null; });
     })).then(function(arr){
       var vm={}; arr.forEach(function(r){ if(r) vm[r.sku]=r; });
-      if(Object.keys(vm).length) applyLive(vm);
-      else tryBackend();
-    }).catch(tryBackend);
+      if(Object.keys(vm).length){ PRICES.vm=vm; PRICES.svc={}; PRICES.source="live"; PRICES.updated=new Date().toISOString(); refresh(); }
+      else applyOffline();
+    }).catch(applyOffline);
+  }
+
+  function loadPrices(){
+    var pKey=$("sel_cloud").value;
+    if(pKey!=="azure"){ PRICES.vm={}; PRICES.svc={}; PRICES.source="baseline"; PRICES.updated=null; refresh(); return; }
+    PRICES.source="loading"; refresh();
+    // backend first (returns VM + storage/DB/monitor); direct Azure as fallback
+    fetch("/api/prices?region=centralindia&currency=INR",{cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){
+        if(d && d.vm && Object.keys(d.vm).length){
+          PRICES.vm=d.vm; PRICES.svc=d.svc||{}; PRICES.source="live"; PRICES.updated=d.updated; refresh();
+        } else throw 0;
+      })
+      .catch(directFallback);
   }
 
   document.querySelectorAll("#docTypes input, #latGroup input, #sl_typical, #sl_max, #sl_peak, #inp_budget")

@@ -1,110 +1,114 @@
 /**
- * Irame — Infrastructure Sizing & BOM Tool
- * Zero-dependency Node backend.
+ * Irame — Infrastructure Sizing & BOM Tool — zero-dependency Node server.
+ *   node server.js   →   http://localhost:3000
  *
- *   node server.js          → http://localhost:3000
- *
- * Serves the HTML and exposes /api/prices, which pulls LIVE compute prices
- * from the official Azure Retail Prices API (free, public, no auth):
- *   https://prices.azure.com/api/retail/prices
- *
- * If the API is unreachable (offline / firewall / proxy), the UI falls back
- * to the baked-in baseline prices automatically — nothing breaks.
+ * Serves index.html and exposes /api/prices, pulling LIVE prices from the
+ * official Azure Retail Prices API (VM compute + storage/DB/monitor meters).
+ * Falls back to the baked-in baseline in the page if the API is unreachable.
+ * Requires Node 18+ (uses global fetch). Add ?debug=1 to inspect meter matches.
  */
 
 "use strict";
 
-const http  = require("http");
-const https = require("https");
-const fs    = require("fs");
-const path  = require("path");
+const http = require("http");
+const fs   = require("fs");
+const path = require("path");
 
-const PORT = process.env.PORT || 3000;
-const HTML = path.join(__dirname, "index.html");
-const HOURS = 730; // hours per month for VM monthly cost
+const PORT  = process.env.PORT || 3000;
+const HTML  = path.join(__dirname, "index.html");
+const HOURS = 730;
+const BASE  = "https://prices.azure.com/api/retail/prices?api-version=2023-01-01-preview";
 
-// VM SKUs we price live (must match the SKUs used in the HTML)
 const VM_SKUS = [
-  "Standard_D16ads_v5",
-  "Standard_E16ads_v5",
-  "Standard_E32ads_v5",
-  "Standard_D8ads_v5",
-  "Standard_D2as_v4"
+  "Standard_D16ads_v5", "Standard_E16ads_v5", "Standard_E32ads_v5",
+  "Standard_D8ads_v5", "Standard_D2as_v4"
 ];
 
-// in-memory cache: "region|currency" -> { at, data }
 const cache = {};
-const TTL = 12 * 60 * 60 * 1000; // 12h
+const TTL = 12 * 60 * 60 * 1000;
 
-function azGet(url) {
-  return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { Accept: "application/json" } }, (res) => {
-      let body = "";
-      res.on("data", (d) => (body += d));
-      res.on("end", () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try { resolve(JSON.parse(body)); }
-          catch (e) { reject(new Error("bad JSON")); }
-        } else {
-          reject(new Error("HTTP " + res.statusCode));
-        }
-      });
-    });
-    req.on("error", reject);
-    req.setTimeout(15000, () => req.destroy(new Error("timeout")));
-  });
+async function azQuery(filter, currency) {
+  const url = BASE + "&currencyCode='" + currency + "'&$filter=" + encodeURIComponent(filter);
+  const r = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  return j.Items || j.items || [];
 }
 
-// Fetch on-demand (Linux, consumption) + 1-yr savings-plan price for one SKU
 async function fetchSku(sku, region, currency) {
   const filter =
     "armRegionName eq '" + region + "' and serviceName eq 'Virtual Machines'" +
     " and armSkuName eq '" + sku + "' and priceType eq 'Consumption'";
-  const url =
-    "https://prices.azure.com/api/retail/prices?api-version=2023-01-01-preview" +
-    "&currencyCode='" + currency + "'&$filter=" + encodeURIComponent(filter);
-
-  const json = await azGet(url);
-  const items = (json.Items || json.items || []).filter((it) => {
-    const p = it.productName || "";
-    const m = it.meterName || "";
-    // exclude Windows licence meters and Spot / Low-Priority pricing
+  const items = (await azQuery(filter, currency)).filter((it) => {
+    const p = it.productName || "", m = it.meterName || "";
     return !/Windows/i.test(p) && !/Spot|Low Priority/i.test(m);
   });
   if (!items.length) return null;
-
-  items.sort((a, b) => a.retailPrice - b.retailPrice); // cheapest = Linux compute
+  items.sort((a, b) => a.retailPrice - b.retailPrice);
   const it = items[0];
   const monthly = it.retailPrice * HOURS;
-
   let savings = null;
   if (Array.isArray(it.savingsPlan)) {
-    const oneYr = it.savingsPlan.find((s) => /1 Year|P1Y/i.test(s.term || ""));
-    if (oneYr && typeof oneYr.retailPrice === "number") {
-      savings = oneYr.retailPrice * HOURS;
-    }
+    const o = it.savingsPlan.find((s) => /1 Year|P1Y/i.test(s.term || ""));
+    if (o && typeof o.retailPrice === "number") savings = o.retailPrice * HOURS;
   }
-  return { sku, monthly, savings, unit: it.unitOfMeasure || "1 Hour", meter: it.meterName || "" };
+  return { sku, monthly, savings };
+}
+
+async function fetchMeter(filter, currency, extra) {
+  let items = (await azQuery(filter, currency)).filter(
+    (it) => (it.type || it.priceType) === "Consumption" && it.retailPrice > 0
+  );
+  if (extra) items = items.filter(extra);
+  if (!items.length) return null;
+  items.sort((a, b) => a.retailPrice - b.retailPrice);
+  const it = items[0];
+  return { price: it.retailPrice, unit: it.unitOfMeasure || "", meter: it.meterName || "", product: it.productName || "" };
+}
+
+async function fetchServices(region, currency) {
+  const svc = {}, debug = {};
+  try {
+    const m = await fetchMeter(
+      "serviceName eq 'Storage' and armRegionName eq '" + region + "' and meterName eq 'Hot LRS Data Stored'",
+      currency, (it) => /Block Blob/i.test(it.productName || ""));
+    if (m) { svc.storagePerGB = m.price; debug.storage = m; }
+  } catch (e) { debug.storageErr = String(e.message || e); }
+  try {
+    const m = await fetchMeter(
+      "serviceName eq 'Log Analytics' and armRegionName eq '" + region + "' and meterName eq 'Pay-as-you-go Data Ingestion'",
+      currency);
+    if (m) { svc.monitorPerGB = m.price; debug.monitor = m; }
+  } catch (e) { debug.monitorErr = String(e.message || e); }
+  try {
+    const m = await fetchMeter(
+      "serviceName eq 'Azure Database for PostgreSQL' and armRegionName eq '" + region + "'", currency,
+      (it) => /Flexible/i.test(it.productName || "") && /General Purpose/i.test(it.productName || "") &&
+              /D2s? v3|D2ds? v4|2 v[Cc]ore/i.test((it.meterName || "") + (it.productName || "")));
+    if (m) { svc.pgComputeHourly = m.price; debug.pgCompute = m; }
+  } catch (e) { debug.pgComputeErr = String(e.message || e); }
+  try {
+    const m = await fetchMeter(
+      "serviceName eq 'Azure Database for PostgreSQL' and armRegionName eq '" + region + "'", currency,
+      (it) => /Flexible/i.test(it.productName || "") && /Storage/i.test(it.meterName || ""));
+    if (m) { svc.pgStoragePerGB = m.price; debug.pgStorage = m; }
+  } catch (e) { debug.pgStorageErr = String(e.message || e); }
+  return { svc, debug };
 }
 
 async function getPrices(region, currency) {
   const key = region + "|" + currency;
   if (cache[key] && Date.now() - cache[key].at < TTL) return cache[key].data;
-
   const vm = {};
   for (const sku of VM_SKUS) {
-    try {
-      const r = await fetchSku(sku, region, currency);
-      if (r) vm[sku] = r;
-    } catch (e) { /* skip this SKU, keep going */ }
+    try { const x = await fetchSku(sku, region, currency); if (x) vm[sku] = x; } catch (e) {}
   }
-
+  let svc = {}, debug = {};
+  try { const s = await fetchServices(region, currency); svc = s.svc; debug = s.debug; }
+  catch (e) { debug.svcErr = String(e.message || e); }
   const data = {
-    provider: "azure",
-    region, currency, hours: HOURS,
-    vm,
-    updated: new Date().toISOString(),
-    source: Object.keys(vm).length ? "live" : "empty"
+    provider: "azure", region, currency, hours: HOURS, vm, svc, debug,
+    updated: new Date().toISOString(), source: Object.keys(vm).length ? "live" : "empty"
   };
   cache[key] = { at: Date.now(), data };
   return data;
@@ -112,39 +116,34 @@ async function getPrices(region, currency) {
 
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost");
-
   if (u.pathname === "/api/prices") {
     const region = u.searchParams.get("region") || "centralindia";
     const currency = u.searchParams.get("currency") || "INR";
+    const debug = u.searchParams.get("debug") === "1";
     try {
       const data = await getPrices(region, currency);
-      res.writeHead(200, {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-store"
-      });
-      res.end(JSON.stringify(data));
+      const out = Object.assign({}, data);
+      if (!debug) delete out.debug;
+      res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
+      res.end(JSON.stringify(out));
     } catch (e) {
       res.writeHead(502, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
       res.end(JSON.stringify({ source: "error", error: String((e && e.message) || e) }));
     }
     return;
   }
-
-  if (u.pathname === "/" || u.pathname === "/index.html" || u.pathname === "/irame-sizing-tool.html") {
+  if (u.pathname === "/" || u.pathname === "/index.html") {
     fs.readFile(HTML, (err, buf) => {
-      if (err) { res.writeHead(500); res.end("irame-sizing-tool.html not found next to server.js"); return; }
+      if (err) { res.writeHead(500); res.end("index.html not found"); return; }
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(buf);
     });
     return;
   }
-
   res.writeHead(404, { "Content-Type": "text/plain" });
   res.end("Not found");
 });
 
 server.listen(PORT, () => {
   console.log("Irame sizing tool running →  http://localhost:" + PORT);
-  console.log("Live prices via Azure Retail Prices API (falls back to baseline if offline).");
 });
