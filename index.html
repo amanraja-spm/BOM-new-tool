@@ -268,7 +268,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     "Standard_D8ads_v5":  { monthly:19341.06,  savings:13546.55  },
     "Standard_D2as_v4":   { monthly:4668.38,   savings:3319.47   }
   }};
-  var PRICES = { vm:{}, svc:{}, source:"baseline", updated:null };
+  var PRICES = { vm:{}, svc:{}, awsVm:{}, source:"baseline", updated:null };
 
   // Use a live-derived line value only if it lands within a sane band of the
   // baseline (guards against a mis-matched meter producing absurd numbers).
@@ -354,7 +354,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     var tierKey = maxMB>5000?"superheavy":maxMB>1000?"heavy":"standard";
     var tier=TIERS[tierKey];
     var workerLabel = tier[pKey==="azure"?"az":pKey==="aws"?"aws":"gcp"];
-    var workerVM = getVM(tier.sku);
+    var awsLive = (pKey==="aws" && PRICES.awsVm && Object.keys(PRICES.awsVm).length>0);
+    // final per-node {monthly,savings}: live AWS price if available, else Azure baseline × factor
+    function nodeCost(azSku, awsLabel){
+      if(awsLive && PRICES.awsVm[awsLabel]) return { monthly:PRICES.awsVm[awsLabel].monthly, savings:PRICES.awsVm[awsLabel].savings };
+      var v=getVM(azSku); return { monthly:v.monthly*factor, savings:v.savings*factor };
+    }
 
     // concurrency per node
     var ramPerJob=Math.max(0.5,(typMB*spec.mem)/1024);
@@ -375,7 +380,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     var Tlast=fmtDur(batches*T_sec);
 
     // ── build BOM line items ──
-    var perNodeM=workerVM.monthly*factor, perNodeS=workerVM.savings*factor;
+    var workerNode=nodeCost(tier.sku, tier.aws);
+    var perNodeM=workerNode.monthly, perNodeS=workerNode.savings;
     var rows=[];
     function row(cat,svcRole,name,regionType,desc,m,s){
       rows.push({
@@ -403,13 +409,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       desc:"Primary document-processing worker node pool: <b>"+nW+"× "+workerLabel+"</b> ("+tier.vcpu+" vCPUs, "+tier.ram+" GB RAM) × 730 hours, Linux; managed OS disks. ~"+jobsPerNode+" jobs/node.",
       monthly:nW*perNodeM, upfront:0, savings:nW*perNodeS, scaling:true
     });
-    var p2=getVM(SKU_POOL2), sysv=getVM(SKU_SYS);
+    // pools: nodeCost returns FINAL per-node; row() re-applies factor, so divide it out
+    var p2=nodeCost(SKU_POOL2, POOL2[pKey]), sysv=nodeCost(SKU_SYS, POOLS[pKey]);
     row("Compute","k8s","userpool 2","local",
       "Secondary worker node pool: 2× "+POOL2[pKey]+" (8 vCPUs, 32 GB RAM) × 730 hours, Linux; managed OS disks.",
-      2*p2.monthly, 2*p2.savings);
+      2*p2.monthly/factor, 2*p2.savings/factor);
     row("Compute","k8s","systempool","local",
       "System node pool: 1× "+POOLS[pKey]+" (2 vCPUs, 8 GB RAM) × 730 hours, Linux; runs cluster system services.",
-      sysv.monthly, sysv.savings);
+      sysv.monthly/factor, sysv.savings/factor);
 
     row("Networking","network","—","local",
       "Virtual network + 2 subnets; ~200 GB outbound data transfer / month.",
@@ -547,12 +554,13 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   }
 
   function priceBadge(){
-    if(PRICES.source==="live"){
+    if(PRICES.source==="live" || PRICES.source==="live-aws"){
       var d=PRICES.updated?new Date(PRICES.updated):null;
-      return "<span style='color:var(--save);font-weight:800'>● Live Azure prices</span>"
+      var lbl=PRICES.source==="live-aws" ? "● Live AWS prices" : "● Live Azure prices";
+      return "<span style='color:var(--save);font-weight:800'>"+lbl+"</span>"
         + (d?" · updated "+d.toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"");
     }
-    if(PRICES.source==="loading") return "<span style='color:var(--ink-3);font-weight:700'>○ Fetching live prices…</span>";
+    if(PRICES.source==="loading") return "<span style='color:var(--ink-3);font-weight:700'>○ Fetching live prices… (AWS first load can take ~30s)</span>";
     if(PRICES.source==="offline") return "<span style='color:var(--warn);font-weight:800'>● Baseline prices — live fetch unavailable</span>";
     return "<span style='color:var(--ink-3);font-weight:700'>● Baseline prices</span>";
   }
@@ -563,7 +571,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       ? (PRICES.source==="live"
           ? "Compute lines priced live from the Azure Retail Prices API; platform/AI lines are a fixed baseline."
           : "Baseline mirrors your Azure Central India estimate; worker pool scales with the workload.")
-      : r.prov.label+" line items are indicative equivalents mapped from the Azure baseline (factor "+r.prov.factor.toFixed(2)+"×).";
+      : (r.pKey==="aws" && PRICES.source==="live-aws")
+        ? "Compute (worker / pools) priced live from the AWS EC2 price list, ap-south-1, on-demand (₹ at ₹"+FX+"/$). Savings ≈ 1-yr commit estimate; platform/AI lines are an indicative baseline."
+        : r.prov.label+" line items are indicative equivalents mapped from the Azure baseline (factor "+r.prov.factor.toFixed(2)+"×).";
 
     var html=
       "<div class='rh'><div class='rh-top'>"
@@ -686,6 +696,20 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
   function loadPrices(){
     var pKey=$("sel_cloud").value;
+    PRICES.awsVm={};
+    if(pKey==="aws"){
+      // AWS live compute via backend (streamed EC2 price file; first call can take ~30-60s)
+      PRICES.vm={}; PRICES.svc={}; PRICES.source="loading"; PRICES.updated=null; refresh();
+      fetch("/api/prices?provider=aws",{cache:"no-store"})
+        .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+        .then(function(d){
+          if(d && d.awsVm && Object.keys(d.awsVm).length){ PRICES.awsVm=d.awsVm; PRICES.source="live-aws"; PRICES.updated=d.updated; }
+          else { PRICES.source="baseline"; }
+          refresh();
+        })
+        .catch(function(){ PRICES.awsVm={}; PRICES.source="baseline"; refresh(); });
+      return;
+    }
     if(pKey!=="azure"){ PRICES.vm={}; PRICES.svc={}; PRICES.source="baseline"; PRICES.updated=null; refresh(); return; }
     PRICES.source="loading"; refresh();
     // backend first (returns VM + storage/DB/monitor); direct Azure as fallback
