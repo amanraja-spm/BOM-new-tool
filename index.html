@@ -438,6 +438,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   function posToMB(p){ return Math.round(Math.pow(10, p/25)); }
   function fmtMB(mb){ if(mb>=10000)return(mb/1024).toFixed(0)+" GB"; if(mb>=1024)return(mb/1024).toFixed(1)+" GB"; return mb+" MB"; }
   function fmtDur(s){ if(s<60)return Math.round(s)+" sec"; if(s<3600)return(s/60).toFixed(1)+" min"; if(s<86400)return(s/3600).toFixed(1)+" hrs"; return(s/86400).toFixed(1)+" days"; }
+  function fmtN(n){ return (+n||0).toLocaleString("en-US",{maximumFractionDigits:0}); }
   function inr(n){ return "₹"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function usd(n){ return "$"+Math.round(n/FX).toLocaleString("en-US"); }
   function money(n){ return CUR==="INR" ? inr(n) : usd(n); }
