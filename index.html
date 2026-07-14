@@ -40,6 +40,8 @@ header p{font-size:12px;opacity:.8;margin-top:2px;font-weight:400}
 .sec .ico svg{width:13px;height:13px}
 
 .fg{margin-bottom:18px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2 .fg{margin-bottom:14px}
 .lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:650;color:var(--ink);margin-bottom:7px}
 .lbl .sub{font-weight:400;color:var(--ink-3);font-size:11px}
 .hint{font-size:11px;color:var(--ink-3);margin:-3px 0 7px}
@@ -155,6 +157,13 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .al li b{color:var(--ink);font-weight:700}
 .foot{font-size:11px;color:var(--ink-3);text-align:center;margin-top:6px;line-height:1.6}
 
+/* BOQ requirements summary */
+.boq-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.boq-item{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--line-2)}
+.boq-k{color:var(--ink-3);font-weight:600;white-space:nowrap}
+.boq-v{color:var(--ink);font-weight:700;text-align:right}
+@media(max-width:760px){.boq-grid{grid-template-columns:1fr}}
+
 @media (max-width:1100px){
   .layout{grid-template-columns:1fr;height:auto}
   .form-panel{border-right:none;border-bottom:1px solid var(--line)}
@@ -214,7 +223,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <div class="layout">
 
   <div class="form-panel">
-    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>Workload Profile</div>
+    <!-- ── Usage & Scale ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>Usage &amp; Scale</div>
 
     <div class="fg">
       <label class="lbl">Document types <span class="sub">select all that apply</span></label>
@@ -225,13 +235,95 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <label class="opt"><input type="checkbox" id="cb_scanned"><span><span class="ttl">Scanned PDF</span><span class="desc">OCR required, complex headers</span></span></label>
       </div>
     </div>
-
     <div class="fg"><label class="lbl">Typical file size</label><input type="range" id="sl_typical" min="0" max="100" value="50"><div class="sv" id="lbl_typical"></div></div>
     <div class="fg"><label class="lbl">Max file size <span class="sub">sets worker tier</span></label><input type="range" id="sl_max" min="0" max="100" value="75"><div class="sv" id="lbl_max"></div></div>
     <div class="fg"><label class="lbl">Peak parallel submissions</label><div class="hint">Jobs arriving simultaneously at peak</div><input type="range" id="sl_peak" min="1" max="500" value="40" step="1"><div class="sv" id="lbl_peak"></div></div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Users now</label><input type="number" id="inp_users_now" value="5" min="1" step="1"></div>
+      <div class="fg"><label class="lbl">Users (12&nbsp;mo)</label><input type="number" id="inp_users_future" value="15" min="1" step="1"></div>
+    </div>
+    <div class="fg"><label class="lbl">Load pattern <span class="sub">reserved vs on-demand fit</span></label>
+      <select id="sel_load"><option value="bh">Business hours only</option><option value="247" selected>24/7</option><option value="spike">Seasonal spikes</option></select></div>
 
-    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg></span>Infrastructure</div>
+    <!-- ── Region & Compliance ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Region &amp; Compliance</div>
+    <div class="fg"><label class="lbl">Preferred region</label>
+      <select id="sel_region">
+        <option value="centralindia" selected>Central India</option>
+        <option value="southindia">South India</option>
+        <option value="westindia">West India</option>
+        <option value="eastus">East US</option>
+        <option value="westeurope">West Europe</option>
+        <option value="southeastasia">Southeast Asia</option>
+      </select></div>
+    <div class="fg"><label class="lbl">Compliance</label>
+      <select id="sel_compliance"><option value="none" selected>None</option><option value="hipaa">HIPAA</option><option value="gdpr">GDPR</option><option value="rbi">RBI</option><option value="other">Other</option></select></div>
 
+    <!-- ── Compute ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg></span>Compute</div>
+    <div class="fg"><label class="lbl">Workload type</label>
+      <select id="sel_workload"><option value="aks" selected>Containerized (AKS)</option><option value="vm">Virtual Machines</option><option value="both">Both</option></select></div>
+    <div class="fg"><label class="lbl">Operating system</label>
+      <select id="sel_os"><option value="linux" selected>Linux</option><option value="windows">Windows (+ licensing)</option></select></div>
+    <div class="fg"><label class="lbl">Environments <span class="sub">costed separately</span></label>
+      <select id="sel_envs"><option value="1" selected>Prod only</option><option value="2">Dev + Prod</option><option value="3">Dev + Test + Prod</option></select></div>
+
+    <!-- ── Storage ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0018 0V5M3 12a9 3 0 0018 0"/></svg></span>Storage</div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Data volume (GB)</label><input type="number" id="inp_data_vol" value="1024" min="1" step="100"></div>
+      <div class="fg"><label class="lbl">Growth (%/yr)</label><input type="number" id="inp_growth" value="0" min="0" max="500" step="5"></div>
+    </div>
+    <div class="fg"><label class="lbl">Access tier</label>
+      <select id="sel_stier"><option value="hot" selected>Hot</option><option value="cool">Cool</option><option value="archive">Archive</option></select></div>
+    <div class="fg"><label class="lbl">Redundancy</label>
+      <select id="sel_redund"><option value="lrs" selected>LRS</option><option value="zrs">ZRS</option><option value="grs">GRS</option></select></div>
+
+    <!-- ── Database ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6a8 3 0 0016 0V5M4 11v6a8 3 0 0016 0v-6"/></svg></span>Database</div>
+    <div class="fg"><label class="lbl">Engine</label>
+      <select id="sel_dbengine"><option value="postgres" selected>PostgreSQL</option><option value="sql">Azure SQL</option><option value="mysql">MySQL</option><option value="cosmos">Cosmos DB</option><option value="none">None</option></select></div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">vCores</label><input type="number" id="inp_dbvcores" value="2" min="1" step="1"></div>
+      <div class="fg"><label class="lbl">Data (GB)</label><input type="number" id="inp_dbsize" value="200" min="1" step="50"></div>
+    </div>
+    <div class="fg"><label class="lbl">High Availability</label>
+      <select id="sel_dbha"><option value="no" selected>No</option><option value="yes">Yes (≈ 2× compute)</option></select></div>
+
+    <!-- ── Networking ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg></span>Networking</div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Private endpoints</label><input type="number" id="inp_endpoints" value="0" min="0" step="1"></div>
+      <div class="fg"><label class="lbl">Egress (GB/mo)</label><input type="number" id="inp_egress" value="200" min="0" step="50"></div>
+    </div>
+    <div class="fg"><label class="lbl">Gateway / WAF / LB</label>
+      <select id="sel_gateway"><option value="none" selected>None</option><option value="lb">Load Balancer</option><option value="agw">Application Gateway</option><option value="waf">App Gateway + WAF</option></select></div>
+
+    <!-- ── AI / Machine Learning ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 14h.01M15 14h.01"/></svg></span>AI / Machine Learning</div>
+    <div class="fg">
+      <label class="lbl">Models <span class="sub">select all that apply</span></label>
+      <div class="opt-group" id="aiModels">
+        <label class="opt on"><input type="checkbox" id="cb_gptmini" checked><span><span class="ttl">GPT-5.4 mini</span></span></label>
+        <label class="opt on"><input type="checkbox" id="cb_gpt55" checked><span><span class="ttl">GPT-5.5</span></span></label>
+        <label class="opt"><input type="checkbox" id="cb_embed"><span><span class="ttl">Embeddings</span></span></label>
+      </div>
+    </div>
+    <div class="fg"><label class="lbl">Monthly tokens <span class="sub">millions</span></label><input type="number" id="inp_tokens" value="94" min="0" step="1"></div>
+    <div class="fg"><label class="lbl">Usage mode</label>
+      <select id="sel_aimode"><option value="rt" selected>Real-time (on-demand)</option><option value="batch">Batch (≈ 50% off)</option></select></div>
+
+    <!-- ── Monitoring, Security & DevOps ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg></span>Monitoring, Security &amp; DevOps</div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Log retention (days)</label><input type="number" id="inp_retention" value="30" min="7" max="730" step="1"></div>
+      <div class="fg"><label class="lbl">Key Vault ops (K/mo)</label><input type="number" id="inp_kv" value="100" min="0" step="10"></div>
+    </div>
+    <div class="fg"><label class="lbl">Container registry tier</label>
+      <select id="sel_registry"><option value="basic" selected>Basic</option><option value="standard">Standard</option><option value="premium">Premium</option></select></div>
+
+    <!-- ── Commercial Terms ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Commercial Terms</div>
     <div class="fg">
       <label class="lbl">Cloud provider</label>
       <select id="sel_cloud">
@@ -240,9 +332,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <option value="gcp">GCP — asia-south1 (Mumbai)</option>
       </select>
     </div>
-
+    <div class="fg"><label class="lbl">Pricing preference</label>
+      <select id="sel_pricing"><option value="payg" selected>Pay-as-you-go</option><option value="1yr">1-year reserved / savings</option><option value="3yr">3-year reserved / savings</option></select></div>
     <div class="fg"><label class="lbl">Monthly budget <span class="sub">₹ / month</span></label><div class="input-prefix"><span>₹</span><input type="number" id="inp_budget" value="200000" min="10000" max="9000000" step="10000"></div></div>
-
+    <div class="fg"><label class="lbl">Support plan</label>
+      <select id="sel_support"><option value="basic" selected>Basic (free)</option><option value="standard">Standard</option><option value="prodirect">Professional Direct</option></select></div>
     <div class="fg">
       <label class="lbl">Capacity strategy</label>
       <div class="opt-group" id="latGroup">
@@ -311,6 +405,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     gcp:   { label:"GCP",   region:"asia-south1 (Mumbai)",      aiRegion:"us-east1",  factor:0.97 }
   };
 
+  var REGION_LABEL = { centralindia:"Central India", southindia:"South India", westindia:"West India", eastus:"East US", westeurope:"West Europe", southeastasia:"Southeast Asia" };
+
   // service-type names by role per provider
   var SVC = {
     storage:  { azure:"Storage Accounts",               aws:"Amazon S3",                  gcp:"Cloud Storage" },
@@ -320,7 +416,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     registry: { azure:"Azure Container Registry",        aws:"Amazon ECR",                 gcp:"Artifact Registry" },
     monitor:  { azure:"Azure Monitor",                   aws:"Amazon CloudWatch",          gcp:"Cloud Monitoring" },
     secrets:  { azure:"Key Vault",                       aws:"AWS Secrets Manager",        gcp:"Secret Manager" },
-    ai:       { azure:"Azure OpenAI",                    aws:"Amazon Bedrock",             gcp:"Vertex AI" }
+    ai:       { azure:"Azure OpenAI",                    aws:"Amazon Bedrock",             gcp:"Vertex AI" },
+    pe:       { azure:"Private Endpoint",                aws:"AWS PrivateLink",            gcp:"Private Service Connect" },
+    egress:   { azure:"Bandwidth (egress)",             aws:"Data Transfer Out",          gcp:"Network Egress" },
+    gateway:  { azure:"Application Gateway",             aws:"ALB / WAF",                  gcp:"Cloud Load Balancing" },
+    support:  { azure:"Azure Support",                   aws:"AWS Support",                gcp:"Cloud Customer Care" }
   };
   // secondary / system pool instance label per provider
   var POOL2 = { azure:"D8ads v5", aws:"m5.2xlarge", gcp:"n2-standard-8" };
@@ -356,6 +456,25 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     var chk   = document.querySelector("input[name='latmode']:checked");
     var realtime = chk ? chk.value==="realtime" : true;
 
+    // ── BOQ intake inputs ──
+    var boq = {
+      usersNow:+$("inp_users_now").value||1, usersFut:+$("inp_users_future").value||1, load:$("sel_load").value,
+      region:$("sel_region").value, compliance:$("sel_compliance").value,
+      workload:$("sel_workload").value, os:$("sel_os").value, envs:+$("sel_envs").value||1,
+      dataVol:+$("inp_data_vol").value||0, growth:+$("inp_growth").value||0, stier:$("sel_stier").value, redund:$("sel_redund").value,
+      dbEngine:$("sel_dbengine").value, dbVcores:+$("inp_dbvcores").value||1, dbSize:+$("inp_dbsize").value||0, dbHA:$("sel_dbha").value==="yes",
+      endpoints:+$("inp_endpoints").value||0, egress:+$("inp_egress").value||0, gateway:$("sel_gateway").value,
+      aiModels:{mini:$("cb_gptmini").checked, gpt55:$("cb_gpt55").checked, embed:$("cb_embed").checked},
+      tokens:+$("inp_tokens").value||0, aiBatch:$("sel_aimode").value==="batch",
+      retention:+$("inp_retention").value||30, kv:+$("inp_kv").value||0, registry:$("sel_registry").value,
+      pricing:$("sel_pricing").value, support:$("sel_support").value
+    };
+    var envFactor = boq.envs;                                  // each env costed separately (compute)
+    var osFactor  = boq.os==="windows" ? 1.4 : 1;             // Windows licensing uplift on compute
+    var STIER = { hot:1, cool:0.52, archive:0.10 };            // storage price vs Hot
+    var REDUND = { lrs:1, zrs:1.25, grs:2.0 };                 // redundancy multiplier
+    var effVolGB = Math.round(boq.dataVol * (1 + boq.growth/100)); // 12-mo projected volume
+
     var sel=[];
     if($("cb_light").checked)sel.push("light");
     if($("cb_complex").checked)sel.push("complex");
@@ -382,28 +501,66 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     var ramCap=Math.floor(tier.ram/ramPerJob);
     var jobsPerNode=Math.max(1,Math.min(cpuCap,ramCap,20));
 
-    // ── line inputs (computed before sizing so the budget can cap node count) ──
+    // ── per-node compute costs (live/baseline) with Windows-licensing uplift ──
     var workerNode=nodeCost(tier.sku, tier.aws);
-    var perNodeM=workerNode.monthly, perNodeS=workerNode.savings;
     var p2=nodeCost(SKU_POOL2, POOL2[pKey]), sysv=nodeCost(SKU_SYS, POOLS[pKey]);
+    var perNodeM=workerNode.monthly, perNodeS=workerNode.savings;
+    var wNodeM=perNodeM*osFactor, wNodeS=perNodeS*osFactor;
+    var p2M=p2.monthly*osFactor, p2S=p2.savings*osFactor;
+    var sysM=sysv.monthly*osFactor, sysS=sysv.savings*osFactor;
+    var pool2Final=2*envFactor*p2M, pool2FinalS=2*envFactor*p2S;
+    var systemFinal=envFactor*sysM, systemFinalS=envFactor*sysS;
 
-    // Live service unit prices (Azure only) → line totals, with sane-band fallback
     var svc = PRICES.svc || {};
-    var storageM = liveLine(svc.storagePerGB!=null ? svc.storagePerGB*1024 : null, 2069.68, 0.3, 3);
-    var monitorM = liveLine(svc.monitorPerGB!=null ? svc.monitorPerGB*180 : null, 10650.58, 0.3, 3);
-    var dbLive   = svc.pgComputeHourly!=null ? (svc.pgComputeHourly*2*730 + (svc.pgPrimaryStorageGB||0)*200 + (svc.pgBackupStorageGB||0)*200) : null;
-    var dbM = liveLine(dbLive, 21160.48, 0.3, 3);
-    var dbS = (dbM!==21160.48) ? dbM*(17793.45/21160.48) : 17793.45;
+
+    // Storage — driven by volume × access tier × redundancy (live Hot LRS per-GB)
+    var baseHotPerGB = svc.storagePerGB!=null ? svc.storagePerGB : 2.0212;
+    var storagePerGBeff = baseHotPerGB * (STIER[boq.stier]||1) * (REDUND[boq.redund]||1);
+    var storageFinal = storagePerGBeff * effVolGB * factor;
+
+    // Database — engine × vCores × HA + storage/backup
+    var vcoreHr = svc.pgComputeHourly!=null ? svc.pgComputeHourly : 11.530946;
+    var primGB  = svc.pgPrimaryStorageGB!=null ? svc.pgPrimaryStorageGB : 12.535718;
+    var bkpGB   = svc.pgBackupStorageGB!=null ? svc.pgBackupStorageGB : 9.090788;
+    var ENGF = { postgres:1, sql:1.15, mysql:1.0, cosmos:1.5, none:0 };
+    var engF = ENGF[boq.dbEngine]!=null ? ENGF[boq.dbEngine] : 1;
+    var dbCompute = vcoreHr*boq.dbVcores*730*(boq.dbHA?2:1);
+    var dbStorage = primGB*boq.dbSize + bkpGB*boq.dbSize;
+    var dbFinal = (dbCompute+dbStorage)*engF*factor;
+    var dbSFinal = dbFinal*0.84;
+
+    // Other services — driven by BOQ inputs
+    var retF = 1 + Math.max(0, boq.retention-31)/30*0.05;
+    var monitorFinal = 10650.58*retF*factor;
+    var kvFinal = 430.62*(boq.kv/100)*factor;
+    var REG = { basic:516.55, standard:1900, premium:4700 };
+    var registryFinal = (REG[boq.registry]||516.55)*factor;
+    var networkFinal = 382.77*factor;
+    var peFinal = boq.endpoints>0 ? boq.endpoints*690*factor : 0;
+    var egBill = Math.max(0, boq.egress-100);
+    var egressFinal = boq.egress>0 ? egBill*8.2*factor : 0;
+    var GW = { none:0, lb:2000, agw:18000, waf:28000 };
+    var gatewayFinal = (GW[boq.gateway]||0)*factor;
+    var SUP = { basic:0, standard:8600, prodirect:86000 };
+    var supportFinal = (SUP[boq.support]||0)*factor;
+
+    // AI — selected models scaled by monthly token volume + batch discount
+    var AIM = { mini:{name:"GPT-5.4 mini",cost:14000,tokM:87.3}, gpt55:{name:"GPT-5.5",cost:6000,tokM:6.6}, embed:{name:"Embeddings",cost:1200,tokM:50} };
+    var aiSel=[]; if(boq.aiModels.mini)aiSel.push("mini"); if(boq.aiModels.gpt55)aiSel.push("gpt55"); if(boq.aiModels.embed)aiSel.push("embed");
+    var baseTokM=0; aiSel.forEach(function(k){ baseTokM+=AIM[k].tokM; });
+    var aiScale = baseTokM>0 ? boq.tokens/baseTokM : 0;
+    var aiBatchF = boq.aiBatch?0.5:1;
+    var aiLines=[], aiTotalFinal=0;
+    aiSel.forEach(function(k){ var m=AIM[k].cost*aiScale*aiBatchF*factor; aiLines.push({k:k,m:m}); aiTotalFinal+=m; });
 
     // fixed monthly cost of everything EXCEPT the scaling worker pool (userpool 1)
-    var otherTotal = factor*(storageM + monitorM + dbM + 382.77 + 516.55 + 430.62 + 14000 + 6000)
-                   + 2*p2.monthly + sysv.monthly;
+    var otherTotal = storageFinal + pool2Final + systemFinal + networkFinal + dbFinal
+      + registryFinal + monitorFinal + kvFinal + peFinal + egressFinal + gatewayFinal + supportFinal + aiTotalFinal;
 
-    // nodes needed for capacity, then capped so the total fits the monthly budget
-    var nWneed = realtime
-      ? Math.max(1, Math.ceil(peakN/jobsPerNode))
-      : Math.max(1, Math.ceil(peakN/(jobsPerNode*3)));
-    var maxByBudget = perNodeM>0 ? Math.floor((budget - otherTotal) / perNodeM) : nWneed;
+    // worker nodes: capacity-needed, then capped so total fits the monthly budget
+    var nWneed = realtime ? Math.max(1,Math.ceil(peakN/jobsPerNode)) : Math.max(1,Math.ceil(peakN/(jobsPerNode*3)));
+    var perNwCost = envFactor*wNodeM;   // cost added per +1 worker node (across all environments)
+    var maxByBudget = perNwCost>0 ? Math.floor((budget-otherTotal)/perNwCost) : nWneed;
     var nW = Math.max(1, Math.min(nWneed, Math.max(1, maxByBudget)));
     var budgetCapped = nW < nWneed;
 
@@ -414,63 +571,65 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     var batches=Math.ceil(peakN/totalSlots);
     var Tlast=fmtDur(batches*T_sec);
 
-    // ── build BOM line items ──
+    var workerFinalM = nW*envFactor*wNodeM, workerFinalS = nW*envFactor*wNodeS;
+
+    // ── build BOM line items (all values final INR) ──
+    var rgn = pKey==="azure" ? (REGION_LABEL[boq.region]||prov.region) : prov.region;
     var rows=[];
-    function row(cat,svcRole,name,regionType,desc,m,s){
-      rows.push({
-        cat:cat, type:SVC[svcRole][pKey], name:name,
-        region: regionType==="ai"?prov.aiRegion:prov.region,
-        desc:desc, monthly:m*factor, upfront:0, savings:s*factor
-      });
+    function addRow(cat,svcRole,name,regionType,desc,m,s){
+      rows.push({ cat:cat, type:SVC[svcRole][pKey], name:name,
+        region: regionType==="ai"?prov.aiRegion:rgn, desc:desc, monthly:m, upfront:0, savings:(s==null?m:s) });
     }
+    var envTxt = envFactor>1 ? " × "+envFactor+" environments" : "";
+    var osTxt  = boq.os==="windows" ? ", Windows" : ", Linux";
 
-    row("Storage","storage","—","local",
-      "Block Blob / object storage, General Purpose v2, LRS redundancy, Hot tier, ~1 TB capacity; standard read / write / list operations; 1,000 GB retrieval + 1,000 GB write.",
-      storageM, storageM);
+    addRow("Storage","storage","—","local",
+      "Block Blob / object storage, GPv2, <b>"+boq.stier+"</b> tier, <b>"+boq.redund.toUpperCase()+"</b> redundancy, <b>"+fmtN(effVolGB)+" GB</b>"+(boq.growth>0?" (incl "+boq.growth+"%/yr growth)":"")+".",
+      storageFinal, storageFinal);
 
-    // worker pool (SCALES, budget-capped)
-    rows.push({
-      cat:"Compute", type:SVC.k8s[pKey], name:"userpool 1", region:prov.region,
-      desc:"Primary document-processing worker node pool: <b>"+nW+"× "+workerLabel+"</b> ("+tier.vcpu+" vCPUs, "+tier.ram+" GB RAM) × 730 hours, Linux; managed OS disks. ~"+jobsPerNode+" jobs/node.",
-      monthly:nW*perNodeM, upfront:0, savings:nW*perNodeS, scaling:true
+    rows.push({ cat:"Compute", type:SVC.k8s[pKey], name:"userpool 1", region:rgn,
+      desc:"Primary worker node pool: <b>"+(nW*envFactor)+"× "+workerLabel+"</b> ("+tier.vcpu+" vCPU, "+tier.ram+" GB) × 730h"+envTxt+osTxt+"; ~"+jobsPerNode+" jobs/node.",
+      monthly:workerFinalM, upfront:0, savings:workerFinalS, scaling:true });
+    addRow("Compute","k8s","userpool 2","local",
+      "Secondary worker node pool: <b>"+(2*envFactor)+"× "+POOL2[pKey]+"</b> (8 vCPU, 32 GB) × 730h"+envTxt+osTxt+".",
+      pool2Final, pool2FinalS);
+    addRow("Compute","k8s","systempool","local",
+      "System node pool: <b>"+envFactor+"× "+POOLS[pKey]+"</b> (2 vCPU, 8 GB) × 730h"+envTxt+"; cluster system services.",
+      systemFinal, systemFinalS);
+
+    addRow("Networking","network","—","local",
+      "Virtual network + subnets; internal load balancing & DNS.", networkFinal, networkFinal);
+    if(peFinal>0) addRow("Networking","pe","—","local",
+      "<b>"+boq.endpoints+"</b> private endpoint(s) — fixed hourly + data-processing.", peFinal, peFinal);
+    if(egressFinal>0) addRow("Networking","egress","—","local",
+      "Outbound data transfer: <b>"+fmtN(boq.egress)+" GB/mo</b> (first 100 GB free).", egressFinal, egressFinal);
+    if(gatewayFinal>0) addRow("Networking","gateway","—","local",
+      (boq.gateway==="waf"?"Application Gateway v2 + WAF":boq.gateway==="agw"?"Application Gateway v2":"Standard Load Balancer")+" — fixed + capacity units.", gatewayFinal, gatewayFinal);
+
+    if(dbFinal>0) addRow("Databases","database", boq.dbEngine==="postgres"?"irame-pg":boq.dbEngine, "local",
+      "Managed <b>"+({postgres:"PostgreSQL",sql:"Azure SQL",mysql:"MySQL",cosmos:"Cosmos DB"}[boq.dbEngine]||boq.dbEngine)+"</b>, General Purpose; <b>"+boq.dbVcores+" vCore</b> × 730h, "+fmtN(boq.dbSize)+" GB storage + backup"+(boq.dbHA?", <b>High Availability (≈2× compute)</b>":", no HA")+(boq.dbEngine!=="postgres"?" — indicative (PostgreSQL-priced proxy)":"")+".",
+      dbFinal, dbSFinal);
+
+    addRow("Containers","registry","—","local",
+      "Container registry, <b>"+boq.registry+"</b> tier"+(boq.registry==="premium"?" (geo-replication)":"")+".", registryFinal, registryFinal);
+
+    addRow("DevOps","monitor","—","local",
+      "Monitoring & logs; <b>"+boq.retention+"-day</b> retention; dashboards, alert & recording rules, app health checks.", monitorFinal, monitorFinal);
+
+    addRow("Security","secrets","—","local",
+      "Secrets / keys vault: ~<b>"+fmtN(boq.kv)+"K</b> operations / month.", kvFinal, kvFinal);
+
+    aiLines.forEach(function(l){
+      addRow("AI + Machine Learning","ai", AIM[l.k].name, "ai",
+        "Managed LLM API — <b>"+AIM[l.k].name+"</b>, "+(boq.aiBatch?"batch":"real-time on-demand")+"; scaled to <b>"+fmtN(boq.tokens)+"M tokens/mo</b>. Pay-per-token.", l.m, l.m);
     });
-    // pools: nodeCost returns FINAL per-node; row() re-applies factor, so divide it out
-    row("Compute","k8s","userpool 2","local",
-      "Secondary worker node pool: 2× "+POOL2[pKey]+" (8 vCPUs, 32 GB RAM) × 730 hours, Linux; managed OS disks.",
-      2*p2.monthly/factor, 2*p2.savings/factor);
-    row("Compute","k8s","systempool","local",
-      "System node pool: 1× "+POOLS[pKey]+" (2 vCPUs, 8 GB RAM) × 730 hours, Linux; runs cluster system services.",
-      sysv.monthly/factor, sysv.savings/factor);
 
-    row("Networking","network","—","local",
-      "Virtual network + 2 subnets; ~200 GB outbound data transfer / month.",
-      382.77, 382.77);
-
-    row("Databases","database","irame-pg","local",
-      "Managed PostgreSQL, General Purpose; 1× 2-vCore instance × 730 hours; Premium SSD, 200 GiB storage + 200 GiB backup (LRS); no High Availability.",
-      dbM, dbS);
-
-    row("Containers","registry","—","local",
-      "Container registry, Basic tier, 1 registry × 30 days; build minutes; ~5 GB outbound transfer.",
-      516.55, 516.55);
-
-    row("DevOps","monitor","—","local",
-      "Monitoring & logs: ~5 GB/day basic logs + 1 GB/day processed; 1-month interactive retention; 7 dashboards; 25 alert + 25 recording rules; app health checks.",
-      monitorM, monitorM);
-
-    row("Security","secrets","—","local",
-      "Secrets / keys vault: ~100,000 advanced operations / month; 1 certificate renewal.",
-      430.62, 430.62);
-
-    row("AI + Machine Learning","ai","GPT-5.4 mini","ai",
-      "Managed LLM API — GPT-5.4-mini class, Standard (on-demand), global: ~65.5M input + 21.8M cached-input tokens / month. Pay-per-token.",
-      14000, 14000);
-    row("AI + Machine Learning","ai","GPT-5.5","ai",
-      "Managed LLM API — GPT-5.5 class (<272k ctx), Standard (on-demand), global: ~5.2M input + 1.4M cached-input tokens / month. Pay-per-token.",
-      6000, 6000);
+    if(supportFinal>0) addRow("Support","support","—","local",
+      "<b>"+({standard:"Standard",prodirect:"Professional Direct"}[boq.support]||boq.support)+"</b> support plan — flat monthly fee.", supportFinal, supportFinal);
 
     var totM=0,totS=0,totU=0;
     for(var i=0;i<rows.length;i++){ totM+=rows[i].monthly; totS+=rows[i].savings; totU+=rows[i].upfront; }
+    var applied = boq.pricing==="payg" ? totM : boq.pricing==="1yr" ? totS : totS*0.82;
 
     return {
       prov:prov, pKey:pKey, rows:rows, totM:totM, totS:totS, totU:totU,
@@ -480,7 +639,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       peakN:peakN, batches:batches, T_sec:T_sec, T_min:T_min, Tlast:Tlast,
       spec:spec, worst:worst, sel:sel, typMB:typMB, maxMB:maxMB,
       ramPerJob:ramPerJob, cpuCap:cpuCap, ramCap:ramCap,
-      budget:budget, realtime:realtime
+      budget:budget, realtime:realtime,
+      boq:boq, effVolGB:effVolGB, applied:applied, envFactor:envFactor
     };
   }
 
@@ -593,6 +753,33 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     return "<span style='color:var(--ink-3);font-weight:700'>● Baseline prices</span>";
   }
 
+  function buildBOQSummary(r){
+    var b=r.boq;
+    var LOAD={bh:"Business hours","247":"24/7",spike:"Seasonal spikes"};
+    var WL={aks:"AKS",vm:"VMs",both:"AKS + VMs"};
+    var GWL={none:"no gateway",lb:"Load Balancer",agw:"App Gateway",waf:"App Gateway + WAF"};
+    var ENG={postgres:"PostgreSQL",sql:"Azure SQL",mysql:"MySQL",cosmos:"Cosmos DB",none:"None"};
+    var PR={payg:"Pay-as-you-go","1yr":"1-yr reserved","3yr":"3-yr reserved"};
+    var SUPL={basic:"Basic",standard:"Standard",prodirect:"Professional Direct"};
+    var ai=[]; if(b.aiModels.mini)ai.push("GPT-5.4 mini"); if(b.aiModels.gpt55)ai.push("GPT-5.5"); if(b.aiModels.embed)ai.push("Embeddings");
+    var items=[
+      ["Concurrent users", b.usersNow+" now → "+b.usersFut+" (12 mo)"],
+      ["Load pattern", LOAD[b.load]||b.load],
+      ["Region", (REGION_LABEL[b.region]||b.region)],
+      ["Compliance", b.compliance==="none"?"None":b.compliance.toUpperCase()],
+      ["Workload / OS", (WL[b.workload]||b.workload)+" · "+(b.os==="windows"?"Windows":"Linux")],
+      ["Environments", b.envs===1?"Prod only":(b.envs===2?"Dev + Prod":"Dev + Test + Prod")],
+      ["Storage", fmtN(r.effVolGB)+" GB · "+b.stier+" · "+b.redund.toUpperCase()+(b.growth>0?" · +"+b.growth+"%/yr":"")],
+      ["Database", b.dbEngine==="none"?"None":((ENG[b.dbEngine])+" · "+b.dbVcores+" vCore · "+fmtN(b.dbSize)+" GB"+(b.dbHA?" · HA":""))],
+      ["Networking", b.endpoints+" endpoint(s) · "+fmtN(b.egress)+" GB egress · "+(GWL[b.gateway]||b.gateway)],
+      ["AI models", (ai.join(", ")||"none")+" · "+fmtN(b.tokens)+"M tok/mo · "+(b.aiBatch?"batch":"real-time")],
+      ["Ops / Security", b.retention+"-day logs · "+fmtN(b.kv)+"K KV ops · "+b.registry+" registry"],
+      ["Commercial", (PR[b.pricing])+" · "+(SUPL[b.support])+" support"]
+    ];
+    var out=""; for(var i=0;i<items.length;i++) out+="<div class='boq-item'><span class='boq-k'>"+items[i][0]+"</span><span class='boq-v'>"+items[i][1]+"</span></div>";
+    return "<div class='card'><div class='ct'>"+ico("<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'/>")+"BOQ Requirements Summary</div><div class='boq-grid'>"+out+"</div></div>";
+  }
+
   function render(r){
     LAST=r;
     var modeStr=r.realtime?"Real-time (zero-queue sizing)":"Queue-tolerant (cost-optimised)";
@@ -609,8 +796,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       +"<div><div class='rt'>Infrastructure Sizing & Bill of Materials</div>"
       +"<div class='rs'>"
       +"<span>Provider: <b>"+r.prov.label+"</b></span>"
-      +"<span>Region: <b>"+r.prov.region+"</b></span>"
+      +"<span>Region: <b>"+(r.pKey==="azure"?(REGION_LABEL[r.boq.region]||r.prov.region):r.prov.region)+"</b></span>"
       +"<span>Strategy: <b>"+modeStr+"</b></span>"
+      +"<span>Pricing: <b>"+({payg:"Pay-as-you-go","1yr":"1-yr reserved","3yr":"3-yr reserved"}[r.boq.pricing])+"</b></span>"
       +"<span>Generated: <b>"+today()+"</b></span>"
       +"</div></div>"
       +"<div class='chips'>"
@@ -629,6 +817,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       +"<div class='mc'><div class='mc-l'>"+ico("<path d='M12 2v4M12 18v4M2 12h4M18 12h4'/><circle cx='12' cy='12' r='4'/>")+"Queue at Peak</div><div class='mc-v'>"+r.queued+"</div><div class='mc-u'>"+r.running+" running · "+r.queued+" waiting</div></div>"
       +"<div class='mc hi'><div class='mc-l'>"+ico("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>")+"Last Job Done In</div><div class='mc-v' style='font-size:21px'>"+r.Tlast+"</div><div class='mc-u'>after peak submission</div></div>"
       +"</div>"
+
+      +buildBOQSummary(r)
 
       +"<div class='card'>"
       +"<div class='ct'>"+ico("<path d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2'/><rect x='9' y='3' width='6' height='4' rx='1'/><path d='M9 12h6M9 16h6'/>")+"Bill of Materials"
@@ -725,13 +915,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     }).catch(applyOffline);
   }
 
+  var AWSREGION = { centralindia:"ap-south-1", southindia:"ap-south-1", westindia:"ap-south-1", eastus:"us-east-1", westeurope:"eu-west-1", southeastasia:"ap-southeast-1" };
   function loadPrices(){
     var pKey=$("sel_cloud").value;
+    var region=($("sel_region")&&$("sel_region").value)||"centralindia";
     PRICES.awsVm={};
     if(pKey==="aws"){
       // AWS live compute via backend (streamed EC2 price file; first call can take ~30-60s)
       PRICES.vm={}; PRICES.svc={}; PRICES.source="loading"; PRICES.updated=null; refresh();
-      fetch("/api/prices?provider=aws",{cache:"no-store"})
+      fetch("/api/prices?provider=aws&region="+(AWSREGION[region]||"ap-south-1"),{cache:"no-store"})
         .then(function(r){ if(!r.ok) throw 0; return r.json(); })
         .then(function(d){
           if(d && d.fx) FX=d.fx;
@@ -745,7 +937,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     if(pKey!=="azure"){ PRICES.vm={}; PRICES.svc={}; PRICES.source="baseline"; PRICES.updated=null; refresh(); return; }
     PRICES.source="loading"; refresh();
     // backend first (returns VM + storage/DB/monitor); direct Azure as fallback
-    fetch("/api/prices?region=centralindia&currency=INR",{cache:"no-store"})
+    fetch("/api/prices?region="+region+"&currency=INR",{cache:"no-store"})
       .then(function(r){ if(!r.ok) throw 0; return r.json(); })
       .then(function(d){
         if(d && d.fx) FX=d.fx;
@@ -756,9 +948,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       .catch(directFallback);
   }
 
-  document.querySelectorAll("#docTypes input, #latGroup input, #sl_typical, #sl_max, #sl_peak, #inp_budget")
-    .forEach(function(el){ el.addEventListener("input",refresh); el.addEventListener("change",refresh); });
+  // bind every input/select in the form to live-refresh (except cloud & region → re-fetch prices)
+  document.querySelectorAll(".form-panel input, .form-panel select")
+    .forEach(function(el){
+      if(el.id==="sel_cloud"||el.id==="sel_region") return;
+      el.addEventListener("input",refresh); el.addEventListener("change",refresh);
+    });
   $("sel_cloud").addEventListener("change", loadPrices);
+  $("sel_region").addEventListener("change", loadPrices);
 
   // collapse / expand the left input panel
   $("toggleNav").addEventListener("click", function(){
@@ -793,9 +990,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   };
 
   $("reset_btn").addEventListener("click",function(){
-    $("sl_typical").value=50; $("sl_max").value=75; $("sl_peak").value=40; $("inp_budget").value=200000;
-    $("sel_cloud").value="azure";
+    var d={ sl_typical:50, sl_max:75, sl_peak:40, inp_budget:200000,
+      inp_users_now:5, inp_users_future:15, sel_load:"247", sel_region:"centralindia", sel_compliance:"none",
+      sel_workload:"aks", sel_os:"linux", sel_envs:"1", inp_data_vol:1024, inp_growth:0, sel_stier:"hot", sel_redund:"lrs",
+      sel_dbengine:"postgres", inp_dbvcores:2, inp_dbsize:200, sel_dbha:"no",
+      inp_endpoints:0, inp_egress:200, sel_gateway:"none", inp_tokens:94, sel_aimode:"rt",
+      inp_retention:30, inp_kv:100, sel_registry:"basic", sel_cloud:"azure", sel_pricing:"payg", sel_support:"basic" };
+    for(var k in d){ if($(k)) $(k).value=d[k]; }
     $("cb_light").checked=true; $("cb_complex").checked=false; $("cb_digital").checked=false; $("cb_scanned").checked=false;
+    $("cb_gptmini").checked=true; $("cb_gpt55").checked=true; $("cb_embed").checked=false;
     $("rb_rt").checked=true;
     CUR="INR"; loadPrices();
   });
