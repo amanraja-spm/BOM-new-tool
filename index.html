@@ -254,6 +254,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <option value="westindia">West India</option>
         <option value="eastus">East US</option>
         <option value="westeurope">West Europe</option>
+        <option value="northeurope">North Europe</option>
         <option value="southeastasia">Southeast Asia</option>
       </select></div>
     <div class="fg"><label class="lbl">Compliance</label>
@@ -405,7 +406,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     gcp:   { label:"GCP",   region:"asia-south1 (Mumbai)",      aiRegion:"us-east1",  factor:0.97 }
   };
 
-  var REGION_LABEL = { centralindia:"Central India", southindia:"South India", westindia:"West India", eastus:"East US", westeurope:"West Europe", southeastasia:"Southeast Asia" };
+  var REGION_LABEL = { centralindia:"Central India", southindia:"South India", westindia:"West India", eastus:"East US", westeurope:"West Europe", northeurope:"North Europe", southeastasia:"Southeast Asia" };
 
   // service-type names by role per provider
   var SVC = {
@@ -916,7 +917,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     }).catch(applyOffline);
   }
 
-  var AWSREGION = { centralindia:"ap-south-1", southindia:"ap-south-1", westindia:"ap-south-1", eastus:"us-east-1", westeurope:"eu-west-1", southeastasia:"ap-southeast-1" };
+  var AWSREGION = { centralindia:"ap-south-1", southindia:"ap-south-1", westindia:"ap-south-1", eastus:"us-east-1", westeurope:"eu-west-1", northeurope:"eu-west-1", southeastasia:"ap-southeast-1" };
   function loadPrices(){
     var pKey=$("sel_cloud").value;
     var region=($("sel_region")&&$("sel_region").value)||"centralindia";
