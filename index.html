@@ -249,13 +249,129 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Region &amp; Compliance</div>
     <div class="fg"><label class="lbl">Preferred region</label>
       <select id="sel_region">
-        <option value="centralindia" selected>Central India</option>
-        <option value="southindia">South India</option>
-        <option value="westindia">West India</option>
-        <option value="eastus">East US</option>
-        <option value="westeurope">West Europe</option>
-        <option value="northeurope">North Europe</option>
-        <option value="southeastasia">Southeast Asia</option>
+        <optgroup label="Africa">
+          <option value="southafricanorth">South Africa North</option>
+          <option value="southafricawest">South Africa West</option>
+        </optgroup>
+        <optgroup label="Asia Pacific">
+          <option value="eastasia">East Asia</option>
+          <option value="southeastasia">Southeast Asia</option>
+        </optgroup>
+        <optgroup label="Australia">
+          <option value="australiacentral">Australia Central</option>
+          <option value="australiacentral2">Australia Central 2</option>
+          <option value="australiaeast">Australia East</option>
+          <option value="australiasoutheast">Australia Southeast</option>
+        </optgroup>
+        <optgroup label="Austria">
+          <option value="austriaeast">Austria East</option>
+        </optgroup>
+        <optgroup label="Azure Government">
+          <option value="usgovarizona">US Gov Arizona</option>
+          <option value="usgovtexas">US Gov Texas</option>
+          <option value="usgovvirginia">US Gov Virginia</option>
+        </optgroup>
+        <optgroup label="Belgium">
+          <option value="belgiumcentral">Belgium Central</option>
+        </optgroup>
+        <optgroup label="Brazil">
+          <option value="brazilsouth">Brazil South</option>
+          <option value="brazilsoutheast">Brazil Southeast</option>
+        </optgroup>
+        <optgroup label="Canada">
+          <option value="canadacentral">Canada Central</option>
+          <option value="canadaeast">Canada East</option>
+        </optgroup>
+        <optgroup label="Chile">
+          <option value="chilecentral">Chile Central</option>
+        </optgroup>
+        <optgroup label="Denmark">
+          <option value="denmarkeast">Denmark East</option>
+        </optgroup>
+        <optgroup label="Europe">
+          <option value="northeurope">North Europe</option>
+          <option value="westeurope">West Europe</option>
+        </optgroup>
+        <optgroup label="France">
+          <option value="francecentral">France Central</option>
+          <option value="francesouth">France South</option>
+        </optgroup>
+        <optgroup label="Germany">
+          <option value="germanynorth">Germany North</option>
+          <option value="germanywestcentral">Germany West Central</option>
+        </optgroup>
+        <optgroup label="India">
+          <option value="centralindia" selected>Central India</option>
+          <option value="southcentralindia">India South Central</option>
+          <option value="southindia">South India</option>
+          <option value="westindia">West India</option>
+        </optgroup>
+        <optgroup label="Indonesia">
+          <option value="indonesiacentral">Indonesia Central</option>
+        </optgroup>
+        <optgroup label="Israel">
+          <option value="israelcentral">Israel Central</option>
+        </optgroup>
+        <optgroup label="Italy">
+          <option value="italynorth">Italy North</option>
+        </optgroup>
+        <optgroup label="Japan">
+          <option value="japaneast">Japan East</option>
+          <option value="japanwest">Japan West</option>
+        </optgroup>
+        <optgroup label="Korea">
+          <option value="koreacentral">Korea Central</option>
+          <option value="koreasouth">Korea South</option>
+        </optgroup>
+        <optgroup label="Malaysia">
+          <option value="malaysiawest">Malaysia West</option>
+        </optgroup>
+        <optgroup label="Mexico">
+          <option value="mexicocentral">Mexico Central</option>
+        </optgroup>
+        <optgroup label="New Zealand">
+          <option value="newzealandnorth">New Zealand North</option>
+        </optgroup>
+        <optgroup label="Norway">
+          <option value="norwayeast">Norway East</option>
+          <option value="norwaywest">Norway West</option>
+        </optgroup>
+        <optgroup label="Poland">
+          <option value="polandcentral">Poland Central</option>
+        </optgroup>
+        <optgroup label="Qatar">
+          <option value="qatarcentral">Qatar Central</option>
+        </optgroup>
+        <optgroup label="Spain">
+          <option value="spaincentral">Spain Central</option>
+        </optgroup>
+        <optgroup label="Sweden">
+          <option value="swedencentral">Sweden Central</option>
+          <option value="swedensouth">Sweden South</option>
+        </optgroup>
+        <optgroup label="Switzerland">
+          <option value="switzerlandnorth">Switzerland North</option>
+          <option value="switzerlandwest">Switzerland West</option>
+        </optgroup>
+        <optgroup label="United Arab Emirates">
+          <option value="uaecentral">UAE Central</option>
+          <option value="uaenorth">UAE North</option>
+        </optgroup>
+        <optgroup label="United Kingdom">
+          <option value="uksouth">UK South</option>
+          <option value="ukwest">UK West</option>
+        </optgroup>
+        <optgroup label="United States">
+          <option value="centralus">Central US</option>
+          <option value="eastus">East US</option>
+          <option value="eastus2">East US 2</option>
+          <option value="northcentralus">North Central US</option>
+          <option value="southcentralus">South Central US</option>
+          <option value="westcentralus">West Central US</option>
+          <option value="westus">West US</option>
+          <option value="westus2">West US 2</option>
+          <option value="westus3">West US 3</option>
+        </optgroup>
       </select></div>
     <div class="fg"><label class="lbl">Compliance</label>
       <select id="sel_compliance"><option value="none" selected>None</option><option value="hipaa">HIPAA</option><option value="gdpr">GDPR</option><option value="rbi">RBI</option><option value="other">Other</option></select></div>
@@ -406,7 +522,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     gcp:   { label:"GCP",   region:"asia-south1 (Mumbai)",      aiRegion:"us-east1",  factor:0.97 }
   };
 
-  var REGION_LABEL = { centralindia:"Central India", southindia:"South India", westindia:"West India", eastus:"East US", westeurope:"West Europe", northeurope:"North Europe", southeastasia:"Southeast Asia" };
+var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"South Africa West","eastasia":"East Asia","southeastasia":"Southeast Asia","australiacentral":"Australia Central","australiacentral2":"Australia Central 2","australiaeast":"Australia East","australiasoutheast":"Australia Southeast","austriaeast":"Austria East","usgovarizona":"US Gov Arizona","usgovtexas":"US Gov Texas","usgovvirginia":"US Gov Virginia","belgiumcentral":"Belgium Central","brazilsouth":"Brazil South","brazilsoutheast":"Brazil Southeast","canadacentral":"Canada Central","canadaeast":"Canada East","chilecentral":"Chile Central","denmarkeast":"Denmark East","northeurope":"North Europe","westeurope":"West Europe","francecentral":"France Central","francesouth":"France South","germanynorth":"Germany North","germanywestcentral":"Germany West Central","centralindia":"Central India","southcentralindia":"India South Central","southindia":"South India","westindia":"West India","indonesiacentral":"Indonesia Central","israelcentral":"Israel Central","italynorth":"Italy North","japaneast":"Japan East","japanwest":"Japan West","koreacentral":"Korea Central","koreasouth":"Korea South","malaysiawest":"Malaysia West","mexicocentral":"Mexico Central","newzealandnorth":"New Zealand North","norwayeast":"Norway East","norwaywest":"Norway West","polandcentral":"Poland Central","qatarcentral":"Qatar Central","spaincentral":"Spain Central","swedencentral":"Sweden Central","swedensouth":"Sweden South","switzerlandnorth":"Switzerland North","switzerlandwest":"Switzerland West","uaecentral":"UAE Central","uaenorth":"UAE North","uksouth":"UK South","ukwest":"UK West","centralus":"Central US","eastus":"East US","eastus2":"East US 2","northcentralus":"North Central US","southcentralus":"South Central US","westcentralus":"West Central US","westus":"West US","westus2":"West US 2","westus3":"West US 3"};
 
   // service-type names by role per provider
   var SVC = {
@@ -917,7 +1033,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     }).catch(applyOffline);
   }
 
-  var AWSREGION = { centralindia:"ap-south-1", southindia:"ap-south-1", westindia:"ap-south-1", eastus:"us-east-1", westeurope:"eu-west-1", northeurope:"eu-west-1", southeastasia:"ap-southeast-1" };
+var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1","eastasia":"ap-east-1","southeastasia":"ap-southeast-1","australiacentral":"ap-southeast-2","australiacentral2":"ap-southeast-2","australiaeast":"ap-southeast-2","australiasoutheast":"ap-southeast-2","austriaeast":"eu-central-1","usgovarizona":"us-east-1","usgovtexas":"us-east-1","usgovvirginia":"us-east-1","belgiumcentral":"eu-west-1","brazilsouth":"sa-east-1","brazilsoutheast":"sa-east-1","canadacentral":"ca-central-1","canadaeast":"ca-central-1","chilecentral":"sa-east-1","denmarkeast":"eu-north-1","northeurope":"eu-west-1","westeurope":"eu-central-1","francecentral":"eu-west-3","francesouth":"eu-west-3","germanynorth":"eu-central-1","germanywestcentral":"eu-central-1","centralindia":"ap-south-1","southcentralindia":"ap-south-1","southindia":"ap-south-1","westindia":"ap-south-1","indonesiacentral":"ap-southeast-3","israelcentral":"il-central-1","italynorth":"eu-south-1","japaneast":"ap-northeast-1","japanwest":"ap-northeast-3","koreacentral":"ap-northeast-2","koreasouth":"ap-northeast-2","malaysiawest":"ap-southeast-1","mexicocentral":"us-east-1","newzealandnorth":"ap-southeast-2","norwayeast":"eu-north-1","norwaywest":"eu-north-1","polandcentral":"eu-central-1","qatarcentral":"me-central-1","spaincentral":"eu-south-2","swedencentral":"eu-north-1","swedensouth":"eu-north-1","switzerlandnorth":"eu-central-2","switzerlandwest":"eu-central-2","uaecentral":"me-central-1","uaenorth":"me-central-1","uksouth":"eu-west-2","ukwest":"eu-west-2","centralus":"us-east-1","eastus":"us-east-1","eastus2":"us-east-1","northcentralus":"us-east-1","southcentralus":"us-east-1","westcentralus":"us-west-2","westus":"us-west-2","westus2":"us-west-2","westus3":"us-west-2"};
   function loadPrices(){
     var pKey=$("sel_cloud").value;
     var region=($("sel_region")&&$("sel_region").value)||"centralindia";
