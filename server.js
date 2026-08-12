@@ -211,75 +211,8 @@ async function getAwsPrices(region) {
   return data;
 }
 
-// ── Deployment Tracker persistence (shared) ──────────────────────────────
-// Durable + shared when DATABASE_URL (Postgres) is configured; otherwise a
-// JSON file on this instance (shared across users live, resets on redeploy).
-const TRACKER_FILE = process.env.TRACKER_FILE || path.join(__dirname, "tracker-data.json");
-let pgPool = null, pgReady = false;
-(function initPg() {
-  if (!process.env.DATABASE_URL) { console.log("Tracker: no DATABASE_URL → file store (" + TRACKER_FILE + ")"); return; }
-  try {
-    const { Pool } = require("pg");
-    pgPool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
-    pgPool.query("CREATE TABLE IF NOT EXISTS tracker_state (id int primary key, data jsonb, rev int, updated timestamptz)")
-      .then(() => { pgReady = true; console.log("Tracker: Postgres ready"); })
-      .catch((e) => { console.log("Tracker: Postgres init failed → " + e.message); pgPool = null; });
-  } catch (e) { console.log("Tracker: pg module not installed → file store. " + e.message); pgPool = null; }
-})();
-
-async function trackerLoad() {
-  if (pgPool && pgReady) {
-    const r = await pgPool.query("SELECT data, rev FROM tracker_state WHERE id=1");
-    if (r.rows.length) return { data: r.rows[0].data, rev: r.rows[0].rev || 0 };
-    return { data: null, rev: 0 };
-  }
-  try { return JSON.parse(fs.readFileSync(TRACKER_FILE, "utf8")); } catch (e) { return { data: null, rev: 0 }; }
-}
-async function trackerSave(data) {
-  const cur = await trackerLoad();
-  const rev = ((cur && cur.rev) || 0) + 1;
-  if (pgPool && pgReady) {
-    await pgPool.query(
-      "INSERT INTO tracker_state (id,data,rev,updated) VALUES (1,$1,$2,now()) " +
-      "ON CONFLICT (id) DO UPDATE SET data=$1, rev=$2, updated=now()",
-      [data, rev]);
-  } else {
-    fs.writeFileSync(TRACKER_FILE, JSON.stringify({ data, rev, updated: new Date().toISOString() }));
-  }
-  return rev;
-}
-function trackerJson(res, code, obj) {
-  res.writeHead(code, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,PUT,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Cache-Control": "no-store" });
-  res.end(JSON.stringify(obj));
-}
-
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost");
-
-  // ── Deployment Tracker: GET current state · PUT replaces it ──
-  if (u.pathname === "/api/tracker") {
-    if (req.method === "OPTIONS") { trackerJson(res, 204, {}); return; }
-    if (req.method === "GET") {
-      try { const st = await trackerLoad(); trackerJson(res, 200, st || { data: null, rev: 0 }); }
-      catch (e) { trackerJson(res, 500, { error: String((e && e.message) || e) }); }
-      return;
-    }
-    if (req.method === "PUT" || req.method === "POST") {
-      let body = "";
-      req.on("data", (c) => { body += c; if (body.length > 8e6) req.destroy(); });
-      req.on("end", async () => {
-        try {
-          const parsed = JSON.parse(body || "{}");
-          const rev = await trackerSave(parsed.data);
-          trackerJson(res, 200, { ok: true, rev: rev });
-        } catch (e) { trackerJson(res, 400, { error: String((e && e.message) || e) }); }
-      });
-      return;
-    }
-    trackerJson(res, 405, { error: "method not allowed" });
-    return;
-  }
 
   if (u.pathname === "/api/prices") {
     const region = u.searchParams.get("region") || "centralindia";
