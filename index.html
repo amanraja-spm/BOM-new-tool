@@ -604,6 +604,14 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var ramCap=Math.floor(tier.ram/ramPerJob);
     var jobsPerNode=Math.max(1,Math.min(cpuCap,ramCap,20));
 
+    // ── node counts derived from CONCURRENT USERS (nothing hardcoded) ──
+    var usersPerNode = realtime ? jobsPerNode : jobsPerNode*3;   // queue-tolerant packs 3× users/node
+    var nWneed = Math.max(1, Math.ceil(boq.users / usersPerNode));
+    var nW  = (NODE_OV.u1!=null && NODE_OV.u1>=1) ? NODE_OV.u1 : nWneed;              // userpool 1
+    var u2n = (NODE_OV.u2!=null && NODE_OV.u2>=0) ? NODE_OV.u2 : Math.max(1, Math.ceil(nW/2));       // userpool 2 = ½ primary
+    var sysn= (NODE_OV.sys!=null && NODE_OV.sys>=0) ? NODE_OV.sys : Math.max(1, Math.ceil((nW+u2n)/10)); // 1 system node / ~10 workers
+    var budgetCapped = false;
+
     // ── per-node compute costs (live/baseline) with Windows-licensing uplift ──
     var workerNode=nodeCost(tier.sku, tier.aws);
     var p2=nodeCost(SKU_POOL2, POOL2[pKey]), sysv=nodeCost(SKU_SYS, POOLS[pKey]);
@@ -611,9 +619,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var wNodeM=perNodeM*osFactor, wNodeS=perNodeS*osFactor;
     var p2M=p2.monthly*osFactor, p2S=p2.savings*osFactor;
     var sysM=sysv.monthly*osFactor, sysS=sysv.savings*osFactor;
-    // node counts — user-editable overrides (userpool 2 & systempool), else defaults
-    var u2n = (NODE_OV.u2!=null && NODE_OV.u2>=0) ? NODE_OV.u2 : 2;
-    var sysn = (NODE_OV.sys!=null && NODE_OV.sys>=0) ? NODE_OV.sys : 1;
+    // pool line costs (counts derived from concurrent users above; still editable in the table)
     var pool2Final=u2n*envFactor*p2M, pool2FinalS=u2n*envFactor*p2S;
     var systemFinal=sysn*envFactor*sysM, systemFinalS=sysn*envFactor*sysS;
 
@@ -662,14 +668,6 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     // fixed monthly cost of everything EXCEPT the scaling worker pool (userpool 1)
     var otherTotal = storageFinal + pool2Final + systemFinal + networkFinal + dbFinal
       + registryFinal + monitorFinal + kvFinal + peFinal + egressFinal + gatewayFinal + supportFinal + aiTotalFinal;
-
-    // worker nodes (userpool 1): capacity-needed, budget-capped, or a manual override
-    var nWneed = realtime ? Math.max(1,Math.ceil(peakN/jobsPerNode)) : Math.max(1,Math.ceil(peakN/(jobsPerNode*3)));
-    var perNwCost = envFactor*wNodeM;   // cost added per +1 worker node (across all environments)
-    var maxByBudget = perNwCost>0 ? Math.floor((budget-otherTotal)/perNwCost) : nWneed;
-    var nWauto = Math.max(1, Math.min(nWneed, Math.max(1, maxByBudget)));
-    var nW = (NODE_OV.u1!=null && NODE_OV.u1>=1) ? NODE_OV.u1 : nWauto;   // manual override wins
-    var budgetCapped = (NODE_OV.u1==null) && (nW < nWneed);
 
     var totalSlots=nW*jobsPerNode;
     var running=Math.min(peakN,totalSlots);
