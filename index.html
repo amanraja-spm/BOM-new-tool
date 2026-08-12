@@ -236,17 +236,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
     <div class="fg"><label class="lbl">Typical file size</label><input type="range" id="sl_typical" min="0" max="100" value="50"><div class="sv" id="lbl_typical"></div></div>
-    <div class="fg"><label class="lbl">Max file size <span class="sub">sets worker tier</span></label><input type="range" id="sl_max" min="0" max="100" value="75"><div class="sv" id="lbl_max"></div></div>
     <div class="fg"><label class="lbl">Peak parallel submissions</label><div class="hint">Jobs arriving simultaneously at peak</div><input type="range" id="sl_peak" min="1" max="500" value="40" step="1"><div class="sv" id="lbl_peak"></div></div>
-    <div class="row2">
-      <div class="fg"><label class="lbl">Users now</label><input type="number" id="inp_users_now" value="5" min="1" step="1"></div>
-      <div class="fg"><label class="lbl">Users (12&nbsp;mo)</label><input type="number" id="inp_users_future" value="15" min="1" step="1"></div>
-    </div>
-    <div class="fg"><label class="lbl">Load pattern <span class="sub">reserved vs on-demand fit</span></label>
-      <select id="sel_load"><option value="bh">Business hours only</option><option value="247" selected>24/7</option><option value="spike">Seasonal spikes</option></select></div>
+    <div class="fg"><label class="lbl">Concurrent users</label><input type="number" id="inp_users" value="5" min="1" step="1"></div>
 
-    <!-- ── Region & Compliance ── -->
-    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Region &amp; Compliance</div>
+    <!-- ── Region ── -->
+    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Region</div>
     <div class="fg"><label class="lbl">Preferred region</label>
       <select id="sel_region">
         <optgroup label="Africa">
@@ -373,28 +367,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <option value="westus3">West US 3</option>
         </optgroup>
       </select></div>
-    <div class="fg"><label class="lbl">Compliance</label>
-      <select id="sel_compliance"><option value="none" selected>None</option><option value="hipaa">HIPAA</option><option value="gdpr">GDPR</option><option value="rbi">RBI</option><option value="other">Other</option></select></div>
-
     <!-- ── Compute ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg></span>Compute</div>
     <div class="fg"><label class="lbl">Workload type</label>
       <select id="sel_workload"><option value="aks" selected>Containerized (AKS)</option><option value="vm">Virtual Machines</option><option value="both">Both</option></select></div>
-    <div class="fg"><label class="lbl">Operating system</label>
-      <select id="sel_os"><option value="linux" selected>Linux</option><option value="windows">Windows (+ licensing)</option></select></div>
-    <div class="fg"><label class="lbl">Environments <span class="sub">costed separately</span></label>
-      <select id="sel_envs"><option value="1" selected>Prod only</option><option value="2">Dev + Prod</option><option value="3">Dev + Test + Prod</option></select></div>
 
     <!-- ── Storage ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0018 0V5M3 12a9 3 0 0018 0"/></svg></span>Storage</div>
-    <div class="row2">
-      <div class="fg"><label class="lbl">Data volume (GB)</label><input type="number" id="inp_data_vol" value="1024" min="1" step="100"></div>
-      <div class="fg"><label class="lbl">Growth (%/yr)</label><input type="number" id="inp_growth" value="0" min="0" max="500" step="5"></div>
-    </div>
-    <div class="fg"><label class="lbl">Access tier</label>
-      <select id="sel_stier"><option value="hot" selected>Hot</option><option value="cool">Cool</option><option value="archive">Archive</option></select></div>
-    <div class="fg"><label class="lbl">Redundancy</label>
-      <select id="sel_redund"><option value="lrs" selected>LRS</option><option value="zrs">ZRS</option><option value="grs">GRS</option></select></div>
+    <div class="fg"><label class="lbl">Data volume (GB)</label><input type="number" id="inp_data_vol" value="1024" min="1" step="100"></div>
 
     <!-- ── Database ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6a8 3 0 0016 0V5M4 11v6a8 3 0 0016 0v-6"/></svg></span>Database</div>
@@ -427,17 +407,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
     <div class="fg"><label class="lbl">Monthly tokens <span class="sub">millions</span></label><input type="number" id="inp_tokens" value="94" min="0" step="1"></div>
-    <div class="fg"><label class="lbl">Usage mode</label>
-      <select id="sel_aimode"><option value="rt" selected>Real-time (on-demand)</option><option value="batch">Batch (≈ 50% off)</option></select></div>
-
-    <!-- ── Monitoring, Security & DevOps ── -->
-    <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg></span>Monitoring, Security &amp; DevOps</div>
-    <div class="row2">
-      <div class="fg"><label class="lbl">Log retention (days)</label><input type="number" id="inp_retention" value="30" min="7" max="730" step="1"></div>
-      <div class="fg"><label class="lbl">Key Vault ops (K/mo)</label><input type="number" id="inp_kv" value="100" min="0" step="10"></div>
-    </div>
-    <div class="fg"><label class="lbl">Container registry tier</label>
-      <select id="sel_registry"><option value="basic" selected>Basic</option><option value="standard">Standard</option><option value="premium">Premium</option></select></div>
 
     <!-- ── Commercial Terms ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Commercial Terms</div>
@@ -451,9 +420,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
     <div class="fg"><label class="lbl">Pricing preference</label>
       <select id="sel_pricing"><option value="payg" selected>Pay-as-you-go</option><option value="1yr">1-year reserved / savings</option><option value="3yr">3-year reserved / savings</option></select></div>
-    <div class="fg"><label class="lbl">Monthly budget <span class="sub">₹ / month</span></label><div class="input-prefix"><span>₹</span><input type="number" id="inp_budget" value="200000" min="10000" max="9000000" step="10000"></div></div>
-    <div class="fg"><label class="lbl">Support plan</label>
-      <select id="sel_support"><option value="basic" selected>Basic (free)</option><option value="standard">Standard</option><option value="prodirect">Professional Direct</option></select></div>
     <div class="fg">
       <label class="lbl">Capacity strategy</label>
       <div class="opt-group" id="latGroup">
@@ -562,30 +528,35 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
   function both(n){ return inr(n)+" · "+usd(n); }
   function today(){ return new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); }
   function $(id){ return document.getElementById(id); }
+  // null-safe input readers (return default when a field has been removed from the UI)
+  function gval(id,def){ var e=$(id); return e?e.value:def; }
+  function gnum(id,def){ var e=$(id); var v=e?+e.value:NaN; return isFinite(v)?v:def; }
+  function gchk(id,def){ var e=$(id); return e?e.checked:def; }
   function ico(p){ return "<span class='ico'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>"+p+"</svg></span>"; }
 
   // ── core calculation ──
   function calculate(){
-    var typMB = posToMB(+$("sl_typical").value);
-    var maxMB = posToMB(+$("sl_max").value);
-    var peakN = +$("sl_peak").value;
-    var budget= +$("inp_budget").value || 0;
+    var typMB = posToMB(gnum("sl_typical",50));
+    var maxMB = posToMB(gnum("sl_max",75));        // max file size removed from UI → default tier
+    var peakN = gnum("sl_peak",40);
+    var hasBudget = !!$("inp_budget");
+    var budget= hasBudget ? (gnum("inp_budget",200000)) : 1e12;  // budget removed → effectively no cap
     var pKey  = $("sel_cloud").value;
     var chk   = document.querySelector("input[name='latmode']:checked");
     var realtime = chk ? chk.value==="realtime" : true;
 
-    // ── BOQ intake inputs ──
+    // ── BOQ intake inputs (removed fields fall back to backend defaults) ──
     var boq = {
-      usersNow:+$("inp_users_now").value||1, usersFut:+$("inp_users_future").value||1, load:$("sel_load").value,
-      region:$("sel_region").value, compliance:$("sel_compliance").value,
-      workload:$("sel_workload").value, os:$("sel_os").value, envs:+$("sel_envs").value||1,
-      dataVol:+$("inp_data_vol").value||0, growth:+$("inp_growth").value||0, stier:$("sel_stier").value, redund:$("sel_redund").value,
-      dbEngine:$("sel_dbengine").value, dbVcores:+$("inp_dbvcores").value||1, dbSize:+$("inp_dbsize").value||0, dbHA:$("sel_dbha").value==="yes",
-      endpoints:+$("inp_endpoints").value||0, egress:+$("inp_egress").value||0, gateway:$("sel_gateway").value,
-      aiModels:{mini:$("cb_gptmini").checked, gpt55:$("cb_gpt55").checked, embed:$("cb_embed").checked},
-      tokens:+$("inp_tokens").value||0, aiBatch:$("sel_aimode").value==="batch",
-      retention:+$("inp_retention").value||30, kv:+$("inp_kv").value||0, registry:$("sel_registry").value,
-      pricing:$("sel_pricing").value, support:$("sel_support").value
+      users:gnum("inp_users",5),
+      region:gval("sel_region","centralindia"), compliance:"none",
+      workload:gval("sel_workload","aks"), os:"linux", envs:1,
+      dataVol:gnum("inp_data_vol",1024), growth:0, stier:"hot", redund:"lrs",
+      dbEngine:gval("sel_dbengine","postgres"), dbVcores:gnum("inp_dbvcores",2), dbSize:gnum("inp_dbsize",200), dbHA:gval("sel_dbha","no")==="yes",
+      endpoints:gnum("inp_endpoints",0), egress:gnum("inp_egress",200), gateway:gval("sel_gateway","none"),
+      aiModels:{mini:gchk("cb_gptmini",true), gpt55:gchk("cb_gpt55",true), embed:gchk("cb_embed",false)},
+      tokens:gnum("inp_tokens",94), aiBatch:false,
+      retention:30, kv:100, registry:"basic",
+      pricing:gval("sel_pricing","payg"), support:"basic"
     };
     var envFactor = boq.envs;                                  // each env costed separately (compute)
     var osFactor  = boq.os==="windows" ? 1.4 : 1;             // Windows licensing uplift on compute
@@ -757,7 +728,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       peakN:peakN, batches:batches, T_sec:T_sec, T_min:T_min, Tlast:Tlast,
       spec:spec, worst:worst, sel:sel, typMB:typMB, maxMB:maxMB,
       ramPerJob:ramPerJob, cpuCap:cpuCap, ramCap:ramCap,
-      budget:budget, realtime:realtime,
+      budget:budget, hasBudget:hasBudget, realtime:realtime,
       boq:boq, effVolGB:effVolGB, applied:applied, envFactor:envFactor
     };
   }
@@ -800,6 +771,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var capNote = r.budgetCapped
       ? "<div class='note warn'>"+ico("<rect x='2' y='3' width='20' height='14' rx='2'/><path d='M8 21h8M12 17v4'/>")+"Budget-capped to <b>"+r.nW+" worker node(s)</b> (<b>"+r.nWneed+"</b> needed for zero queue). To stay within budget, <b>"+r.queued+" job(s) wait in queue</b> — last job finishes in <b>"+r.Tlast+"</b>. Raise the budget to add nodes & cut latency.</div>"
       : "";
+    if(!r.hasBudget) return saveNote;   // budget field removed from UI → no budget bar/note
     return note+capNote+saveNote
       +"<div class='bbar'><div style='width:"+pct+"%;background:"+col+"'></div></div>"
       +"<div class='bbar-l'><span>On-demand: <b>"+money(r.totM)+"</b></span><span>"+pct+"% of budget</span><span>Budget: <b>"+money(r.budget)+"</b></span></div>";
@@ -873,26 +845,20 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
 
   function buildBOQSummary(r){
     var b=r.boq;
-    var LOAD={bh:"Business hours","247":"24/7",spike:"Seasonal spikes"};
-    var WL={aks:"AKS",vm:"VMs",both:"AKS + VMs"};
+    var WL={aks:"Containerized (AKS)",vm:"Virtual Machines",both:"AKS + VMs"};
     var GWL={none:"no gateway",lb:"Load Balancer",agw:"App Gateway",waf:"App Gateway + WAF"};
     var ENG={postgres:"PostgreSQL",sql:"Azure SQL",mysql:"MySQL",cosmos:"Cosmos DB",none:"None"};
     var PR={payg:"Pay-as-you-go","1yr":"1-yr reserved","3yr":"3-yr reserved"};
-    var SUPL={basic:"Basic",standard:"Standard",prodirect:"Professional Direct"};
     var ai=[]; if(b.aiModels.mini)ai.push("GPT-5.4 mini"); if(b.aiModels.gpt55)ai.push("GPT-5.5"); if(b.aiModels.embed)ai.push("Embeddings");
     var items=[
-      ["Concurrent users", b.usersNow+" now → "+b.usersFut+" (12 mo)"],
-      ["Load pattern", LOAD[b.load]||b.load],
+      ["Concurrent users", fmtN(b.users)],
       ["Region", (REGION_LABEL[b.region]||b.region)],
-      ["Compliance", b.compliance==="none"?"None":b.compliance.toUpperCase()],
-      ["Workload / OS", (WL[b.workload]||b.workload)+" · "+(b.os==="windows"?"Windows":"Linux")],
-      ["Environments", b.envs===1?"Prod only":(b.envs===2?"Dev + Prod":"Dev + Test + Prod")],
-      ["Storage", fmtN(r.effVolGB)+" GB · "+b.stier+" · "+b.redund.toUpperCase()+(b.growth>0?" · +"+b.growth+"%/yr":"")],
+      ["Workload", (WL[b.workload]||b.workload)],
+      ["Storage", fmtN(r.effVolGB)+" GB"],
       ["Database", b.dbEngine==="none"?"None":((ENG[b.dbEngine])+" · "+b.dbVcores+" vCore · "+fmtN(b.dbSize)+" GB"+(b.dbHA?" · HA":""))],
       ["Networking", b.endpoints+" endpoint(s) · "+fmtN(b.egress)+" GB egress · "+(GWL[b.gateway]||b.gateway)],
-      ["AI models", (ai.join(", ")||"none")+" · "+fmtN(b.tokens)+"M tok/mo · "+(b.aiBatch?"batch":"real-time")],
-      ["Ops / Security", b.retention+"-day logs · "+fmtN(b.kv)+"K KV ops · "+b.registry+" registry"],
-      ["Commercial", (PR[b.pricing])+" · "+(SUPL[b.support])+" support"]
+      ["AI models", (ai.join(", ")||"none")+" · "+fmtN(b.tokens)+"M tok/mo"],
+      ["Pricing", (PR[b.pricing])]
     ];
     var out=""; for(var i=0;i<items.length;i++) out+="<div class='boq-item'><span class='boq-k'>"+items[i][0]+"</span><span class='boq-v'>"+items[i][1]+"</span></div>";
     return "<div class='card'><div class='ct'>"+ico("<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'/>")+"BOQ Requirements Summary</div><div class='boq-grid'>"+out+"</div></div>";
@@ -978,9 +944,8 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
 
   // ── live wiring ──
   function updateLabels(){
-    $("lbl_typical").textContent=fmtMB(posToMB(+$("sl_typical").value));
-    $("lbl_max").textContent    =fmtMB(posToMB(+$("sl_max").value));
-    $("lbl_peak").textContent   =$("sl_peak").value+" workflows";
+    if($("lbl_typical")) $("lbl_typical").textContent=fmtMB(posToMB(+$("sl_typical").value));
+    if($("lbl_peak")) $("lbl_peak").textContent=$("sl_peak").value+" workflows";
   }
   function syncOptStyles(){
     document.querySelectorAll(".opt").forEach(function(o){ o.classList.toggle("on",o.querySelector("input").checked); });
@@ -1108,12 +1073,11 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   };
 
   $("reset_btn").addEventListener("click",function(){
-    var d={ sl_typical:50, sl_max:75, sl_peak:40, inp_budget:200000,
-      inp_users_now:5, inp_users_future:15, sel_load:"247", sel_region:"centralindia", sel_compliance:"none",
-      sel_workload:"aks", sel_os:"linux", sel_envs:"1", inp_data_vol:1024, inp_growth:0, sel_stier:"hot", sel_redund:"lrs",
+    var d={ sl_typical:50, sl_peak:40, inp_users:5, sel_region:"centralindia",
+      sel_workload:"aks", inp_data_vol:1024,
       sel_dbengine:"postgres", inp_dbvcores:2, inp_dbsize:200, sel_dbha:"no",
-      inp_endpoints:0, inp_egress:200, sel_gateway:"none", inp_tokens:94, sel_aimode:"rt",
-      inp_retention:30, inp_kv:100, sel_registry:"basic", sel_cloud:"azure", sel_pricing:"payg", sel_support:"basic" };
+      inp_endpoints:0, inp_egress:200, sel_gateway:"none", inp_tokens:94,
+      sel_cloud:"azure", sel_pricing:"payg" };
     for(var k in d){ if($(k)) $(k).value=d[k]; }
     $("cb_light").checked=true; $("cb_complex").checked=false; $("cb_digital").checked=false; $("cb_scanned").checked=false;
     $("cb_gptmini").checked=true; $("cb_gpt55").checked=true; $("cb_embed").checked=false;
