@@ -213,18 +213,18 @@ body.home header,body.home .layout{display:none !important}
 .wl-head{text-align:center;max-width:640px;margin-bottom:34px}
 .wl-head h2{font-size:27px;font-weight:800;color:var(--ink);letter-spacing:-.4px}
 .wl-head p{font-size:14px;color:var(--ink-2);margin-top:10px;line-height:1.6}
-.wl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;width:100%;max-width:1040px}
-.wl-card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 24px 22px;
-  box-shadow:var(--shadow);min-height:210px;display:flex;flex-direction:column;transition:transform .16s,box-shadow .16s,border-color .16s}
-.wl-card .wl-ico{width:48px;height:48px;border-radius:13px;background:var(--brand-50);display:grid;place-items:center;color:var(--brand);margin-bottom:16px}
-.wl-card .wl-ico svg{width:24px;height:24px}
-.wl-card h3{font-size:16px;font-weight:750;color:var(--ink);letter-spacing:-.2px}
+.wl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:100%;max-width:900px}
+.wl-card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;
+  box-shadow:var(--shadow);min-height:132px;display:flex;flex-direction:column;transition:transform .16s,box-shadow .16s,border-color .16s}
+.wl-card .wl-ico{width:40px;height:40px;border-radius:11px;background:var(--brand-50);display:grid;place-items:center;color:var(--brand);margin-bottom:12px}
+.wl-card .wl-ico svg{width:20px;height:20px}
+.wl-card h3{font-size:14.5px;font-weight:750;color:var(--ink);letter-spacing:-.2px}
 .wl-card .wl-desc{font-size:12.5px;color:var(--ink-2);margin-top:8px;line-height:1.55;flex:1}
 .wl-card .wl-cta{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:750;color:var(--brand);margin-top:auto}
 .wl-card .wl-cta svg{width:15px;height:15px;transition:transform .16s}
 .wl-card.active{cursor:pointer}
-.wl-card.active::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:4px;border-radius:0 4px 4px 0;background:linear-gradient(var(--brand),var(--accent))}
-.wl-card.active:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(16,24,40,.12);border-color:var(--brand-100)}
+.wl-card.active::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:linear-gradient(var(--brand),var(--accent))}
+.wl-card.active:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(16,24,40,.12);border-color:var(--brand-100)}
 .wl-card.active:hover .wl-cta svg{transform:translateX(3px)}
 .wl-card.locked{opacity:.72;cursor:not-allowed;background:linear-gradient(180deg,#fff,#fbfcfe)}
 .wl-card.locked .wl-ico{background:var(--line-2);color:var(--ink-3)}
