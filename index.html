@@ -865,14 +865,12 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
         +"<td class='desc-cell'>"+descHtml+"</td>"
         +"<td class='num total'>"+money(x.monthly)+"</td>"
         +"<td class='num'>"+money(x.upfront)+"</td>"
-        +"<td class='num savecol'>"+money(x.savings)+"</td>"
         +"</tr>";
     }
     out+="<tr class='grand-row'>"
       +"<td colspan='6'>Total monthly estimate</td>"
       +"<td class='num'>"+money(r.totM)+"</td>"
       +"<td class='num'>"+money(r.totU)+"</td>"
-      +"<td class='num savecol'>"+money(r.totS)+"</td>"
       +"</tr>";
     return out;
   }
@@ -1035,18 +1033,10 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       +"<div class='csub'>"+priceBadge()+" &nbsp;·&nbsp; "+providerNote+" &nbsp;·&nbsp; FX: US$1 = ₹"+FX.toFixed(2)+" (live).</div>"
       +"<div class='tablewrap'><table class='bom'><thead><tr>"
       +"<th class='sel-th'></th><th>Service category</th><th>Service type</th><th>Custom name</th><th>Region</th><th>Description</th>"
-      +"<th class='num'>Est. monthly cost</th><th class='num'>Est. upfront cost</th><th class='num'>Est. monthly cost<br>with 1-yr savings plan</th>"
+      +"<th class='num'>Est. monthly cost</th><th class='num'>Est. upfront cost</th>"
       +"</tr></thead><tbody>"+buildBOM(r)+"</tbody></table></div>"
       +budgetBlock(r)
       +"</div>"
-
-      +"<div class='card'>"
-      +"<div class='ct'>"+ico("<path d='M4 7V4h16v3M9 20h6M12 4v16'/>")+"Latency Formula &amp; Calculation</div>"
-      +"<div class='fbox'>"+buildFormula(r)+"</div></div>"
-
-      +"<div class='card'>"
-      +"<div class='ct'>"+ico("<rect x='3' y='3' width='18' height='18' rx='2'/><path d='M3 9h18M9 21V9'/>")+"Processing Time by Doc Type<span class='spacer'></span><span class='tag'>at "+fmtMB(r.typMB)+"</span></div>"
-      +"<table class='dt'><thead><tr><th>Type</th><th class='num'>Base (α)</th><th class='num'>Rate (β)</th><th class='num'>Est. time</th></tr></thead><tbody>"+buildDocRows(r)+"</tbody></table></div>"
 
       +"<div class='card'>"
       +"<div class='ct'>"+ico("<circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/>")+"Key Assumptions</div>"
