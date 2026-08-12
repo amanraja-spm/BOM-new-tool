@@ -238,10 +238,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="fg">
       <label class="lbl">Document types <span class="sub">select all that apply</span></label>
       <div class="opt-group" id="docTypes">
-        <label class="opt"><input type="checkbox" id="cb_light" checked><span><span class="ttl">Lightweight Excel / CSV</span><span class="desc">Clean tabular data, simple headers</span></span></label>
-        <label class="opt"><input type="checkbox" id="cb_complex"><span><span class="ttl">Complex Excel / CSV</span><span class="desc">Merged cells, multi-row / complex headers</span></span></label>
-        <label class="opt"><input type="checkbox" id="cb_digital"><span><span class="ttl">Digital PDF</span><span class="desc">Standard headers, selectable text</span></span></label>
-        <label class="opt"><input type="checkbox" id="cb_scanned"><span><span class="ttl">Scanned PDF</span><span class="desc">OCR required, complex headers</span></span></label>
+        <label class="opt"><input type="checkbox" id="cb_excel" checked><span><span class="ttl">Excel</span><span class="desc">Standard workbook, clean tabular data</span></span></label>
+        <label class="opt"><input type="checkbox" id="cb_hexcel"><span><span class="ttl">Heavy weight Excel</span><span class="desc">Many sheets, merged cells, complex structure</span></span></label>
+        <label class="opt"><input type="checkbox" id="cb_pdf"><span><span class="ttl">PDF</span><span class="desc">Digital PDF, selectable text</span></span></label>
+        <label class="opt"><input type="checkbox" id="cb_pdfimg"><span><span class="ttl">PDF with images</span><span class="desc">Scanned / image-heavy — OCR + vision</span></span></label>
       </div>
     </div>
     <div class="fg"><label class="lbl">Typical file size</label><input type="range" id="sl_typical" min="0" max="100" value="50"><div class="sv" id="lbl_typical"></div></div>
@@ -405,17 +405,23 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="fg"><label class="lbl">Gateway / WAF / LB</label>
       <select id="sel_gateway"><option value="none" selected>None</option><option value="lb">Load Balancer</option><option value="agw">Application Gateway</option><option value="waf">App Gateway + WAF</option></select></div>
 
-    <!-- ── AI / Machine Learning ── -->
+    <!-- ── AI / Machine Learning (OpenAI LLM spend) ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 14h.01M15 14h.01"/></svg></span>AI / Machine Learning</div>
-    <div class="fg">
-      <label class="lbl">Models <span class="sub">select all that apply</span></label>
-      <div class="opt-group" id="aiModels">
-        <label class="opt on"><input type="checkbox" id="cb_gptmini" checked><span><span class="ttl">GPT-5.4 mini</span></span></label>
-        <label class="opt on"><input type="checkbox" id="cb_gpt55" checked><span><span class="ttl">GPT-5.5</span></span></label>
-        <label class="opt"><input type="checkbox" id="cb_embed"><span><span class="ttl">Embeddings</span></span></label>
-      </div>
+    <div class="hint">OpenAI model spend is derived from the document types selected above plus the monthly volumes and document sizes below.</div>
+    <div class="fg"><label class="lbl">Usage intensity</label>
+      <select id="sel_ai_scen"><option value="" selected>Auto (per document type)</option><option value="low">Light</option><option value="typ">Typical</option><option value="high">Heavy</option></select></div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Uploads / mo</label><input type="number" id="inp_ai_uploads" value="50" min="0" step="10"></div>
+      <div class="fg"><label class="lbl">Queries / mo</label><input type="number" id="inp_ai_queries" value="300" min="0" step="10"></div>
     </div>
-    <div class="fg"><label class="lbl">Monthly tokens <span class="sub">millions</span></label><input type="number" id="inp_tokens" value="94" min="0" step="1"></div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Workflows built / mo</label><input type="number" id="inp_ai_builds" value="10" min="0" step="1"></div>
+      <div class="fg"><label class="lbl">Workflow runs / mo</label><input type="number" id="inp_ai_runs" value="100" min="0" step="10"></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Avg PDF pages</label><input type="number" id="inp_pdf_pages" value="20" min="1" step="1"></div>
+      <div class="fg"><label class="lbl">Avg Excel sheets</label><input type="number" id="inp_xls_sheets" value="3" min="1" step="1"></div>
+    </div>
 
     <!-- ── Commercial Terms ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Commercial Terms</div>
@@ -519,13 +525,85 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
   var POOL2 = { azure:"D8ads v5", aws:"m5.2xlarge", gcp:"n2-standard-8" };
   var POOLS = { azure:"D2as v4",  aws:"t3.large",   gcp:"e2-standard-2" };
 
-  // T(S) = base + rate * S_mb (seconds)
+  // T(S) = base + rate * S_mb (seconds).  calc/scen/sheets → LLM cost engine mapping.
   var DTYPES = {
-    light:   { label:"Lightweight Excel / CSV", base:3,  rate:0.10, cpu:0.5, mem:2.5 },
-    complex: { label:"Complex Excel / CSV",     base:5,  rate:0.50, cpu:1.0, mem:3.0 },
-    digital: { label:"Digital PDF",             base:5,  rate:0.30, cpu:1.0, mem:3.0 },
-    scanned: { label:"Scanned PDF (OCR)",       base:15, rate:2.00, cpu:2.0, mem:3.5 }
+    excel:  { label:"Excel",             base:3,  rate:0.10, cpu:0.5, mem:2.5, calc:"excel", scen:"typ",  sheets:3  },
+    hexcel: { label:"Heavy weight Excel", base:5,  rate:0.50, cpu:1.0, mem:3.0, calc:"excel", scen:"high", sheets:15 },
+    pdf:    { label:"PDF",               base:5,  rate:0.30, cpu:1.0, mem:3.0, calc:"pdf",   scen:"typ"             },
+    pdfimg: { label:"PDF with images",    base:15, rate:2.00, cpu:2.0, mem:3.5, calc:"pdf",   scen:"high"            }
   };
+
+  // ── LLM (OpenAI) cost engine — ported from the Auditify LLM Cost Calculator ──
+  // Returns USD per single operation; multiply by monthly volume + FX for INR.
+  var LLM_K = 1000;
+  var LLM_MODELS = {
+    reason:     { name:"gpt-5.5",               inP:5.00, outP:30.00 },
+    fast:       { name:"gpt-5.4-mini",          inP:0.75, outP:4.50  },
+    vision:     { name:"gemini-3.5-flash",      inP:1.50, outP:9.00  },
+    visionLite: { name:"gemini-3.1-flash-lite", inP:0.25, outP:1.50  }
+  };
+  var LLM_OCR = { name:"mistral-ocr-4-0", perPage:0.004 };
+  var LLM_AGENT = {
+    query:  { low:[20*LLM_K,2*LLM_K],   typ:[35*LLM_K,3.5*LLM_K], high:[90*LLM_K,9*LLM_K]  },
+    plan:   { low:[30*LLM_K,5*LLM_K],   typ:[80*LLM_K,15*LLM_K],  high:[150*LLM_K,30*LLM_K] },
+    exec:   { low:[100*LLM_K,20*LLM_K], typ:[200*LLM_K,40*LLM_K], high:[400*LLM_K,80*LLM_K] },
+    consol: { low:[10*LLM_K,2*LLM_K],   typ:[20*LLM_K,5*LLM_K],   high:[35*LLM_K,8*LLM_K]  },
+    rerun:  { low:[8*LLM_K,1.5*LLM_K],  typ:[15*LLM_K,3*LLM_K],   high:[250*LLM_K,50*LLM_K] }
+  };
+  function llmPdfChunks(pages){ return Math.max(1, Math.ceil(pages/12)); }
+  function llmLineItems(file, op, scen, pages, sheets){
+    var p=pages, sh=sheets, items=[];
+    function agent(key){ var t=LLM_AGENT[key][scen]; items.push({model:"reason",calls:1,inT:t[0],outT:t[1]}); }
+    var ch=llmPdfChunks(p);
+    var exCalls={low:1,typ:ch,high:Math.min(4,ch+1)}[scen];
+    if(op==="ingest"){
+      if(file==="excel"){
+        var sc={low:0,typ:1,high:2*sh}[scen];
+        if(sc>0) items.push({model:"fast",calls:sc,inT:4.5*LLM_K,outT:0.3*LLM_K});
+        if(sh>=15) items.push({model:"fast",calls:sh,inT:0.35*LLM_K,outT:0.05*LLM_K});
+      } else if(file==="pdf"){
+        items.push({model:"ocr",calls:p,inT:0,outT:0});
+        var redo={low:0,typ:Math.ceil(0.1*p),high:Math.ceil(0.2*p)}[scen];
+        if(redo>0) items.push({model:"visionLite",calls:redo,inT:2*LLM_K,outT:3*LLM_K});
+        if(p>=10) items.push({model:"fast",calls:Math.ceil(p/8),inT:1.8*LLM_K,outT:0.5*LLM_K});
+      } else {
+        items.push({model:"ocr",calls:1,inT:0,outT:0});
+        var r2={low:0,typ:1,high:3}[scen];
+        if(r2>0) items.push({model:"visionLite",calls:r2,inT:2*LLM_K,outT:3*LLM_K});
+      }
+    }
+    if(op==="query"){
+      agent("query");
+      if(file==="pdf"){
+        items.push({model:"reason",calls:exCalls,inT:7.5*LLM_K,outT:3*LLM_K});
+        if(scen==="high") items.push({model:"fast",calls:1,inT:5*LLM_K,outT:1*LLM_K});
+      }
+      if(file==="image") items.push({model:"vision",calls:{low:1,typ:1,high:3}[scen],inT:1.6*LLM_K,outT:1.5*LLM_K});
+    }
+    if(op==="create"){
+      agent("plan"); agent("exec"); agent("consol");
+      items.push({model:"fast",calls:1,inT:0.5*LLM_K,outT:0.05*LLM_K});
+      if(file==="pdf"){ var cc={low:1,typ:ch+1,high:2*ch}[scen]; items.push({model:"reason",calls:cc,inT:7.5*LLM_K,outT:3*LLM_K}); }
+      if(file==="image") items.push({model:"vision",calls:{low:1,typ:2,high:4}[scen],inT:1.6*LLM_K,outT:1.5*LLM_K});
+    }
+    if(op==="run"){
+      agent("rerun");
+      if(scen==="high"&&file!=="image") items.push({model:"fast",calls:1,inT:3*LLM_K,outT:0.5*LLM_K});
+      if(file==="pdf"){
+        items.push({model:"reason",calls:exCalls,inT:7.5*LLM_K,outT:3*LLM_K});
+        if(scen==="high") items.push({model:"fast",calls:1,inT:5*LLM_K,outT:1*LLM_K});
+      }
+      if(file==="image") items.push({model:"vision",calls:{low:1,typ:1,high:2}[scen],inT:1.6*LLM_K,outT:1.5*LLM_K});
+    }
+    return items;
+  }
+  function llmItemCost(it){
+    if(it.model==="ocr") return it.calls*LLM_OCR.perPage;
+    var m=LLM_MODELS[it.model]; return it.calls*(it.inT*m.inP+it.outT*m.outP)/1e6;
+  }
+  function llmCellCost(file, op, scen, pages, sheets){
+    return llmLineItems(file,op,scen,pages,sheets).reduce(function(a,it){return a+llmItemCost(it);},0);
+  }
 
   // ── helpers ──
   function posToMB(p){ return Math.round(Math.pow(10, p/25)); }
@@ -563,8 +641,6 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       dataVol:gnum("inp_data_vol",1024), growth:0, stier:"hot", redund:"lrs",
       dbEngine:gval("sel_dbengine","postgres"), dbVcores:gnum("inp_dbvcores",2), dbSize:gnum("inp_dbsize",200), dbHA:gval("sel_dbha","no")==="yes",
       endpoints:gnum("inp_endpoints",0), egress:gnum("inp_egress",200), gateway:gval("sel_gateway","none"),
-      aiModels:{mini:gchk("cb_gptmini",true), gpt55:gchk("cb_gpt55",true), embed:gchk("cb_embed",false)},
-      tokens:gnum("inp_tokens",94), aiBatch:false,
       retention:30, kv:100, registry:"basic",
       pricing:gval("sel_pricing","payg"), support:"basic"
     };
@@ -575,11 +651,11 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var effVolGB = Math.round(boq.dataVol * (1 + boq.growth/100)); // 12-mo projected volume
 
     var sel=[];
-    if($("cb_light").checked)sel.push("light");
-    if($("cb_complex").checked)sel.push("complex");
-    if($("cb_digital").checked)sel.push("digital");
-    if($("cb_scanned").checked)sel.push("scanned");
-    if(sel.length===0)sel=["light"];
+    if(gchk("cb_excel",true))sel.push("excel");
+    if(gchk("cb_hexcel",false))sel.push("hexcel");
+    if(gchk("cb_pdf",false))sel.push("pdf");
+    if(gchk("cb_pdfimg",false))sel.push("pdfimg");
+    if(sel.length===0)sel=["excel"];
     var worst=sel.reduce(function(a,b){return DTYPES[a].rate>DTYPES[b].rate?a:b;});
     var spec=DTYPES[worst];
 
@@ -652,14 +728,26 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var SUP = { basic:0, standard:8600, prodirect:86000 };
     var supportFinal = (SUP[boq.support]||0)*factor;
 
-    // AI — selected models scaled by monthly token volume + batch discount
-    var AIM = { mini:{name:"GPT-5.4 mini",cost:14000,tokM:87.3}, gpt55:{name:"GPT-5.5",cost:6000,tokM:6.6}, embed:{name:"Embeddings",cost:1200,tokM:50} };
-    var aiSel=[]; if(boq.aiModels.mini)aiSel.push("mini"); if(boq.aiModels.gpt55)aiSel.push("gpt55"); if(boq.aiModels.embed)aiSel.push("embed");
-    var baseTokM=0; aiSel.forEach(function(k){ baseTokM+=AIM[k].tokM; });
-    var aiScale = baseTokM>0 ? boq.tokens/baseTokM : 0;
-    var aiBatchF = boq.aiBatch?0.5:1;
-    var aiLines=[], aiTotalFinal=0;
-    aiSel.forEach(function(k){ var m=AIM[k].cost*aiScale*aiBatchF*factor; aiLines.push({k:k,m:m}); aiTotalFinal+=m; });
+    // AI — OpenAI/LLM model spend, derived from the selected document types via the
+    // ported LLM cost engine × monthly operation volumes (uploads/queries/builds/runs).
+    var aiVol   = { ingest:gnum("inp_ai_uploads",50), query:gnum("inp_ai_queries",300), create:gnum("inp_ai_builds",10), run:gnum("inp_ai_runs",100) };
+    var aiPages = Math.max(1, Math.round(gnum("inp_pdf_pages",20)));
+    var aiSheets= Math.max(1, Math.round(gnum("inp_xls_sheets",3)));
+    var aiScenOverride = gval("sel_ai_scen","");   // "" → per-doc-type default scenario
+    var LLM_OPS = ["ingest","query","create","run"];
+    // per selected doc type: blended monthly USD spend (all volume assumed on that type)
+    var aiPerType = sel.map(function(k){
+      var d=DTYPES[k], file=d.calc, scen=aiScenOverride||d.scen;
+      var sheets = (k==="hexcel") ? Math.max(15,aiSheets) : aiSheets;
+      var usd=0;
+      LLM_OPS.forEach(function(op){ usd += llmCellCost(file,op,scen,aiPages,sheets)*aiVol[op]; });
+      return { k:k, label:d.label, usd:usd };
+    });
+    // multiple types selected → the monthly volume is a blend across them (average)
+    var aiUsdMonthly = aiPerType.length ? aiPerType.reduce(function(a,x){return a+x.usd;},0)/aiPerType.length : 0;
+    var aiTotalFinal = aiUsdMonthly * FX;   // → INR (LLM list prices, no cloud region factor)
+    boq.ai = { uploads:aiVol.ingest, queries:aiVol.query, builds:aiVol.create, runs:aiVol.run,
+      pages:aiPages, sheets:aiSheets, scen:aiScenOverride, usdMonthly:aiUsdMonthly, types:sel.slice() };
 
     // fixed monthly cost of everything EXCEPT the scaling worker pool (userpool 1)
     var otherTotal = storageFinal + pool2Final + systemFinal + networkFinal + dbFinal
@@ -722,10 +810,15 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     addRow("Security","secrets","—","local",
       "Secrets / keys vault: ~<b>"+fmtN(boq.kv)+"K</b> operations / month.", kvFinal, kvFinal);
 
-    aiLines.forEach(function(l){
-      addRow("AI + Machine Learning","ai", AIM[l.k].name, "ai",
-        "Managed LLM API — <b>"+AIM[l.k].name+"</b>, "+(boq.aiBatch?"batch":"real-time on-demand")+"; scaled to <b>"+fmtN(boq.tokens)+"M tokens/mo</b>. Pay-per-token.", l.m, l.m);
-    });
+    if(aiTotalFinal>0){
+      var aiTypeLbl = sel.map(function(k){return DTYPES[k].label;}).join(", ");
+      var scenLbl = aiScenOverride ? ({low:"light",typ:"typical",high:"heavy"}[aiScenOverride]) : "per-type";
+      addRow("AI + Machine Learning","ai","OpenAI LLM","ai",
+        "Model spend (gpt-5.5 reasoning + gpt-5.4-mini fast tier + Mistral OCR / vision) for <b>"+aiTypeLbl+"</b> ("+scenLbl+" intensity) — "
+        +"<b>"+fmtN(aiVol.ingest)+"</b> uploads, <b>"+fmtN(aiVol.query)+"</b> queries, <b>"+fmtN(aiVol.create)+"</b> workflow builds, <b>"+fmtN(aiVol.run)+"</b> runs / mo; "
+        +"PDFs ~"+fmtN(aiPages)+" pages, Excel ~"+fmtN(aiSheets)+" sheets. Pay-per-token (≈ $"+fmtN(Math.round(aiUsdMonthly))+"/mo).",
+        aiTotalFinal, aiTotalFinal);
+    }
 
     if(supportFinal>0) addRow("Support","support","—","local",
       "<b>"+({standard:"Standard",prodirect:"Professional Direct"}[boq.support]||boq.support)+"</b> support plan — flat monthly fee.", supportFinal, supportFinal);
@@ -823,7 +916,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
   }
 
   function buildDocRows(r){
-    var keys=["light","complex","digital","scanned"], out="";
+    var keys=["excel","hexcel","pdf","pdfimg"], out="";
     for(var i=0;i<keys.length;i++){
       var k=keys[i],d=DTYPES[k],T=d.base+d.rate*r.typMB;
       var on=r.sel.indexOf(k)>=0, cls=r.worst===k?"star":on?"on":"off";
@@ -870,15 +963,20 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var GWL={none:"no gateway",lb:"Load Balancer",agw:"App Gateway",waf:"App Gateway + WAF"};
     var ENG={postgres:"PostgreSQL",sql:"Azure SQL",mysql:"MySQL",cosmos:"Cosmos DB",none:"None"};
     var PR={payg:"Pay-as-you-go","1yr":"1-yr reserved","3yr":"3-yr reserved"};
-    var ai=[]; if(b.aiModels.mini)ai.push("GPT-5.4 mini"); if(b.aiModels.gpt55)ai.push("GPT-5.5"); if(b.aiModels.embed)ai.push("Embeddings");
+    var docLbls={excel:"Excel",hexcel:"Heavy weight Excel",pdf:"PDF",pdfimg:"PDF with images"};
+    var docTxt=(r.sel||[]).map(function(k){return docLbls[k]||k;}).join(", ")||"—";
+    var aiTxt = b.ai
+      ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo · "+fmtN(b.ai.uploads)+" up / "+fmtN(b.ai.queries)+" q / "+fmtN(b.ai.builds)+" build / "+fmtN(b.ai.runs)+" runs")
+      : "—";
     var items=[
       ["Concurrent users", fmtN(b.users)],
       ["Region", (REGION_LABEL[b.region]||b.region)],
       ["Workload", (WL[b.workload]||b.workload)],
+      ["Document types", docTxt],
       ["Storage", fmtN(r.effVolGB)+" GB"],
       ["Database", b.dbEngine==="none"?"None":((ENG[b.dbEngine])+" · "+b.dbVcores+" vCore · "+fmtN(b.dbSize)+" GB"+(b.dbHA?" · HA":""))],
       ["Networking", b.endpoints+" endpoint(s) · "+fmtN(b.egress)+" GB egress · "+(GWL[b.gateway]||b.gateway)],
-      ["AI models", (ai.join(", ")||"none")+" · "+fmtN(b.tokens)+"M tok/mo"],
+      ["AI (OpenAI LLM)", aiTxt],
       ["Pricing", (PR[b.pricing])]
     ];
     var out=""; for(var i=0;i<items.length;i++) out+="<div class='boq-item'><span class='boq-k'>"+items[i][0]+"</span><span class='boq-v'>"+items[i][1]+"</span></div>";
@@ -1107,11 +1205,11 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     var d={ sl_typical:50, sl_peak:40, inp_users:5, sel_region:"centralindia",
       sel_workload:"aks", inp_data_vol:1024,
       sel_dbengine:"postgres", inp_dbvcores:2, inp_dbsize:200, sel_dbha:"no",
-      inp_endpoints:0, inp_egress:200, sel_gateway:"none", inp_tokens:94,
+      inp_endpoints:0, inp_egress:200, sel_gateway:"none",
+      sel_ai_scen:"", inp_ai_uploads:50, inp_ai_queries:300, inp_ai_builds:10, inp_ai_runs:100, inp_pdf_pages:20, inp_xls_sheets:3,
       sel_cloud:"azure", sel_pricing:"payg" };
     for(var k in d){ if($(k)) $(k).value=d[k]; }
-    $("cb_light").checked=true; $("cb_complex").checked=false; $("cb_digital").checked=false; $("cb_scanned").checked=false;
-    $("cb_gptmini").checked=true; $("cb_gpt55").checked=true; $("cb_embed").checked=false;
+    $("cb_excel").checked=true; $("cb_hexcel").checked=false; $("cb_pdf").checked=false; $("cb_pdfimg").checked=false;
     $("rb_rt").checked=true;
     EXCLUDED={}; CUR="INR"; loadPrices();
   });
