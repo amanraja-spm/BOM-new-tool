@@ -422,6 +422,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="fg"><label class="lbl">Avg PDF pages</label><input type="number" id="inp_pdf_pages" value="20" min="1" step="1"></div>
       <div class="fg"><label class="lbl">Avg Excel sheets</label><input type="number" id="inp_xls_sheets" value="3" min="1" step="1"></div>
     </div>
+    <div class="fg"><label class="lbl">Avg tokens / call <span class="sub">thousands</span></label><div class="hint">Scales model token spend around a 40K-token baseline call.</div><input type="number" id="inp_ai_tokens" value="40" min="1" step="5"></div>
 
     <!-- ── Commercial Terms ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Commercial Terms</div>
@@ -597,12 +598,13 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     }
     return items;
   }
-  function llmItemCost(it){
+  // tokScale scales token-based model spend (OCR is per-page, unaffected).
+  function llmItemCost(it, tokScale){
     if(it.model==="ocr") return it.calls*LLM_OCR.perPage;
-    var m=LLM_MODELS[it.model]; return it.calls*(it.inT*m.inP+it.outT*m.outP)/1e6;
+    var m=LLM_MODELS[it.model]; return it.calls*(it.inT*m.inP+it.outT*m.outP)/1e6*(tokScale||1);
   }
-  function llmCellCost(file, op, scen, pages, sheets){
-    return llmLineItems(file,op,scen,pages,sheets).reduce(function(a,it){return a+llmItemCost(it);},0);
+  function llmCellCost(file, op, scen, pages, sheets, tokScale){
+    return llmLineItems(file,op,scen,pages,sheets).reduce(function(a,it){return a+llmItemCost(it,tokScale);},0);
   }
 
   // ── helpers ──
@@ -734,20 +736,22 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var aiPages = Math.max(1, Math.round(gnum("inp_pdf_pages",20)));
     var aiSheets= Math.max(1, Math.round(gnum("inp_xls_sheets",3)));
     var aiScenOverride = gval("sel_ai_scen","");   // "" → per-doc-type default scenario
+    var aiTokK  = Math.max(1, gnum("inp_ai_tokens",40));  // avg tokens per call (thousands)
+    var aiTokScale = aiTokK / 40;                          // baseline 40K/call → 1.0 (no change)
     var LLM_OPS = ["ingest","query","create","run"];
     // per selected doc type: blended monthly USD spend (all volume assumed on that type)
     var aiPerType = sel.map(function(k){
       var d=DTYPES[k], file=d.calc, scen=aiScenOverride||d.scen;
       var sheets = (k==="hexcel") ? Math.max(15,aiSheets) : aiSheets;
       var usd=0;
-      LLM_OPS.forEach(function(op){ usd += llmCellCost(file,op,scen,aiPages,sheets)*aiVol[op]; });
+      LLM_OPS.forEach(function(op){ usd += llmCellCost(file,op,scen,aiPages,sheets,aiTokScale)*aiVol[op]; });
       return { k:k, label:d.label, usd:usd };
     });
     // multiple types selected → the monthly volume is a blend across them (average)
     var aiUsdMonthly = aiPerType.length ? aiPerType.reduce(function(a,x){return a+x.usd;},0)/aiPerType.length : 0;
     var aiTotalFinal = aiUsdMonthly * FX;   // → INR (LLM list prices, no cloud region factor)
     boq.ai = { uploads:aiVol.ingest, queries:aiVol.query, builds:aiVol.create, runs:aiVol.run,
-      pages:aiPages, sheets:aiSheets, scen:aiScenOverride, usdMonthly:aiUsdMonthly, types:sel.slice() };
+      pages:aiPages, sheets:aiSheets, tokK:aiTokK, scen:aiScenOverride, usdMonthly:aiUsdMonthly, types:sel.slice() };
 
     // fixed monthly cost of everything EXCEPT the scaling worker pool (userpool 1)
     var otherTotal = storageFinal + pool2Final + systemFinal + networkFinal + dbFinal
@@ -816,7 +820,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       addRow("AI + Machine Learning","ai","OpenAI LLM","ai",
         "Model spend (gpt-5.5 reasoning + gpt-5.4-mini fast tier + Mistral OCR / vision) for <b>"+aiTypeLbl+"</b> ("+scenLbl+" intensity) — "
         +"<b>"+fmtN(aiVol.ingest)+"</b> uploads, <b>"+fmtN(aiVol.query)+"</b> queries, <b>"+fmtN(aiVol.create)+"</b> workflow builds, <b>"+fmtN(aiVol.run)+"</b> runs / mo; "
-        +"PDFs ~"+fmtN(aiPages)+" pages, Excel ~"+fmtN(aiSheets)+" sheets. Pay-per-token (≈ $"+fmtN(Math.round(aiUsdMonthly))+"/mo).",
+        +"PDFs ~"+fmtN(aiPages)+" pages, Excel ~"+fmtN(aiSheets)+" sheets, ~<b>"+fmtN(aiTokK)+"K tokens/call</b>. Pay-per-token (≈ $"+fmtN(Math.round(aiUsdMonthly))+"/mo).",
         aiTotalFinal, aiTotalFinal);
     }
 
@@ -966,7 +970,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var docLbls={excel:"Excel",hexcel:"Heavy weight Excel",pdf:"PDF",pdfimg:"PDF with images"};
     var docTxt=(r.sel||[]).map(function(k){return docLbls[k]||k;}).join(", ")||"—";
     var aiTxt = b.ai
-      ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo · "+fmtN(b.ai.uploads)+" up / "+fmtN(b.ai.queries)+" q / "+fmtN(b.ai.builds)+" build / "+fmtN(b.ai.runs)+" runs")
+      ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo · "+fmtN(b.ai.uploads)+" up / "+fmtN(b.ai.queries)+" q / "+fmtN(b.ai.builds)+" build / "+fmtN(b.ai.runs)+" runs · ~"+fmtN(b.ai.tokK)+"K tok/call")
       : "—";
     var items=[
       ["Concurrent users", fmtN(b.users)],
@@ -1206,7 +1210,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       sel_workload:"aks", inp_data_vol:1024,
       sel_dbengine:"postgres", inp_dbvcores:2, inp_dbsize:200, sel_dbha:"no",
       inp_endpoints:0, inp_egress:200, sel_gateway:"none",
-      sel_ai_scen:"", inp_ai_uploads:50, inp_ai_queries:300, inp_ai_builds:10, inp_ai_runs:100, inp_pdf_pages:20, inp_xls_sheets:3,
+      sel_ai_scen:"", inp_ai_uploads:50, inp_ai_queries:300, inp_ai_builds:10, inp_ai_runs:100, inp_pdf_pages:20, inp_xls_sheets:3, inp_ai_tokens:40,
       sel_cloud:"azure", sel_pricing:"payg" };
     for(var k in d){ if($(k)) $(k).value=d[k]; }
     $("cb_excel").checked=true; $("cb_hexcel").checked=false; $("cb_pdf").checked=false; $("cb_pdfimg").checked=false;
