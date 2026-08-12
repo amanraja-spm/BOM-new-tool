@@ -860,7 +860,6 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
         +"<td class='sel-td'><input type='checkbox' class='row-sel' data-idx='"+i+"'"+(x.excluded?"":" checked")+" title='Include / exclude this line'></td>"
         +"<td class='cat'>"+x.cat+"</td>"
         +"<td class='stype'>"+x.type+tag+"</td>"
-        +"<td class='cname'>"+(x.name||"—")+"</td>"
         +"<td class='region'>"+x.region+"</td>"
         +"<td class='desc-cell'>"+descHtml+"</td>"
         +"<td class='num total'>"+money(x.monthly)+"</td>"
@@ -868,7 +867,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
         +"</tr>";
     }
     out+="<tr class='grand-row'>"
-      +"<td colspan='6'>Total monthly estimate</td>"
+      +"<td colspan='5'>Total monthly estimate</td>"
       +"<td class='num'>"+money(r.totM)+"</td>"
       +"<td class='num'>"+money(r.totU)+"</td>"
       +"</tr>";
@@ -1032,7 +1031,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       +"</div>"
       +"<div class='csub'>"+priceBadge()+" &nbsp;·&nbsp; "+providerNote+" &nbsp;·&nbsp; FX: US$1 = ₹"+FX.toFixed(2)+" (live).</div>"
       +"<div class='tablewrap'><table class='bom'><thead><tr>"
-      +"<th class='sel-th'></th><th>Service category</th><th>Service type</th><th>Custom name</th><th>Region</th><th>Description</th>"
+      +"<th class='sel-th'></th><th>Service category</th><th>Service type</th><th>Region</th><th>Description</th>"
       +"<th class='num'>Est. monthly cost</th><th class='num'>Est. upfront cost</th>"
       +"</tr></thead><tbody>"+buildBOM(r)+"</tbody></table></div>"
       +budgetBlock(r)
