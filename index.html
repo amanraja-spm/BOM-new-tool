@@ -196,6 +196,46 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .layout.nav-collapsed{grid-template-columns:1fr}
 .layout.nav-collapsed .form-panel{display:none}
 
+/* ── Welcome / launcher page ── */
+#welcome{display:none}
+body.home #welcome{display:flex}
+body.home header,body.home .layout{display:none !important}
+#welcome{min-height:100vh;flex-direction:column;background:
+  radial-gradient(1200px 500px at 50% -8%,rgba(45,212,191,.10),transparent 60%),
+  linear-gradient(180deg,#f7fafd 0%,var(--bg) 100%)}
+.wl-top{background:linear-gradient(120deg,#16395c 0%,var(--brand) 55%,var(--brand-500) 100%);color:#fff;
+  padding:22px 34px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 14px rgba(16,57,92,.25)}
+.wl-top .logo{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.13);display:grid;place-items:center;
+  font-weight:800;font-size:18px;letter-spacing:.5px;border:1px solid rgba(255,255,255,.22)}
+.wl-top h1{font-size:18px;font-weight:700;letter-spacing:.2px}
+.wl-top p{font-size:12px;opacity:.82;margin-top:2px}
+.wl-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 24px 60px}
+.wl-head{text-align:center;max-width:640px;margin-bottom:34px}
+.wl-head h2{font-size:27px;font-weight:800;color:var(--ink);letter-spacing:-.4px}
+.wl-head p{font-size:14px;color:var(--ink-2);margin-top:10px;line-height:1.6}
+.wl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;width:100%;max-width:1040px}
+.wl-card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 24px 22px;
+  box-shadow:var(--shadow);min-height:210px;display:flex;flex-direction:column;transition:transform .16s,box-shadow .16s,border-color .16s}
+.wl-card .wl-ico{width:48px;height:48px;border-radius:13px;background:var(--brand-50);display:grid;place-items:center;color:var(--brand);margin-bottom:16px}
+.wl-card .wl-ico svg{width:24px;height:24px}
+.wl-card h3{font-size:16px;font-weight:750;color:var(--ink);letter-spacing:-.2px}
+.wl-card .wl-desc{font-size:12.5px;color:var(--ink-2);margin-top:8px;line-height:1.55;flex:1}
+.wl-card .wl-cta{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:750;color:var(--brand);margin-top:16px}
+.wl-card .wl-cta svg{width:15px;height:15px;transition:transform .16s}
+.wl-card.active{cursor:pointer}
+.wl-card.active::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:4px;border-radius:0 4px 4px 0;background:linear-gradient(var(--brand),var(--accent))}
+.wl-card.active:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(16,24,40,.12);border-color:var(--brand-100)}
+.wl-card.active:hover .wl-cta svg{transform:translateX(3px)}
+.wl-card.locked{opacity:.72;cursor:not-allowed;background:linear-gradient(180deg,#fff,#fbfcfe)}
+.wl-card.locked .wl-ico{background:var(--line-2);color:var(--ink-3)}
+.wl-card.locked h3{color:var(--ink-2)}
+.wl-badge{position:absolute;top:16px;right:16px;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--ink-3);background:var(--line-2);padding:4px 9px;border-radius:999px}
+.wl-badge.live{color:var(--save);background:var(--save-bg)}
+.wl-foot{margin-top:34px;font-size:11.5px;color:var(--ink-3);text-align:center}
+@media (max-width:900px){.wl-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.wl-grid{grid-template-columns:1fr}.wl-head h2{font-size:22px}}
+
 /* Print → Save as PDF: show only the report, full width, keep colors */
 @media print{
   @page{margin:14mm}
@@ -216,8 +256,75 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 </head>
 <body>
 
+<!-- ── Welcome / launcher ── -->
+<section id="welcome">
+  <div class="wl-top">
+    <div class="logo">IR</div>
+    <div>
+      <h1>Irame — Tools</h1>
+      <p>Select a tool to get started.</p>
+    </div>
+  </div>
+  <div class="wl-body">
+    <div class="wl-head">
+      <h2>Welcome to the Irame workspace</h2>
+      <p>Your suite of internal tools. Open the Infrastructure Sizing &amp; BOM tool below — more tools are on the way.</p>
+    </div>
+    <div class="wl-grid">
+
+      <div class="wl-card active" id="card_bom" role="button" tabindex="0">
+        <span class="wl-badge live">Live</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg></span>
+        <h3>Infrastructure Sizing &amp; BOM Tool</h3>
+        <div class="wl-desc">Turn a workload profile into a recommended cloud setup, a full bill of materials, and a latency projection — with live pricing.</div>
+        <span class="wl-cta">Open tool <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </div>
+
+      <div class="wl-card locked" aria-disabled="true">
+        <span class="wl-badge">Coming soon</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
+        <h3>Card 2</h3>
+        <div class="wl-desc">Coming soon.</div>
+      </div>
+
+      <div class="wl-card locked" aria-disabled="true">
+        <span class="wl-badge">Coming soon</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <h3>Card 3</h3>
+        <div class="wl-desc">Coming soon.</div>
+      </div>
+
+      <div class="wl-card locked" aria-disabled="true">
+        <span class="wl-badge">Coming soon</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>
+        <h3>Card 4</h3>
+        <div class="wl-desc">Coming soon.</div>
+      </div>
+
+      <div class="wl-card locked" aria-disabled="true">
+        <span class="wl-badge">Coming soon</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>
+        <h3>Card 5</h3>
+        <div class="wl-desc">Coming soon.</div>
+      </div>
+
+      <div class="wl-card locked" aria-disabled="true">
+        <span class="wl-badge">Coming soon</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 14h.01M15 14h.01"/></svg></span>
+        <h3>Card 6</h3>
+        <div class="wl-desc">Coming soon.</div>
+      </div>
+
+    </div>
+    <div class="wl-foot">Irame internal tools · more coming soon</div>
+  </div>
+</section>
+
 <header>
   <div class="brand">
+    <button class="nav-toggle no-print" id="homeBtn" title="Back to all tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+    </button>
     <button class="nav-toggle no-print" id="toggleNav" title="Show / hide the input panel">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
@@ -1175,6 +1282,17 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   $("toggleNav").addEventListener("click", function(){
     document.querySelector(".layout").classList.toggle("nav-collapsed");
   });
+
+  // ── Welcome launcher: start on the home page; card 1 opens the BOM tool ──
+  document.body.classList.add("home");
+  function enterBOM(){ document.body.classList.remove("home"); window.scrollTo(0,0); }
+  function goHome(){ document.body.classList.add("home"); window.scrollTo(0,0); }
+  var cardBOM=$("card_bom");
+  if(cardBOM){
+    cardBOM.addEventListener("click", enterBOM);
+    cardBOM.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); enterBOM(); } });
+  }
+  if($("homeBtn")) $("homeBtn").addEventListener("click", goHome);
 
   // ── Download BOM as a polished, client-ready Excel (.xlsx) ──
   function stripTags(s){ var d=document.createElement("div"); d.innerHTML=String(s==null?"":s); return (d.textContent||d.innerText||"").replace(/\s+/g," ").trim(); }
