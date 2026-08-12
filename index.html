@@ -121,17 +121,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .bom td.num.savecol{font-weight:700;color:var(--save)}
 .scaling-tag{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:800;letter-spacing:.4px;color:var(--accent);background:#e6f7f4;padding:1px 6px;border-radius:5px;vertical-align:middle}
 
-/* inline-editable node counts & cost cells */
-.node-inp{width:50px;text-align:center;border:1.5px solid var(--brand-100);background:#fff;font-family:inherit;font-size:12px;font-weight:800;color:var(--brand);border-radius:6px;padding:2px 4px;margin-right:2px}
-.node-inp:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 3px var(--brand-50)}
-.cost-cur{color:var(--ink-3);font-size:12px;font-weight:700;margin-right:1px}
-.cost-inp{width:92px;text-align:right;border:1px solid transparent;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);border-radius:6px;padding:3px 4px;cursor:text}
-.cost-inp:hover{border-color:var(--line)}
-.cost-inp:focus{border-color:var(--brand);background:#fff;outline:none;box-shadow:0 0 0 3px var(--brand-50)}
-.cost-inp.ov{color:var(--brand);background:var(--brand-50);font-weight:800}
-.reset-edits{display:inline-flex;align-items:center;gap:5px;background:#fff3e3;color:var(--warn);border:1px solid #f5c98a;border-radius:9px;padding:5px 11px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;margin-left:8px}
-.reset-edits svg{width:13px;height:13px}
-@media print{.node-inp,.cost-inp{border:none;background:transparent;color:#000;padding:0}}
+/* row include/exclude selection */
+.bom th.sel-th,.bom td.sel-td{width:34px;text-align:center;padding-left:8px;padding-right:4px}
+.row-sel{width:15px;height:15px;accent-color:var(--brand);cursor:pointer;vertical-align:middle}
+.bom tr.excluded td{opacity:.42}
+.bom tr.excluded td.sel-td{opacity:1}
+.bom tr.excluded .stype,.bom tr.excluded .desc-cell{text-decoration:line-through}
+.bom tr.excluded .total,.bom tr.excluded .savecol{text-decoration:line-through}
+@media print{.sel-th,.sel-td{display:none}.bom tr.excluded{display:none}}
 .grand-row td{background:var(--brand);color:#fff;font-weight:800;font-size:13.5px;padding:13px 12px}
 .grand-row td.savecol{color:#9af5e2}
 .grand-row td:first-child{border-radius:0 0 0 9px}
@@ -453,8 +450,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   var FX = 94.5;          // live USD→INR (updated from server response when available)
   var CUR = "INR";        // active display currency
   var LAST = null;        // last computed report (for Excel export)
-  var NODE_OV = {};       // manual node-count overrides: {u1,u2,sys} (undefined = auto)
-  var COST_OV = {};       // manual per-line monthly-cost overrides: rowKey → value
+  var EXCLUDED = {};      // rowKey → true when a line is unselected (dropped from totals)
 
   // ── Worker tiers (vcpu/ram + per-provider instance label + Azure SKU) ──
   var TIERS = {
@@ -607,9 +603,9 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     // ── node counts derived from CONCURRENT USERS (nothing hardcoded) ──
     var usersPerNode = realtime ? jobsPerNode : jobsPerNode*3;   // queue-tolerant packs 3× users/node
     var nWneed = Math.max(1, Math.ceil(boq.users / usersPerNode));
-    var nW  = (NODE_OV.u1!=null && NODE_OV.u1>=1) ? NODE_OV.u1 : nWneed;              // userpool 1
-    var u2n = (NODE_OV.u2!=null && NODE_OV.u2>=0) ? NODE_OV.u2 : Math.max(1, Math.ceil(nW/2));       // userpool 2 = ½ primary
-    var sysn= (NODE_OV.sys!=null && NODE_OV.sys>=0) ? NODE_OV.sys : Math.max(1, Math.ceil((nW+u2n)/10)); // 1 system node / ~10 workers
+    var nW  = nWneed;                                       // userpool 1
+    var u2n = Math.max(1, Math.ceil(nW/2));                  // userpool 2 = ½ primary
+    var sysn= Math.max(1, Math.ceil((nW+u2n)/10));          // 1 system node / ~10 workers
     var budgetCapped = false;
 
     // ── per-node compute costs (live/baseline) with Windows-licensing uplift ──
@@ -734,11 +730,13 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     if(supportFinal>0) addRow("Support","support","—","local",
       "<b>"+({standard:"Standard",prodirect:"Professional Direct"}[boq.support]||boq.support)+"</b> support plan — flat monthly fee.", supportFinal, supportFinal);
 
-    // apply manual per-line monthly-cost overrides (edited directly in the table)
-    for(var oi=0;oi<rows.length;oi++){ var ov=COST_OV[rows[oi].key]; if(ov!=null && isFinite(ov)){ rows[oi].monthly=ov; rows[oi].savings=ov; rows[oi].overridden=true; } }
-
+    // mark unselected lines and total only the selected ones
     var totM=0,totS=0,totU=0;
-    for(var i=0;i<rows.length;i++){ totM+=rows[i].monthly; totS+=rows[i].savings; totU+=rows[i].upfront; }
+    for(var i=0;i<rows.length;i++){
+      rows[i].excluded = !!EXCLUDED[rows[i].key];
+      if(rows[i].excluded) continue;
+      totM+=rows[i].monthly; totS+=rows[i].savings; totU+=rows[i].upfront;
+    }
     var applied = boq.pricing==="payg" ? totM : boq.pricing==="1yr" ? totS : totS*0.82;
 
     return {
@@ -760,22 +758,21 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     for(var i=0;i<r.rows.length;i++){
       var x=r.rows[i];
       var tag=x.scaling?"<span class='scaling-tag'>SCALES</span>":"";
-      var descHtml=(x.nodeKey ? "<input class='node-inp' data-nk='"+x.nodeKey+"' type='number' min='0' step='1' value='"+x.nodeCount+"' title='Edit node count'> × " : "")+x.desc;
-      var costVal=CUR==="INR" ? Math.round(x.monthly) : Math.round(x.monthly/FX);
-      var sym=CUR==="INR" ? "₹" : "$";
-      out+="<tr>"
+      var descHtml=(x.nodeKey ? "<b>"+x.nodeCount+"× </b>" : "")+x.desc;
+      out+="<tr class='"+(x.excluded?"excluded":"")+"'>"
+        +"<td class='sel-td'><input type='checkbox' class='row-sel' data-idx='"+i+"'"+(x.excluded?"":" checked")+" title='Include / exclude this line'></td>"
         +"<td class='cat'>"+x.cat+"</td>"
         +"<td class='stype'>"+x.type+tag+"</td>"
         +"<td class='cname'>"+(x.name||"—")+"</td>"
         +"<td class='region'>"+x.region+"</td>"
         +"<td class='desc-cell'>"+descHtml+"</td>"
-        +"<td class='num total'><span class='cost-cur'>"+sym+"</span><input class='cost-inp"+(x.overridden?" ov":"")+"' data-idx='"+i+"' value='"+fmtN(costVal)+"' title='Click to edit this line cost'></td>"
+        +"<td class='num total'>"+money(x.monthly)+"</td>"
         +"<td class='num'>"+money(x.upfront)+"</td>"
         +"<td class='num savecol'>"+money(x.savings)+"</td>"
         +"</tr>";
     }
     out+="<tr class='grand-row'>"
-      +"<td colspan='5'>Total monthly estimate</td>"
+      +"<td colspan='6'>Total monthly estimate</td>"
       +"<td class='num'>"+money(r.totM)+"</td>"
       +"<td class='num'>"+money(r.totU)+"</td>"
       +"<td class='num savecol'>"+money(r.totS)+"</td>"
@@ -932,11 +929,10 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       +"<div class='ct'>"+ico("<path d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2'/><rect x='9' y='3' width='6' height='4' rx='1'/><path d='M9 12h6M9 16h6'/>")+"Bill of Materials"
       +"<span class='spacer'></span>"
       +"<div class='cur-toggle' id='curToggle'><button data-cur='INR' class='"+(CUR==="INR"?"on":"")+"'>₹ INR</button><button data-cur='USD' class='"+(CUR==="USD"?"on":"")+"'>$ USD</button></div>"
-      +((Object.keys(NODE_OV).length||Object.keys(COST_OV).length) ? "<button class='reset-edits no-print' id='resetEdits' title='Clear manual edits'>"+ico("<path d='M3 12a9 9 0 109-9 9 9 0 00-7 3.3L3 8'/><path d='M3 3v5h5'/>")+"Reset edits</button>" : "")
       +"</div>"
       +"<div class='csub'>"+priceBadge()+" &nbsp;·&nbsp; "+providerNote+" &nbsp;·&nbsp; FX: US$1 = ₹"+FX.toFixed(2)+" (live).</div>"
       +"<div class='tablewrap'><table class='bom'><thead><tr>"
-      +"<th>Service category</th><th>Service type</th><th>Custom name</th><th>Region</th><th>Description</th>"
+      +"<th class='sel-th'></th><th>Service category</th><th>Service type</th><th>Custom name</th><th>Region</th><th>Description</th>"
       +"<th class='num'>Est. monthly cost</th><th class='num'>Est. upfront cost</th><th class='num'>Est. monthly cost<br>with 1-yr savings plan</th>"
       +"</tr></thead><tbody>"+buildBOM(r)+"</tbody></table></div>"
       +budgetBlock(r)
@@ -966,27 +962,15 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       });
     }
 
-    // inline-editable node counts
-    $("report").querySelectorAll(".node-inp").forEach(function(inp){
-      inp.addEventListener("change",function(){
-        var nk=inp.getAttribute("data-nk"), v=inp.value.trim();
-        if(v==="") delete NODE_OV[nk]; else NODE_OV[nk]=Math.max(0, parseInt(v,10)||0);
-        refresh();
-      });
-    });
-    // inline-editable line costs
-    $("report").querySelectorAll(".cost-inp").forEach(function(inp){
-      inp.addEventListener("change",function(){
-        var idx=+inp.getAttribute("data-idx"), v=inp.value.trim();
+    // row include/exclude checkboxes
+    $("report").querySelectorAll(".row-sel").forEach(function(cb){
+      cb.addEventListener("change",function(){
+        var idx=+cb.getAttribute("data-idx");
         var row=LAST&&LAST.rows&&LAST.rows[idx]; if(!row) return;
-        if(v===""){ delete COST_OV[row.key]; }
-        else { var num=parseFloat(v.replace(/[^0-9.\-]/g,"")); if(isFinite(num)) COST_OV[row.key]= CUR==="USD"? num*FX : num; }
+        if(cb.checked) delete EXCLUDED[row.key]; else EXCLUDED[row.key]=true;
         refresh();
       });
     });
-    // reset-edits button
-    var re=$("resetEdits");
-    if(re) re.addEventListener("click",function(){ NODE_OV={}; COST_OV={}; refresh(); });
   }
 
   // ── live wiring ──
@@ -1103,7 +1087,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     aoa.push(["Budget (INR)", r2(r.budget), "Worker nodes", r.nW, "FX US$1=", r2(FX)]);
     aoa.push([]);
     aoa.push(["Service category","Service type","Custom name","Region","Description","Est. monthly cost (INR)","Est. upfront cost (INR)","Est. monthly w/ 1-yr savings (INR)"]);
-    for(var i=0;i<r.rows.length;i++){ var x=r.rows[i];
+    for(var i=0;i<r.rows.length;i++){ var x=r.rows[i]; if(x.excluded) continue;   // export selected lines only
       aoa.push([x.cat, stripTags(x.type), x.name||"—", x.region, stripTags(x.desc), r2(x.monthly), r2(x.upfront), r2(x.savings)]);
     }
     aoa.push(["TOTAL — monthly estimate","","","","", r2(r.totM), r2(r.totU), r2(r.totS)]);
@@ -1129,7 +1113,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     $("cb_light").checked=true; $("cb_complex").checked=false; $("cb_digital").checked=false; $("cb_scanned").checked=false;
     $("cb_gptmini").checked=true; $("cb_gpt55").checked=true; $("cb_embed").checked=false;
     $("rb_rt").checked=true;
-    NODE_OV={}; COST_OV={}; CUR="INR"; loadPrices();
+    EXCLUDED={}; CUR="INR"; loadPrices();
   });
 
   loadPrices();
