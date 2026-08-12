@@ -200,7 +200,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 @media print{
   @page{margin:14mm}
   html,body{background:#fff}
-  header,.form-panel,.no-print{display:none !important}
+  header,.form-panel,.no-print,.cur-toggle{display:none !important}
   .layout{display:block;height:auto}
   .report-panel{padding:0;overflow:visible;background:#fff}
   .card,.mc,.fbox{box-shadow:none}
@@ -212,6 +212,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -927,22 +928,26 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     return out;
   }
 
-  function buildAssumptions(r){
+  // shared assumptions data (may contain <b> for the on-screen list; stripped for Excel)
+  function assumptionItems(r){
     var tl={standard:"Standard",heavy:"Memory-Optimised",superheavy:"High-Memory"};
-    var items=[
-      "Worst-case type used for sizing: <b>"+DTYPES[r.worst].label+"</b>",
-      "Memory per job: "+r.typMB+" MB × "+r.spec.mem+"× buffer = <b>"+r.ramPerJob.toFixed(1)+" GB/pod</b>",
-      "Jobs per node limited by CPU ("+r.cpuCap+") and RAM ("+r.ramCap+") → <b>"+r.jobsPerNode+" concurrent pods/node</b>",
-      "Worker tier <b>"+tl[r.tierKey]+" ("+r.worker.label+")</b> selected for max file size of "+fmtMB(r.maxMB),
-      "Worker pool (<b>userpool 1</b>) is the only line that scales with the form — "+r.nW+" node(s) at peak. Other services are a fixed baseline you can tune per quote.",
+    return [
+      "Worst-case document type used for sizing: <b>"+DTYPES[r.worst].label+"</b>.",
+      "Memory per job: "+r.typMB+" MB × "+r.spec.mem+"× buffer = <b>"+r.ramPerJob.toFixed(1)+" GB/pod</b>.",
+      "Jobs per node limited by CPU ("+r.cpuCap+") and RAM ("+r.ramCap+") → <b>"+r.jobsPerNode+" concurrent pods/node</b>.",
+      "Worker tier <b>"+tl[r.tierKey]+" ("+r.worker.label+")</b> selected for the workload profile.",
+      "Worker pool (<b>userpool 1</b>) is the line that scales with concurrent users — <b>"+r.nW+" node(s)</b> at peak. Other services are sized from the requirement inputs.",
       r.realtime
         ? "Real-time strategy: sized to clear all peak jobs at once — <b>"+r.running+" run concurrently, "+r.queued+" queued</b>."
         : "Queue strategy: fewer nodes to cut cost — <b>"+r.running+" run concurrently, "+r.queued+" wait in queue</b>.",
-      "Two cost columns shown: <b>on-demand (PAYG)</b> and <b>1-year savings plan</b> (committed, cheaper).",
-      "AI / LLM lines are pay-per-token and shown at a representative monthly volume; they do not change with the savings plan.",
-      "Pricing is indicative public list pricing in <b>₹</b> (US$ shown at live ₹"+FX.toFixed(2)+"/$). Blob storage grows over time — set a 90-day archive lifecycle policy."
+      "AI / LLM lines are pay-per-token, priced from the selected document types and monthly volumes (uploads, queries, workflow builds & runs).",
+      "Compute lines are priced live from the cloud provider's public price list; platform & AI lines are an indicative baseline.",
+      "Pricing is indicative public list pricing in <b>₹</b> (US$ shown at live ₹"+FX.toFixed(2)+"/$), excluding taxes and negotiated discounts. Validate with your cloud account team before procurement."
     ];
-    var out="";for(var i=0;i<items.length;i++)out+="<li>"+items[i]+"</li>";
+  }
+  function buildAssumptions(r){
+    var items=assumptionItems(r), out="";
+    for(var i=0;i<items.length;i++)out+="<li>"+items[i]+"</li>";
     return out;
   }
 
@@ -958,7 +963,8 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     return "<span style='color:var(--ink-3);font-weight:700'>● Baseline prices</span>";
   }
 
-  function buildBOQSummary(r){
+  // shared requirements-summary data (plain text) — used by the on-screen card and the Excel export
+  function boqItems(r){
     var b=r.boq;
     var WL={aks:"Containerized (AKS)",vm:"Virtual Machines",both:"AKS + VMs"};
     var GWL={none:"no gateway",lb:"Load Balancer",agw:"App Gateway",waf:"App Gateway + WAF"};
@@ -969,7 +975,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var aiTxt = b.ai
       ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo · "+fmtN(b.ai.uploads)+" up / "+fmtN(b.ai.queries)+" q / "+fmtN(b.ai.builds)+" build / "+fmtN(b.ai.runs)+" runs · ~"+fmtN(b.ai.tokK)+"K tok/call")
       : "—";
-    var items=[
+    return [
       ["Concurrent users", fmtN(b.users)],
       ["Region", (REGION_LABEL[b.region]||b.region)],
       ["Workload", (WL[b.workload]||b.workload)],
@@ -980,7 +986,10 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       ["AI (OpenAI LLM)", aiTxt],
       ["Pricing", (PR[b.pricing])]
     ];
-    var out=""; for(var i=0;i<items.length;i++) out+="<div class='boq-item'><span class='boq-k'>"+items[i][0]+"</span><span class='boq-v'>"+items[i][1]+"</span></div>";
+  }
+  function buildBOQSummary(r){
+    var items=boqItems(r), out="";
+    for(var i=0;i<items.length;i++) out+="<div class='boq-item'><span class='boq-k'>"+items[i][0]+"</span><span class='boq-v'>"+items[i][1]+"</span></div>";
     return "<div class='card'><div class='ct'>"+ico("<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'/>")+"BOQ Requirements Summary</div><div class='boq-grid'>"+out+"</div></div>";
   }
 
@@ -1167,31 +1176,125 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     document.querySelector(".layout").classList.toggle("nav-collapsed");
   });
 
-  // ── Download BOM as Excel (.xlsx), CSV fallback ──
+  // ── Download BOM as a polished, client-ready Excel (.xlsx) ──
   function stripTags(s){ var d=document.createElement("div"); d.innerHTML=String(s==null?"":s); return (d.textContent||d.innerText||"").replace(/\s+/g," ").trim(); }
   function r2(n){ return Math.round((+n||0)*100)/100; }
-  window.__downloadBOM = function(){
-    var r=LAST; if(!r){ return; }
-    var aoa=[];
-    aoa.push(["Irame — Infrastructure Sizing & Bill of Materials"]);
-    aoa.push(["Provider", r.prov.label, "Region", r.prov.region, "Strategy", r.realtime?"Real-time":"Queue-tolerant", "Generated", today()]);
-    aoa.push(["Budget (INR)", r2(r.budget), "Worker nodes", r.nW, "FX US$1=", r2(FX)]);
-    aoa.push([]);
-    aoa.push(["Service category","Service type","Custom name","Region","Description","Est. monthly cost (INR)","Est. upfront cost (INR)","Est. monthly w/ 1-yr savings (INR)"]);
-    for(var i=0;i<r.rows.length;i++){ var x=r.rows[i]; if(x.excluded) continue;   // export selected lines only
-      aoa.push([x.cat, stripTags(x.type), x.name||"—", x.region, stripTags(x.desc), r2(x.monthly), r2(x.upfront), r2(x.savings)]);
+  function saveBlob(blob,fname){ var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500); }
+
+  // Rich, styled workbook via ExcelJS (BOM sheet + Assumptions sheet)
+  function exportExcelJS(r, fname){
+    var BRAND="FF1F4E79", BRAND2="FF23588A", LIGHT="FFEEF4FB", ALT="FFF5F9FC", LINE="FFDCE8F5", INK="FF0F172A", SUB="FF475569", CURFMT='₹#,##0.00';
+    function bd(){ var s={style:"thin",color:{argb:LINE}}; return {top:s,left:s,bottom:s,right:s}; }
+    var wb=new ExcelJS.Workbook(); wb.creator="Irame"; wb.created=new Date();
+    var regionTxt=(r.pKey==="azure"?(REGION_LABEL[r.boq.region]||r.prov.region):r.prov.region);
+    var pricingTxt=({payg:"Pay-as-you-go","1yr":"1-yr reserved","3yr":"3-yr reserved"}[r.boq.pricing])||r.boq.pricing;
+
+    // ── Sheet 1 — Bill of Materials ──
+    var ws=wb.addWorksheet("Bill of Materials",{views:[{state:"frozen",ySplit:4}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2}}});
+    ws.columns=[{width:20},{width:34},{width:16},{width:66},{width:22},{width:20}];
+    ws.mergeCells("A1:F1");
+    var t=ws.getCell("A1"); t.value="Irame — Infrastructure Sizing & Bill of Materials";
+    t.font={bold:true,size:16,color:{argb:"FFFFFFFF"}}; t.alignment={vertical:"middle",indent:1};
+    t.fill={type:"pattern",pattern:"solid",fgColor:{argb:BRAND}}; ws.getRow(1).height=32;
+    ws.mergeCells("A2:F2");
+    var m=ws.getCell("A2");
+    m.value="Provider: "+r.prov.label+"        Region: "+regionTxt+"        Pricing: "+pricingTxt+"        Generated: "+today()+"        FX: US$1 = ₹"+FX.toFixed(2);
+    m.font={size:10,color:{argb:SUB}}; m.alignment={vertical:"middle",indent:1};
+    m.fill={type:"pattern",pattern:"solid",fgColor:{argb:LIGHT}}; ws.getRow(2).height=20;
+    ws.getRow(3).height=6;
+    var head=["Service category","Service type","Region","Description","Est. monthly cost (INR)","Est. upfront cost (INR)"];
+    var hr=ws.getRow(4);
+    head.forEach(function(h,i){ var c=hr.getCell(i+1); c.value=h;
+      c.font={bold:true,size:10,color:{argb:"FFFFFFFF"}}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:BRAND2}};
+      c.alignment={vertical:"middle",horizontal:(i>=4?"right":"left"),wrapText:true}; c.border=bd(); });
+    hr.height=28;
+    var rn=5, band=false;
+    for(var i=0;i<r.rows.length;i++){ var x=r.rows[i]; if(x.excluded) continue;
+      var desc=(x.nodeKey?x.nodeCount+"× ":"")+stripTags(x.desc);
+      var row=ws.getRow(rn);
+      row.getCell(1).value=x.cat; row.getCell(2).value=stripTags(x.type); row.getCell(3).value=x.region;
+      row.getCell(4).value=desc;
+      row.getCell(5).value=r2(x.monthly); row.getCell(5).numFmt=CURFMT;
+      row.getCell(6).value=r2(x.upfront); row.getCell(6).numFmt=CURFMT;
+      for(var c=1;c<=6;c++){ var cell=row.getCell(c); cell.border=bd();
+        cell.alignment={vertical:"top",horizontal:(c>=5?"right":"left"),wrapText:(c===4)};
+        cell.font={size:10,color:{argb:INK}};
+        if(band) cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:ALT}}; }
+      row.getCell(1).font={size:10,bold:true,color:{argb:SUB}};
+      rn++; band=!band;
     }
-    aoa.push(["TOTAL — monthly estimate","","","","", r2(r.totM), r2(r.totU), r2(r.totS)]);
-    var fname="irame-bom-"+r.prov.label.toLowerCase()+"-"+new Date().toISOString().slice(0,10);
+    ws.mergeCells("A"+rn+":D"+rn);
+    var tr=ws.getRow(rn);
+    tr.getCell(1).value="TOTAL — monthly estimate";
+    tr.getCell(5).value=r2(r.totM); tr.getCell(5).numFmt=CURFMT;
+    tr.getCell(6).value=r2(r.totU); tr.getCell(6).numFmt=CURFMT;
+    for(var c=1;c<=6;c++){ var cell=tr.getCell(c); cell.font={bold:true,size:11,color:{argb:"FFFFFFFF"}};
+      cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:BRAND}};
+      cell.alignment={vertical:"middle",horizontal:(c>=5?"right":"left"),indent:(c===1?1:0)}; cell.border=bd(); }
+    tr.height=24;
+
+    // ── Sheet 2 — Assumptions & Requirements ──
+    var as=wb.addWorksheet("Assumptions",{pageSetup:{fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.2,footer:0.2}}});
+    as.columns=[{width:30},{width:104}];
+    as.mergeCells("A1:B1");
+    var at=as.getCell("A1"); at.value="Assumptions & Requirements"; at.font={bold:true,size:15,color:{argb:"FFFFFFFF"}};
+    at.alignment={vertical:"middle",indent:1}; at.fill={type:"pattern",pattern:"solid",fgColor:{argb:BRAND}}; as.getRow(1).height=30;
+    as.getRow(2).height=6;
+    function section(rowIdx,label){ as.mergeCells("A"+rowIdx+":B"+rowIdx); var s=as.getCell("A"+rowIdx);
+      s.value=label; s.font={bold:true,size:11,color:{argb:BRAND}}; s.alignment={vertical:"middle",indent:1};
+      s.fill={type:"pattern",pattern:"solid",fgColor:{argb:LIGHT}}; as.getRow(rowIdx).height=22; }
+    var ar=3; section(ar,"Requirements summary"); ar++;
+    boqItems(r).forEach(function(kv){
+      var row=as.getRow(ar);
+      row.getCell(1).value=kv[0]; row.getCell(1).font={size:10,bold:true,color:{argb:SUB}}; row.getCell(1).alignment={vertical:"top",indent:1};
+      row.getCell(2).value=kv[1]; row.getCell(2).font={size:10,color:{argb:INK}}; row.getCell(2).alignment={vertical:"top",wrapText:true};
+      row.getCell(1).border=bd(); row.getCell(2).border=bd(); ar++;
+    });
+    ar++; section(ar,"Key assumptions"); ar++;
+    assumptionItems(r).forEach(function(txt,idx){
+      var row=as.getRow(ar);
+      row.getCell(1).value=(idx+1)+"."; row.getCell(1).font={size:10,bold:true,color:{argb:BRAND}}; row.getCell(1).alignment={vertical:"top",horizontal:"right"};
+      row.getCell(2).value=stripTags(txt); row.getCell(2).font={size:10,color:{argb:INK}}; row.getCell(2).alignment={vertical:"top",wrapText:true};
+      row.getCell(1).border=bd(); row.getCell(2).border=bd(); as.getRow(ar).height=Math.max(18, Math.ceil(stripTags(txt).length/95)*15); ar++;
+    });
+
+    return wb.xlsx.writeBuffer().then(function(buf){
+      saveBlob(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}), fname+".xlsx");
+    });
+  }
+
+  // Plain fallback (SheetJS: two sheets, no styling) then CSV
+  function exportFallback(r, fname){
+    var head=["Service category","Service type","Region","Description","Est. monthly cost (INR)","Est. upfront cost (INR)"];
+    var bom=[["Irame — Infrastructure Sizing & Bill of Materials"],
+      ["Provider",r.prov.label,"Region",(r.pKey==="azure"?(REGION_LABEL[r.boq.region]||r.prov.region):r.prov.region),"Generated",today(),"FX US$1=",r2(FX)],[],head];
+    for(var i=0;i<r.rows.length;i++){ var x=r.rows[i]; if(x.excluded) continue;
+      bom.push([x.cat,stripTags(x.type),x.region,(x.nodeKey?x.nodeCount+"× ":"")+stripTags(x.desc),r2(x.monthly),r2(x.upfront)]); }
+    bom.push(["TOTAL — monthly estimate","","","",r2(r.totM),r2(r.totU)]);
+    var asrows=[["Assumptions & Requirements"],[],["Requirements summary"]];
+    boqItems(r).forEach(function(kv){ asrows.push([kv[0],kv[1]]); });
+    asrows.push([],["Key assumptions"]);
+    assumptionItems(r).forEach(function(t,idx){ asrows.push([(idx+1)+".",stripTags(t)]); });
     if(typeof XLSX!=="undefined"){
-      var ws=XLSX.utils.aoa_to_sheet(aoa);
-      ws["!cols"]=[{wch:20},{wch:28},{wch:14},{wch:18},{wch:62},{wch:20},{wch:18},{wch:24}];
-      var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"BOM");
+      var wb=XLSX.utils.book_new();
+      var s1=XLSX.utils.aoa_to_sheet(bom); s1["!cols"]=[{wch:20},{wch:34},{wch:16},{wch:66},{wch:22},{wch:20}];
+      XLSX.utils.book_append_sheet(wb,s1,"Bill of Materials");
+      var s2=XLSX.utils.aoa_to_sheet(asrows); s2["!cols"]=[{wch:30},{wch:104}];
+      XLSX.utils.book_append_sheet(wb,s2,"Assumptions");
       XLSX.writeFile(wb, fname+".xlsx");
     } else {
-      var csv=aoa.map(function(row){ return row.map(function(c){ var s=(c==null?"":String(c)); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(","); }).join("\n");
-      var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=fname+".csv"; a.click();
+      var csv=bom.map(function(row){ return row.map(function(c){ var s=(c==null?"":String(c)); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(","); }).join("\n");
+      saveBlob(new Blob([csv],{type:"text/csv"}), fname+".csv");
     }
+  }
+
+  window.__downloadBOM = function(){
+    var r=LAST; if(!r) return;
+    var fname="irame-bom-"+r.prov.label.toLowerCase()+"-"+new Date().toISOString().slice(0,10);
+    try{
+      if(typeof ExcelJS!=="undefined"){ exportExcelJS(r,fname).catch(function(){ exportFallback(r,fname); }); }
+      else exportFallback(r,fname);
+    }catch(e){ exportFallback(r,fname); }
   };
 
   $("reset_btn").addEventListener("click",function(){
