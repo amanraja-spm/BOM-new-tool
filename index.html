@@ -124,7 +124,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* inline-editable node counts & cost cells */
 .node-inp{width:50px;text-align:center;border:1.5px solid var(--brand-100);background:#fff;font-family:inherit;font-size:12px;font-weight:800;color:var(--brand);border-radius:6px;padding:2px 4px;margin-right:2px}
 .node-inp:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 3px var(--brand-50)}
-.cost-inp{width:104px;text-align:right;border:1px solid transparent;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);border-radius:6px;padding:3px 6px;cursor:text}
+.cost-cur{color:var(--ink-3);font-size:12px;font-weight:700;margin-right:1px}
+.cost-inp{width:92px;text-align:right;border:1px solid transparent;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);border-radius:6px;padding:3px 4px;cursor:text}
 .cost-inp:hover{border-color:var(--line)}
 .cost-inp:focus{border-color:var(--brand);background:#fff;outline:none;box-shadow:0 0 0 3px var(--brand-50)}
 .cost-inp.ov{color:var(--brand);background:var(--brand-50);font-weight:800}
@@ -763,13 +764,14 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       var tag=x.scaling?"<span class='scaling-tag'>SCALES</span>":"";
       var descHtml=(x.nodeKey ? "<input class='node-inp' data-nk='"+x.nodeKey+"' type='number' min='0' step='1' value='"+x.nodeCount+"' title='Edit node count'> × " : "")+x.desc;
       var costVal=CUR==="INR" ? Math.round(x.monthly) : Math.round(x.monthly/FX);
+      var sym=CUR==="INR" ? "₹" : "$";
       out+="<tr>"
         +"<td class='cat'>"+x.cat+"</td>"
         +"<td class='stype'>"+x.type+tag+"</td>"
         +"<td class='cname'>"+(x.name||"—")+"</td>"
         +"<td class='region'>"+x.region+"</td>"
         +"<td class='desc-cell'>"+descHtml+"</td>"
-        +"<td class='num total'><input class='cost-inp"+(x.overridden?" ov":"")+"' data-idx='"+i+"' value='"+costVal+"' title='Click to edit this line cost'></td>"
+        +"<td class='num total'><span class='cost-cur'>"+sym+"</span><input class='cost-inp"+(x.overridden?" ov":"")+"' data-idx='"+i+"' value='"+fmtN(costVal)+"' title='Click to edit this line cost'></td>"
         +"<td class='num'>"+money(x.upfront)+"</td>"
         +"<td class='num savecol'>"+money(x.savings)+"</td>"
         +"</tr>";
