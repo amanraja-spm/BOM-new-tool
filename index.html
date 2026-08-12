@@ -198,8 +198,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 /* ── Welcome / launcher page ── */
 #welcome{display:none}
+#tracker{display:none}
 body.home #welcome{display:flex}
-body.home header,body.home .layout{display:none !important}
+body.app-tracker #tracker{display:flex}
+body:not(.app-bom) > header{display:none !important}
+body:not(.app-bom) > .layout{display:none !important}
 #welcome{min-height:100vh;flex-direction:column;background:
   radial-gradient(1200px 500px at 50% -8%,rgba(45,212,191,.10),transparent 60%),
   linear-gradient(180deg,#f7fafd 0%,var(--bg) 100%)}
@@ -236,6 +239,114 @@ body.home header,body.home .layout{display:none !important}
 @media (max-width:900px){.wl-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.wl-grid{grid-template-columns:1fr}.wl-head h2{font-size:22px}}
 
+/* ── Deployment Tracker (Card 2) ── */
+#tracker{flex-direction:column;height:100vh;background:var(--bg)}
+.tk-top{display:flex;align-items:center;gap:14px;padding:12px 22px;background:linear-gradient(120deg,#16395c 0%,var(--brand) 55%,var(--brand-500) 100%);color:#fff;box-shadow:0 2px 14px rgba(16,57,92,.25);flex-shrink:0}
+.tk-home{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:9px;color:#fff;cursor:pointer}
+.tk-home:hover{background:rgba(255,255,255,.26)}.tk-home svg{width:17px;height:17px}
+.tk-title{font-size:16px;font-weight:750;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tk-tabs{display:flex;gap:2px;flex:1;overflow-x:auto;margin-left:6px}
+.tk-tab{padding:7px 13px;border-radius:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.72);cursor:pointer;white-space:nowrap;border:none;background:transparent;font-family:inherit;display:flex;align-items:center;gap:6px}
+.tk-tab:hover{background:rgba(255,255,255,.12);color:#fff}
+.tk-tab.on{background:rgba(255,255,255,.18);color:#fff}
+.tk-tab svg{width:14px;height:14px}
+.tk-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.tk-sync{font-size:11px;font-weight:600;color:rgba(255,255,255,.7);white-space:nowrap}
+.tk-sync.saving{color:#ffe08a}.tk-sync.saved{color:#9af5e2}.tk-sync.local{color:#ffc9a3}
+.tk-btn{border:none;font-family:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:8px 14px;cursor:pointer}
+.tk-new{background:#fff;color:var(--brand)}.tk-new:hover{background:#eef4fb}
+.tk-body{flex:1;overflow:auto;padding:0}
+
+/* Board */
+.tk-board{display:flex;gap:14px;padding:18px 22px;align-items:flex-start;min-height:100%}
+.tk-col{flex:0 0 288px;width:288px;background:#eef1f6;border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;max-height:calc(100vh - 130px)}
+.tk-col.drop{outline:2px dashed var(--brand);outline-offset:-2px;background:var(--brand-50)}
+.tk-col-h{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;font-size:13px;font-weight:750;color:var(--ink)}
+.tk-col-h .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.tk-col-h .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-col-h .ct{font-size:12px;color:var(--ink-3);font-weight:700}
+.tk-col-h .mn{opacity:0;cursor:pointer;color:var(--ink-3);border:none;background:none;font-size:16px;line-height:1;padding:0 2px}
+.tk-col:hover .mn{opacity:1}
+.tk-col-b{padding:0 10px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.tk-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 12px;box-shadow:var(--shadow-sm);cursor:pointer;transition:box-shadow .12s,transform .05s}
+.tk-card:hover{box-shadow:0 4px 14px rgba(16,24,40,.10)}
+.tk-card.dragging{opacity:.5}
+.tk-card .ttl{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:8px;line-height:1.3}
+.tk-tags{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.tk-tag{font-size:11px;font-weight:650;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.tk-meta{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:11.5px;color:var(--ink-3)}
+.tk-meta .dte{display:flex;align-items:center;gap:4px}
+.tk-meta .cm{display:flex;align-items:center;gap:3px}
+.tk-add{margin:2px 0 4px;padding:8px 10px;border:none;background:none;color:var(--ink-3);font-family:inherit;font-size:12.5px;font-weight:600;text-align:left;cursor:pointer;border-radius:8px}
+.tk-add:hover{background:rgba(31,78,121,.06);color:var(--brand)}
+.tk-addcol{flex:0 0 200px;padding:12px}
+.tk-addcol button{width:100%;padding:11px;border:1.5px dashed var(--line);background:#fff;border-radius:12px;color:var(--ink-3);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.tk-addcol button:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-50)}
+
+/* List / Status grouped */
+.tk-list{padding:18px 22px;max-width:1100px}
+.tk-group{margin-bottom:22px}
+.tk-group-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--ink);margin-bottom:8px}
+.tk-group-h .dot{width:9px;height:9px;border-radius:50%}
+.tk-group-h .ct{color:var(--ink-3);font-weight:700}
+.tk-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fff;border:1px solid var(--line-2);border-radius:9px;margin-bottom:6px;cursor:pointer}
+.tk-row:hover{background:var(--brand-50)}
+.tk-row .rn{font-weight:700;color:var(--ink);flex:1;min-width:120px}
+.tk-row .rtags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* Table */
+.tk-tablewrap{padding:16px 22px;overflow:auto}
+.tk-table{border-collapse:collapse;width:100%;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tk-table th{background:var(--brand-50);color:var(--brand);text-align:left;padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;position:sticky;top:0}
+.tk-table td{padding:9px 12px;border-top:1px solid var(--line-2);white-space:nowrap;color:var(--ink-2)}
+.tk-table tr{cursor:pointer}
+.tk-table tbody tr:hover td{background:var(--brand-50)}
+.tk-table td.tnm{font-weight:700;color:var(--ink)}
+
+/* Timeline / Gantt */
+.tk-gantt{padding:16px 22px;overflow:auto}
+.tk-gantt-grid{position:relative;min-width:900px}
+.tk-gantt-head{display:flex;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}
+.tk-gantt-head .lbl{flex:0 0 200px}
+.tk-gantt-months{flex:1;display:flex}
+.tk-gantt-month{flex:1;font-size:11px;font-weight:700;color:var(--ink-3);text-align:center;padding:6px 0;border-left:1px solid var(--line-2)}
+.tk-gantt-row{display:flex;align-items:center;height:38px;border-bottom:1px solid var(--line-2)}
+.tk-gantt-row .lbl{flex:0 0 200px;font-size:12.5px;font-weight:650;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;cursor:pointer}
+.tk-gantt-track{flex:1;position:relative;height:100%}
+.tk-bar{position:absolute;top:9px;height:20px;border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;overflow:hidden;white-space:nowrap;box-shadow:var(--shadow-sm)}
+
+/* Modal */
+.tk-modal{display:none;position:fixed;inset:0;z-index:50;background:rgba(15,23,42,.5);align-items:flex-start;justify-content:center;padding:44px 16px;overflow:auto}
+.tk-modal.on{display:flex}
+.tk-modal-card{background:#fff;border-radius:16px;width:100%;max-width:640px;box-shadow:0 24px 60px rgba(16,24,40,.28);overflow:hidden}
+.tk-m-h{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 8px}
+.tk-m-h input.tk-mtitle{flex:1;font-size:20px;font-weight:800;border:none;outline:none;color:var(--ink);font-family:inherit;padding:2px 0}
+.tk-m-close{border:none;background:var(--line-2);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;color:var(--ink-2);flex-shrink:0}
+.tk-m-close:hover{background:var(--line)}
+.tk-m-b{padding:6px 22px 20px}
+.tk-field{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line-2)}
+.tk-field label{font-size:12.5px;color:var(--ink-3);font-weight:650;display:flex;align-items:center;gap:7px}
+.tk-field label svg{width:14px;height:14px}
+.tk-field input,.tk-field select,.tk-field textarea{width:100%;padding:7px 10px;border:1.5px solid transparent;border-radius:8px;font-size:13px;font-family:inherit;color:var(--ink);background:transparent;outline:none}
+.tk-field input:hover,.tk-field select:hover{background:var(--line-2)}
+.tk-field input:focus,.tk-field select:focus,.tk-field textarea:focus{border-color:var(--brand);background:#fff}
+.tk-cmts{margin-top:16px}
+.tk-cmts-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--brand);margin-bottom:10px}
+.tk-cmt{display:flex;gap:9px;margin-bottom:10px}
+.tk-cmt .av{width:26px;height:26px;border-radius:50%;background:var(--brand-100);color:var(--brand);display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
+.tk-cmt .bd{flex:1}
+.tk-cmt .who{font-size:12px;font-weight:700;color:var(--ink)}
+.tk-cmt .who span{font-weight:500;color:var(--ink-3);font-size:11px;margin-left:6px}
+.tk-cmt .tx{font-size:13px;color:var(--ink-2);margin-top:1px;white-space:pre-wrap}
+.tk-cmt-new{display:flex;gap:8px;margin-top:10px}
+.tk-cmt-new input{flex:1;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;font-size:13px;outline:none}
+.tk-cmt-new input:focus{border-color:var(--brand)}
+.tk-cmt-new button{border:none;background:var(--brand);color:#fff;border-radius:9px;padding:0 14px;font-weight:700;cursor:pointer;font-family:inherit}
+.tk-m-f{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-top:1px solid var(--line-2);background:var(--bg)}
+.tk-del{border:none;background:none;color:#b71c1c;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit}
+.tk-del:hover{text-decoration:underline}
+@media(max-width:640px){.tk-field{grid-template-columns:1fr}.tk-col,.tk-col.tk-col{flex-basis:82vw;width:82vw}}
+
 /* Print → Save as PDF: show only the report, full width, keep colors */
 @media print{
   @page{margin:14mm}
@@ -254,7 +365,7 @@ body.home header,body.home .layout{display:none !important}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
-<body>
+<body class="home">
 
 <!-- ── Welcome / launcher ── -->
 <section id="welcome">
@@ -279,10 +390,11 @@ body.home header,body.home .layout{display:none !important}
         <span class="wl-cta">Open tool <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
-      <div class="wl-card locked" aria-disabled="true">
-        <span class="wl-badge">Coming soon</span>
+      <div class="wl-card active" id="card_tracker" role="button" tabindex="0">
+        <span class="wl-badge live">Live</span>
         <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
-        <h3>Card 2</h3>
+        <h3>Deployment Tracker</h3>
+        <span class="wl-cta">Open tool <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
       <div class="wl-card locked" aria-disabled="true">
@@ -551,6 +663,24 @@ body.home header,body.home .layout{display:none !important}
 
   <div class="report-panel" id="report"></div>
 </div>
+
+<!-- ── Deployment Tracker (Card 2) ── -->
+<section id="tracker">
+  <div class="tk-top">
+    <button class="tk-home" id="tk_home" title="Back to all tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+    </button>
+    <div class="tk-title">🚀 <span>Deployment Tracker</span></div>
+    <nav class="tk-tabs" id="tk_tabs"></nav>
+    <div class="tk-actions">
+      <span class="tk-sync" id="tk_sync"></span>
+      <button class="tk-btn tk-new" id="tk_new">+ New</button>
+    </div>
+  </div>
+  <div class="tk-body" id="tk_body"></div>
+</section>
+
+<div class="tk-modal" id="tk_modal"><div class="tk-modal-card" id="tk_modal_card"></div></div>
 
 <script>
 (function () {
@@ -1277,16 +1407,21 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     document.querySelector(".layout").classList.toggle("nav-collapsed");
   });
 
-  // ── Welcome launcher: start on the home page; card 1 opens the BOM tool ──
-  document.body.classList.add("home");
-  function enterBOM(){ document.body.classList.remove("home"); window.scrollTo(0,0); }
-  function goHome(){ document.body.classList.add("home"); window.scrollTo(0,0); }
+  // ── Welcome launcher: switch between the home page and each tool view ──
+  function showView(v){
+    document.body.classList.remove("home","app-bom","app-tracker");
+    document.body.classList.add(v);
+    window.scrollTo(0,0);
+    if(v==="app-tracker" && window.__trackerEnter) window.__trackerEnter();
+  }
+  window.__showView = showView;                 // used by the tracker module
+  if(!document.body.classList.contains("home")) document.body.classList.add("home");
   var cardBOM=$("card_bom");
   if(cardBOM){
-    cardBOM.addEventListener("click", enterBOM);
-    cardBOM.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); enterBOM(); } });
+    cardBOM.addEventListener("click", function(){ showView("app-bom"); });
+    cardBOM.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); showView("app-bom"); } });
   }
-  if($("homeBtn")) $("homeBtn").addEventListener("click", goHome);
+  if($("homeBtn")) $("homeBtn").addEventListener("click", function(){ showView("home"); });
 
   // ── Download BOM as a polished, client-ready Excel (.xlsx) ──
   function stripTags(s){ var d=document.createElement("div"); d.innerHTML=String(s==null?"":s); return (d.textContent||d.innerText||"").replace(/\s+/g," ").trim(); }
@@ -1423,6 +1558,376 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   });
 
   loadPrices();
+})();
+</script>
+
+<!-- ══════════ Deployment Tracker (Card 2) ══════════ -->
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+  var CUR_USER = (function(){ try{ return localStorage.getItem("tk_user")||"Aman"; }catch(e){ return "Aman"; } })();
+
+  // ── seed (migrated from the Notion "Deployment Tracker 2 (1)") ──
+  var SEED = {
+    seq: 100,
+    stages: [
+      {id:"on_hold",name:"On Hold",color:"#9aa0a6"},
+      {id:"req",name:"Requirement Gathering",color:"#d99e0b"},
+      {id:"infra_prep",name:"Infra Prep (Client)",color:"#d99e0b"},
+      {id:"validate",name:"Validate Infra (Client)",color:"#e07b39"},
+      {id:"deploy",name:"Deployment (irame)",color:"#c2529b"},
+      {id:"testbug",name:"Test & Bug FIx PProd",color:"#8a63d2"},
+      {id:"datasrc",name:"Data Source Integration",color:"#4a8cf7"},
+      {id:"workflow",name:"Workflow Creation",color:"#3aa3a3"},
+      {id:"vendortest",name:"Vendor Testing",color:"#5a9e5a"},
+      {id:"vapt",name:"Infra VAPT - Vendor",color:"#c0894a"},
+      {id:"closed",name:"Closed",color:"#5a9e5a"}
+    ],
+    statuses: [
+      {name:"Not Started",color:"#9aa0a6"},
+      {name:"To be Picked",color:"#4a8cf7"},
+      {name:"In Progress",color:"#d99e0b"},
+      {name:"Done",color:"#5a9e5a"},
+      {name:"Closed",color:"#8a8f98"}
+    ],
+    people: ["Aman","Deepak","Akshat","Abhinav","Tushar Goel","Saurabh P","Vaibhav","Ankit","Yash Gupta"],
+    records: [
+      {id:"r1",client:"DS Group",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r2",client:"Indigo CCM",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r3",client:"Airtel Africa",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r4",client:"Jio Platform",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r5",client:"AFG",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r6",client:"Havells",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r7",client:"Alkem",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r8",client:"Mankind",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r9",client:"Sun Pharma",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r10",client:"Protiviti",product:"",method:"",poc:"",status:"Not Started",stage:"on_hold"},
+      {id:"r11",client:"Air India",product:"",method:"",poc:"Aman",status:"To be Picked",stage:"req"},
+      {id:"r12",client:"PWC - AIXL",product:"Expense Validation",method:"Upload",poc:"Aman",status:"To be Picked",stage:"req"},
+      {id:"r13",client:"ICICI",product:"Azure Cloud",method:"Deployment",poc:"Aman",status:"To be Picked",stage:"req"},
+      {id:"r14",client:"Landmarkgroup",product:"",method:"",poc:"Aman",status:"To be Picked",stage:"req"},
+      {id:"r15",client:"PVR",product:"",method:"",poc:"Aman",status:"To be Picked",stage:"req"},
+      {id:"r16",client:"HCL",product:"Auditify",method:"Integration (Upload)",poc:"Aman",status:"To be Picked",stage:"infra_prep",overall:"2026-08-07",notionCmts:1},
+      {id:"r17",client:"GT",product:"Auditify",method:"Upload",poc:"Deepak",status:"In Progress",stage:"deploy",overall:"2026-07-24",actual:"2026-08-27",stageOwner:"Vaibhav",stageTimeline:"2026-08-13",docLink:"https://drive.google.com/drive/folders/1jliDdRyXe3bsgfGS--DU7MviGyPHWOFl?usp=drive_link",notionCmts:2},
+      {id:"r18",client:"AMLI",product:"App irame",method:"Datalake",poc:"Deepak",status:"In Progress",stage:"testbug",overall:"2026-06-15",actual:"2026-08-20",stageOwner:"Vaibhav",stageTimeline:"2026-08-20",notionCmts:5},
+      {id:"r19",client:"Trident",product:"Auditify",method:"Synaps Setup; Integration (datalake); SQL QnA; Automated workflows; QnA on Workflow output; Schema training",poc:"Akshat",status:"In Progress",stage:"datasrc",overall:"2026-07-31",actual:"2026-08-10",stageOwner:"Akshat",stageTimeline:"2026-08-10"},
+      {id:"r20",client:"JSW - New",product:"Auditify",method:"Integration",poc:"Deepak",status:"In Progress",stage:"datasrc",overall:"2026-07-24",actual:"2026-08-18",stageOwner:"Tushar Goel",stageTimeline:"2026-08-13"},
+      {id:"r21",client:"PWC - Akasa",product:"CCM",method:"Integration / Upload",poc:"Deepak",status:"In Progress",stage:"workflow",overall:"2026-07-15",actual:"2026-08-05",stageOwner:"Ankit",stageTimeline:"2026-08-08",docLink:"https://drive.google.com/drive/folders/1ogSKFPxYGNzll_5sMhyteGYg06mDXQp9?usp=drive_link",notionCmts:2},
+      {id:"r22",client:"TACO",product:"Auditify",method:"Upload -> CCM",poc:"Deepak",status:"In Progress",stage:"workflow",overall:"2026-07-20",actual:"2026-08-07",stageOwner:"Yash Gupta",docLink:"https://drive.google.com/drive/folders/1o-xMe3ZIyLvqFu404ujEAVPYBu1mQZ4v?usp=drive_link",notionCmts:2},
+      {id:"r23",client:"PWC (internal)",product:"Auditify",method:"Upload",poc:"Aman",status:"In Progress",stage:"vendortest",overall:"2026-07-23",actual:"2026-08-11",notionCmts:1},
+      {id:"r24",client:"CK Birla",product:"Auditify",method:"Upload",poc:"Aman",status:"Done",stage:"vapt",overall:"2026-07-23",notionCmts:1},
+      {id:"r25",client:"GT",product:"Irame",method:"Deployment",poc:"Tushar Goel",status:"Done",stage:"closed",overall:"2026-07-01"},
+      {id:"r26",client:"JSW - Earlier - uat",product:"Auditify",method:"Integration",poc:"Tushar Goel",status:"Done",stage:"closed",overall:"2026-06-26"},
+      {id:"r27",client:"GT",product:"App irame",method:"Upload",poc:"Tushar Goel",status:"Done",stage:"closed",overall:"2026-05-01"},
+      {id:"r28",client:"TACO",product:"App irame",method:"Upload",poc:"Tushar Goel",status:"Done",stage:"closed",overall:"2026-06-17"},
+      {id:"r29",client:"Indigo new",product:"Auditify",method:"Upload",poc:"Saurabh P",status:"Done",stage:"closed",overall:"2026-06-28"},
+      {id:"r30",client:"Indigo earlier",product:"Auditify",method:"Upload",poc:"Saurabh P",status:"Done",stage:"closed",overall:"2026-06-15"},
+      {id:"r31",client:"PwC",product:"AI Concierge",method:"Deployment (PDF)",poc:"Tushar Goel",status:"Done",stage:"closed",overall:"2026-06-13"},
+      {id:"r32",client:"Trident",product:"App irame",method:"Integration (datalake)",poc:"Akshat",status:"Done",stage:"closed",overall:"2026-07-10"},
+      {id:"r33",client:"AMLI",product:"Auditify",method:"Datalake",poc:"Deepak",status:"Done",stage:"closed",overall:"2026-07-22"},
+      {id:"r34",client:"Danube Properties",product:"Auditify",method:"Upload",poc:"Deepak",status:"Done",stage:"closed",overall:"2026-07-22"}
+    ]
+  };
+
+  var T = { state:null, view:"board", editing:null, rev:0, loaded:false, saveTimer:null, dragId:null };
+
+  // ── storage: shared server API with localStorage fallback ──
+  var Store = {
+    load: function(){
+      return fetch("/api/tracker",{cache:"no-store"}).then(function(r){ if(!r.ok) throw 0; return r.json(); })
+        .then(function(j){ T.rev=j.rev||0; T.shared=true; if(j&&j.data) return j.data;
+          try{ var s=localStorage.getItem("tk_state"); if(s) return JSON.parse(s); }catch(e){}
+          return null; })
+        .catch(function(){ T.shared=false; try{ var s=localStorage.getItem("tk_state"); if(s) return JSON.parse(s); }catch(e){} return null; });
+    },
+    save: function(data){
+      try{ localStorage.setItem("tk_state", JSON.stringify(data)); }catch(e){}
+      return fetch("/api/tracker",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({data:data})})
+        .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+        .then(function(j){ T.rev=j.rev||T.rev; T.shared=true; return true; })
+        .catch(function(){ T.shared=false; return false; });
+    },
+    poll: function(){ return fetch("/api/tracker",{cache:"no-store"}).then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }); }
+  };
+
+  function setSync(kind,msg){ var e=$("tk_sync"); if(!e) return; e.className="tk-sync "+(kind||""); e.textContent=msg||""; }
+  function scheduleSave(){
+    setSync("saving","Saving…");
+    if(T.saveTimer) clearTimeout(T.saveTimer);
+    T.saveTimer=setTimeout(function(){
+      Store.save(T.state).then(function(ok){ setSync(ok?"saved":"local", ok?"Saved · shared":"Saved · local only"); });
+    },350);
+  }
+
+  // ── helpers ──
+  function stageById(id){ for(var i=0;i<T.state.stages.length;i++) if(T.state.stages[i].id===id) return T.state.stages[i]; return null; }
+  function statusObj(nm){ for(var i=0;i<T.state.statuses.length;i++) if(T.state.statuses[i].name===nm) return T.state.statuses[i]; return {name:nm,color:"#9aa0a6"}; }
+  function recsIn(stageId){ return T.state.records.filter(function(r){ return r.stage===stageId; }); }
+  function recById(id){ for(var i=0;i<T.state.records.length;i++) if(T.state.records[i].id===id) return T.state.records[i]; return null; }
+  var PAL=["#c0894a","#4a8cf7","#5a9e5a","#c2529b","#8a63d2","#d99e0b","#3aa3a3","#e07b39","#7a8b99"];
+  function pColor(nm){ if(!nm) return "#9aa0a6"; var h=0; for(var i=0;i<nm.length;i++) h=(h*31+nm.charCodeAt(i))>>>0; return PAL[h%PAL.length]; }
+  function tint(hex,a){ var n=parseInt(hex.slice(1),16); return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")"; }
+  function initials(nm){ if(!nm) return "?"; var p=nm.trim().split(/\s+/); return (p[0][0]+(p[1]?p[1][0]:"")).toUpperCase(); }
+  var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function fmtDate(iso){ if(!iso) return ""; var d=new Date(iso+"T00:00:00"); if(isNaN(d)) return iso; return MON[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear(); }
+  function cmtCount(r){ return (r.comments?r.comments.length:0)+(r.notionCmts||0); }
+
+  function statusTag(nm){ var s=statusObj(nm); return "<span class='tk-tag' style='background:"+tint(s.color,.16)+";color:"+s.color+"'>"+esc(nm)+"</span>"; }
+  function pocTag(nm){ if(!nm) return ""; var c=pColor(nm); return "<span class='tk-tag' style='background:"+tint(c,.16)+";color:"+c+"'>"+esc(nm)+"</span>"; }
+
+  // ══ TABS ══
+  var VIEWS=[
+    {id:"board",label:"Stage",icon:"<rect x='3' y='4' width='5' height='16' rx='1'/><rect x='10' y='4' width='5' height='11' rx='1'/><rect x='17' y='4' width='4' height='16' rx='1'/>"},
+    {id:"list",label:"List",icon:"<path d='M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'/>"},
+    {id:"timeline",label:"Timelines",icon:"<path d='M3 7h18M6 7v10M12 7v6M18 7v13'/>"},
+    {id:"status",label:"Status",icon:"<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>"},
+    {id:"table",label:"Table",icon:"<rect x='3' y='3' width='18' height='18' rx='2'/><path d='M3 9h18M3 15h18M9 3v18'/>"},
+    {id:"gantt",label:"Gantt",icon:"<path d='M4 6h8M4 12h12M4 18h6'/>"}
+  ];
+  function renderTabs(){
+    $("tk_tabs").innerHTML=VIEWS.map(function(v){
+      return "<button class='tk-tab"+(T.view===v.id?" on":"")+"' data-v='"+v.id+"'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>"+v.icon+"</svg>"+v.label+"</button>";
+    }).join("");
+    Array.prototype.forEach.call($("tk_tabs").querySelectorAll(".tk-tab"),function(b){
+      b.addEventListener("click",function(){ T.view=b.getAttribute("data-v"); renderTabs(); renderBody(); });
+    });
+  }
+
+  // ══ BODY ══
+  function renderBody(){
+    var b=$("tk_body");
+    if(T.view==="board") b.innerHTML="", b.appendChild(renderBoard());
+    else if(T.view==="table") b.innerHTML=renderTable();
+    else if(T.view==="list") b.innerHTML=renderGrouped("stage");
+    else if(T.view==="status") b.innerHTML=renderGrouped("status");
+    else if(T.view==="gantt") b.innerHTML=renderGantt(true);
+    else if(T.view==="timeline") b.innerHTML=renderGantt(false);
+    bindBodyEvents();
+  }
+
+  function cardHTML(r){
+    var bits="<div class='tk-card' draggable='true' data-id='"+r.id+"'><div class='ttl'>"+esc(r.client||"Untitled")+"</div><div class='tk-tags'>";
+    if(r.status) bits+=statusTag(r.status);
+    if(r.poc) bits+=pocTag(r.poc);
+    bits+="</div>";
+    var meta="";
+    if(r.overall) meta+="<span class='dte'>"+fmtDate(r.overall)+"</span>";
+    if(cmtCount(r)) meta+="<span class='cm'>💬 "+cmtCount(r)+"</span>";
+    if(meta) bits+="<div class='tk-meta'>"+meta+"</div>";
+    return bits+"</div>";
+  }
+  function renderBoard(){
+    var wrap=document.createElement("div"); wrap.className="tk-board";
+    T.state.stages.forEach(function(st){
+      var recs=recsIn(st.id);
+      var col=document.createElement("div"); col.className="tk-col"; col.setAttribute("data-stage",st.id);
+      col.innerHTML="<div class='tk-col-h'><span class='dot' style='background:"+st.color+"'></span><span class='nm'>"+esc(st.name)+"</span><span class='ct'>"+recs.length+"</span><button class='mn' data-stmenu='"+st.id+"'>⋯</button></div>"
+        +"<div class='tk-col-b'>"+recs.map(cardHTML).join("")+"<button class='tk-add' data-addcard='"+st.id+"'>+ New page</button></div>";
+      wrap.appendChild(col);
+    });
+    var add=document.createElement("div"); add.className="tk-addcol";
+    add.innerHTML="<button id='tk_addcol'>+ Add stage</button>";
+    wrap.appendChild(add);
+    return wrap;
+  }
+
+  function renderGrouped(by){
+    var groups;
+    if(by==="stage") groups=T.state.stages.map(function(s){ return {name:s.name,color:s.color,recs:recsIn(s.id)}; });
+    else groups=T.state.statuses.map(function(s){ return {name:s.name,color:s.color,recs:T.state.records.filter(function(r){return r.status===s.name;})}; });
+    var out="<div class='tk-list'>";
+    groups.forEach(function(g){
+      out+="<div class='tk-group'><div class='tk-group-h'><span class='dot' style='background:"+g.color+"'></span>"+esc(g.name)+" <span class='ct'>"+g.recs.length+"</span></div>";
+      g.recs.forEach(function(r){
+        out+="<div class='tk-row' data-id='"+r.id+"'><span class='rn'>"+esc(r.client||"Untitled")+"</span><span class='rtags'>"
+          +(by==="stage"?statusTag(r.status||""):"<span class='tk-tag' style='background:"+tint(stageById(r.stage)?stageById(r.stage).color:'#999',.16)+";color:"+(stageById(r.stage)?stageById(r.stage).color:'#999')+"'>"+esc(stageById(r.stage)?stageById(r.stage).name:'')+"</span>")
+          +(r.poc?pocTag(r.poc):"")+(r.overall?"<span class='tk-tag' style='background:var(--line-2);color:var(--ink-2)'>"+fmtDate(r.overall)+"</span>":"")+(cmtCount(r)?"<span class='tk-tag' style='background:var(--line-2);color:var(--ink-2)'>💬 "+cmtCount(r)+"</span>":"")+"</span></div>";
+      });
+      out+="</div>";
+    });
+    return out+"</div>";
+  }
+
+  function renderTable(){
+    var cols=["Client","Type / Product","Deployment Method","POC","Status","Stage","Overall Timeline","Actual Completion","Stage Owner","Stage Timeline"];
+    var h="<div class='tk-tablewrap'><table class='tk-table'><thead><tr>"+cols.map(function(c){return "<th>"+c+"</th>";}).join("")+"</tr></thead><tbody>";
+    T.state.records.forEach(function(r){
+      var st=stageById(r.stage);
+      h+="<tr data-id='"+r.id+"'><td class='tnm'>"+esc(r.client||"")+"</td><td>"+esc(r.product||"")+"</td><td>"+esc(r.method||"")+"</td><td>"+esc(r.poc||"")+"</td><td>"+(r.status?statusTag(r.status):"")+"</td><td>"+(st?"<span class='tk-tag' style='background:"+tint(st.color,.16)+";color:"+st.color+"'>"+esc(st.name)+"</span>":"")+"</td><td>"+fmtDate(r.overall)+"</td><td>"+fmtDate(r.actual)+"</td><td>"+esc(r.stageOwner||"")+"</td><td>"+fmtDate(r.stageTimeline)+"</td></tr>";
+    });
+    return h+"</tbody></table></div>";
+  }
+
+  function monthFloor(d){ return new Date(d.getFullYear(),d.getMonth(),1); }
+  function monthCeil(d){ return new Date(d.getFullYear(),d.getMonth()+1,0); }
+  function renderGantt(groupByStage){
+    var recs=T.state.records.filter(function(r){ return r.overall; });
+    if(!recs.length) return "<div class='tk-list'><p style='color:var(--ink-3)'>No dated items to plot yet.</p></div>";
+    var min=null,max=null;
+    recs.forEach(function(r){
+      var s=new Date(r.overall+"T00:00:00"); var e=new Date((r.actual||r.stageTimeline||r.overall)+"T00:00:00");
+      if(!min||s<min)min=s; if(!max||e>max)max=e;
+    });
+    var rs=monthFloor(min), re=monthCeil(max); var total=re-rs;
+    var months=[]; var cur=new Date(rs);
+    while(cur<=re){ months.push(new Date(cur)); cur=new Date(cur.getFullYear(),cur.getMonth()+1,1); }
+    function bar(r){
+      var s=new Date(r.overall+"T00:00:00"); var e=new Date((r.actual||r.stageTimeline||r.overall)+"T00:00:00");
+      var left=(s-rs)/total*100, width=Math.max(2.5,(e-s)/total*100);
+      var col=statusObj(r.status).color;
+      return "<div class='tk-gantt-row'><div class='lbl' data-id='"+r.id+"'>"+esc(r.client||"")+"</div><div class='tk-gantt-track'><div class='tk-bar' data-id='"+r.id+"' style='left:"+left+"%;width:"+width+"%;background:"+col+"'>"+esc(r.client||"")+"</div></div></div>";
+    }
+    var head="<div class='tk-gantt-head'><div class='lbl'></div><div class='tk-gantt-months'>"+months.map(function(m){return "<div class='tk-gantt-month'>"+MON[m.getMonth()]+" '"+String(m.getFullYear()).slice(2)+"</div>";}).join("")+"</div></div>";
+    var body="";
+    if(groupByStage){
+      T.state.stages.forEach(function(st){
+        var g=recs.filter(function(r){return r.stage===st.id;}); if(!g.length) return;
+        body+="<div class='tk-group-h' style='padding:10px 0 4px'><span class='dot' style='background:"+st.color+"'></span>"+esc(st.name)+"</div>"+g.map(bar).join("");
+      });
+    } else {
+      recs.sort(function(a,b){return a.overall<b.overall?-1:1;});
+      body=recs.map(bar).join("");
+    }
+    return "<div class='tk-gantt'><div class='tk-gantt-grid'>"+head+body+"</div></div>";
+  }
+
+  // ══ events on body ══
+  function bindBodyEvents(){
+    var b=$("tk_body");
+    Array.prototype.forEach.call(b.querySelectorAll("[data-id]"),function(el){
+      if(el.classList.contains("tk-bar")||el.classList.contains("tk-card")||el.classList.contains("tk-row")||el.tagName==="TR"||el.classList.contains("lbl")){
+        el.addEventListener("click",function(e){ if(el.classList.contains("tk-card")&&T.dragId) return; openModal(el.getAttribute("data-id")); });
+      }
+    });
+    Array.prototype.forEach.call(b.querySelectorAll("[data-addcard]"),function(el){
+      el.addEventListener("click",function(){ addRecord(el.getAttribute("data-addcard")); });
+    });
+    Array.prototype.forEach.call(b.querySelectorAll("[data-stmenu]"),function(el){
+      el.addEventListener("click",function(e){ e.stopPropagation(); stageMenu(el.getAttribute("data-stmenu")); });
+    });
+    if($("tk_addcol")) $("tk_addcol").addEventListener("click",addStage);
+    // drag & drop (board)
+    if(T.view==="board"){
+      Array.prototype.forEach.call(b.querySelectorAll(".tk-card"),function(card){
+        card.addEventListener("dragstart",function(){ T.dragId=card.getAttribute("data-id"); card.classList.add("dragging"); });
+        card.addEventListener("dragend",function(){ card.classList.remove("dragging"); setTimeout(function(){T.dragId=null;},50); });
+      });
+      Array.prototype.forEach.call(b.querySelectorAll(".tk-col"),function(col){
+        col.addEventListener("dragover",function(e){ e.preventDefault(); col.classList.add("drop"); });
+        col.addEventListener("dragleave",function(){ col.classList.remove("drop"); });
+        col.addEventListener("drop",function(e){ e.preventDefault(); col.classList.remove("drop");
+          var rec=recById(T.dragId); if(rec){ rec.stage=col.getAttribute("data-stage"); scheduleSave(); renderBody(); } });
+      });
+    }
+  }
+
+  // ══ record + stage mutations ══
+  function addRecord(stageId){
+    var r={id:"r"+(++T.state.seq),client:"Untitled",product:"",method:"",poc:"",status:(stageId==="on_hold"?"Not Started":"To be Picked"),stage:stageId,comments:[]};
+    T.state.records.push(r); scheduleSave(); renderBody(); openModal(r.id);
+  }
+  function addStage(){
+    var nm=prompt("New stage name:"); if(!nm) return;
+    T.state.stages.push({id:"s"+(++T.state.seq),name:nm,color:PAL[T.state.stages.length%PAL.length]});
+    scheduleSave(); renderBody();
+  }
+  function stageMenu(id){
+    var st=stageById(id); if(!st) return;
+    var act=prompt("Stage \""+st.name+"\" — type: rename / delete / (cancel)","rename");
+    if(act==="rename"){ var nm=prompt("Rename stage:",st.name); if(nm){ st.name=nm; scheduleSave(); renderBody(); } }
+    else if(act==="delete"){
+      if(recsIn(id).length && !confirm("This stage has "+recsIn(id).length+" item(s). Delete stage and move its items to the first stage?")) return;
+      var first=T.state.stages[0].id===id?(T.state.stages[1]?T.state.stages[1].id:null):T.state.stages[0].id;
+      T.state.records.forEach(function(r){ if(r.stage===id && first) r.stage=first; });
+      T.state.stages=T.state.stages.filter(function(s){return s.id!==id;});
+      scheduleSave(); renderBody();
+    }
+  }
+
+  // ══ MODAL ══
+  function selOptions(list,val,addLabel){
+    var o="<option value=''>—</option>";
+    list.forEach(function(x){ o+="<option value='"+esc(x)+"'"+(x===val?" selected":"")+">"+esc(x)+"</option>"; });
+    if(addLabel) o+="<option value='__add'>"+addLabel+"</option>";
+    return o;
+  }
+  function fieldRow(label,icon,inner){ return "<div class='tk-field'><label><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>"+icon+"</svg>"+label+"</label>"+inner+"</div>"; }
+  function openModal(id){
+    var r=recById(id); if(!r) return; T.editing=id; if(!r.comments) r.comments=[];
+    var stageOpts=T.state.stages.map(function(s){return "<option value='"+s.id+"'"+(s.id===r.stage?" selected":"")+">"+esc(s.name)+"</option>";}).join("");
+    var statusOpts=T.state.statuses.map(function(s){return "<option value='"+esc(s.name)+"'"+(s.name===r.status?" selected":"")+">"+esc(s.name)+"</option>";}).join("");
+    var cmts=(r.comments||[]).map(function(c){
+      return "<div class='tk-cmt'><div class='av' style='background:"+tint(pColor(c.author),.18)+";color:"+pColor(c.author)+"'>"+initials(c.author)+"</div><div class='bd'><div class='who'>"+esc(c.author)+"<span>"+esc(c.ts||"")+"</span></div><div class='tx'>"+esc(c.text)+"</div></div></div>";
+    }).join("");
+    var legacy = r.notionCmts ? "<div class='tk-cmt'><div class='av'>N</div><div class='bd'><div class='who'>Notion<span>migrated</span></div><div class='tx'>"+r.notionCmts+" earlier comment(s) exist on the original Notion card (text not migrated).</div></div></div>" : "";
+    var html=
+      "<div class='tk-m-h'><input class='tk-mtitle' id='tk_f_client' value='"+esc(r.client||"")+"' placeholder='Client name'><button class='tk-m-close' id='tk_mclose'>✕</button></div>"
+      +"<div class='tk-m-b'>"
+      +fieldRow("Type / Product","<rect x='3' y='3' width='18' height='18' rx='2'/>","<input id='tk_f_product' value='"+esc(r.product||"")+"'>")
+      +fieldRow("Deployment Method","<path d='M12 2v20M2 12h20'/>","<input id='tk_f_method' value='"+esc(r.method||"")+"'>")
+      +fieldRow("POC","<circle cx='12' cy='8' r='4'/><path d='M4 21v-1a7 7 0 0114 0v1'/>","<select id='tk_f_poc'>"+selOptions(T.state.people,r.poc,"+ Add person…")+"</select>")
+      +fieldRow("Status","<circle cx='12' cy='12' r='9'/>","<select id='tk_f_status'>"+statusOpts+"</select>")
+      +fieldRow("Stage","<rect x='3' y='4' width='5' height='16'/>","<select id='tk_f_stage'>"+stageOpts+"</select>")
+      +fieldRow("Overall Timeline","<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>","<input type='date' id='tk_f_overall' value='"+(r.overall||"")+"'>")
+      +fieldRow("Actual Completion","<path d='M20 6L9 17l-5-5'/>","<input type='date' id='tk_f_actual' value='"+(r.actual||"")+"'>")
+      +fieldRow("Stage Owner","<circle cx='12' cy='8' r='4'/><path d='M4 21v-1a7 7 0 0114 0v1'/>","<select id='tk_f_sowner'>"+selOptions(T.state.people,r.stageOwner,"+ Add person…")+"</select>")
+      +fieldRow("Stage Timeline","<circle cx='12' cy='12' r='9'/>","<input type='date' id='tk_f_stimeline' value='"+(r.stageTimeline||"")+"'>")
+      +fieldRow("Doc Link","<path d='M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1'/><path d='M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1'/>","<input id='tk_f_doc' value='"+esc(r.docLink||"")+"' placeholder='https://'>")
+      +"<div class='tk-cmts'><div class='tk-cmts-h'>Comments</div>"+cmts+legacy
+      +"<div class='tk-cmt-new'><input id='tk_cmt_in' placeholder='Add a comment…'><button id='tk_cmt_add'>Send</button></div></div>"
+      +"</div>"
+      +"<div class='tk-m-f'><button class='tk-del' id='tk_del'>Delete</button><span style='font-size:11.5px;color:var(--ink-3)'>Changes save automatically</span></div>";
+    $("tk_modal_card").innerHTML=html; $("tk_modal").classList.add("on");
+
+    function bindText(fid,key){ var e=$(fid); e.addEventListener("input",function(){ r[key]=e.value; scheduleSave(); renderTitleLive(); }); }
+    function renderTitleLive(){}
+    bindText("tk_f_client","client"); bindText("tk_f_product","product"); bindText("tk_f_method","method");
+    bindText("tk_f_overall","overall"); bindText("tk_f_actual","actual"); bindText("tk_f_stimeline","stageTimeline"); bindText("tk_f_doc","docLink");
+    function bindSelPerson(fid,key){ var e=$(fid); e.addEventListener("change",function(){ if(e.value==="__add"){ var nm=prompt("New person:"); if(nm){ if(T.state.people.indexOf(nm)<0)T.state.people.push(nm); r[key]=nm; } else { e.value=r[key]||""; } } else r[key]=e.value; scheduleSave(); openModal(id); }); }
+    bindSelPerson("tk_f_poc","poc"); bindSelPerson("tk_f_sowner","stageOwner");
+    $("tk_f_status").addEventListener("change",function(){ r.status=$("tk_f_status").value; scheduleSave(); });
+    $("tk_f_stage").addEventListener("change",function(){ r.stage=$("tk_f_stage").value; scheduleSave(); });
+    $("tk_mclose").addEventListener("click",closeModal);
+    $("tk_del").addEventListener("click",function(){ if(confirm("Delete \""+(r.client||"this card")+"\"?")){ T.state.records=T.state.records.filter(function(x){return x.id!==id;}); scheduleSave(); closeModal(); renderBody(); } });
+    function addCmt(){ var v=$("tk_cmt_in").value.trim(); if(!v) return; r.comments.push({author:CUR_USER,text:v,ts:fmtDate(new Date().toISOString().slice(0,10))}); scheduleSave(); openModal(id); }
+    $("tk_cmt_add").addEventListener("click",addCmt);
+    $("tk_cmt_in").addEventListener("keydown",function(e){ if(e.key==="Enter") addCmt(); });
+    setTimeout(function(){ var ci=$("tk_cmt_in"); },0);
+  }
+  function closeModal(){ $("tk_modal").classList.remove("on"); T.editing=null; renderBody(); }
+
+  // ══ init / polling ══
+  function firstRender(){ renderTabs(); renderBody(); }
+  function ensureLoaded(cb){
+    if(T.loaded){ cb&&cb(); return; }
+    setSync("","Loading…");
+    Store.load().then(function(data){
+      T.state = data && data.records ? data : JSON.parse(JSON.stringify(SEED));
+      if(!data || !data.records){ Store.save(T.state).then(function(ok){ setSync(ok?"saved":"local", ok?"Saved · shared":"Saved · local only"); }); }
+      else setSync(T.shared?"saved":"local", T.shared?"Shared":"Local only");
+      T.loaded=true; firstRender(); startPolling(); cb&&cb();
+    });
+  }
+  function startPolling(){
+    setInterval(function(){
+      if(T.editing) return;                 // don't clobber an open edit
+      if(document.body.className.indexOf("app-tracker")<0) return;
+      Store.poll().then(function(j){
+        if(j && j.data && (j.rev||0)>T.rev){ T.rev=j.rev; T.state=j.data; renderBody(); setSync("saved","Synced"); }
+      });
+    },12000);
+  }
+
+  window.__trackerEnter=function(){ ensureLoaded(); };
+  if($("card_tracker")){
+    $("card_tracker").addEventListener("click",function(){ if(window.__showView) window.__showView("app-tracker"); });
+    $("card_tracker").addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(window.__showView) window.__showView("app-tracker"); } });
+  }
+  if($("tk_home")) $("tk_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
+  if($("tk_new")) $("tk_new").addEventListener("click",function(){ if(T.state) addRecord(T.state.stages[0].id); });
+  if($("tk_modal")) $("tk_modal").addEventListener("click",function(e){ if(e.target===$("tk_modal")) closeModal(); });
 })();
 </script>
 </body>

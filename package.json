@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server.js"
   },
+  "optionalDependencies": {
+    "pg": "^8.11.5"
+  },
   "engines": {
     "node": ">=18"
   }
