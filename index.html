@@ -120,6 +120,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .bom td.num.total{font-weight:700;color:var(--ink)}
 .bom td.num.savecol{font-weight:700;color:var(--save)}
 .scaling-tag{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:800;letter-spacing:.4px;color:var(--accent);background:#e6f7f4;padding:1px 6px;border-radius:5px;vertical-align:middle}
+
+/* inline-editable node counts & cost cells */
+.node-inp{width:50px;text-align:center;border:1.5px solid var(--brand-100);background:#fff;font-family:inherit;font-size:12px;font-weight:800;color:var(--brand);border-radius:6px;padding:2px 4px;margin-right:2px}
+.node-inp:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 3px var(--brand-50)}
+.cost-inp{width:104px;text-align:right;border:1px solid transparent;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);border-radius:6px;padding:3px 6px;cursor:text}
+.cost-inp:hover{border-color:var(--line)}
+.cost-inp:focus{border-color:var(--brand);background:#fff;outline:none;box-shadow:0 0 0 3px var(--brand-50)}
+.cost-inp.ov{color:var(--brand);background:var(--brand-50);font-weight:800}
+.reset-edits{display:inline-flex;align-items:center;gap:5px;background:#fff3e3;color:var(--warn);border:1px solid #f5c98a;border-radius:9px;padding:5px 11px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;margin-left:8px}
+.reset-edits svg{width:13px;height:13px}
+@media print{.node-inp,.cost-inp{border:none;background:transparent;color:#000;padding:0}}
 .grand-row td{background:var(--brand);color:#fff;font-weight:800;font-size:13.5px;padding:13px 12px}
 .grand-row td.savecol{color:#9af5e2}
 .grand-row td:first-child{border-radius:0 0 0 9px}
@@ -441,6 +452,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   var FX = 94.5;          // live USD→INR (updated from server response when available)
   var CUR = "INR";        // active display currency
   var LAST = null;        // last computed report (for Excel export)
+  var NODE_OV = {};       // manual node-count overrides: {u1,u2,sys} (undefined = auto)
+  var COST_OV = {};       // manual per-line monthly-cost overrides: rowKey → value
 
   // ── Worker tiers (vcpu/ram + per-provider instance label + Azure SKU) ──
   var TIERS = {
@@ -597,8 +610,11 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var wNodeM=perNodeM*osFactor, wNodeS=perNodeS*osFactor;
     var p2M=p2.monthly*osFactor, p2S=p2.savings*osFactor;
     var sysM=sysv.monthly*osFactor, sysS=sysv.savings*osFactor;
-    var pool2Final=2*envFactor*p2M, pool2FinalS=2*envFactor*p2S;
-    var systemFinal=envFactor*sysM, systemFinalS=envFactor*sysS;
+    // node counts — user-editable overrides (userpool 2 & systempool), else defaults
+    var u2n = (NODE_OV.u2!=null && NODE_OV.u2>=0) ? NODE_OV.u2 : 2;
+    var sysn = (NODE_OV.sys!=null && NODE_OV.sys>=0) ? NODE_OV.sys : 1;
+    var pool2Final=u2n*envFactor*p2M, pool2FinalS=u2n*envFactor*p2S;
+    var systemFinal=sysn*envFactor*sysM, systemFinalS=sysn*envFactor*sysS;
 
     var svc = PRICES.svc || {};
 
@@ -646,12 +662,13 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var otherTotal = storageFinal + pool2Final + systemFinal + networkFinal + dbFinal
       + registryFinal + monitorFinal + kvFinal + peFinal + egressFinal + gatewayFinal + supportFinal + aiTotalFinal;
 
-    // worker nodes: capacity-needed, then capped so total fits the monthly budget
+    // worker nodes (userpool 1): capacity-needed, budget-capped, or a manual override
     var nWneed = realtime ? Math.max(1,Math.ceil(peakN/jobsPerNode)) : Math.max(1,Math.ceil(peakN/(jobsPerNode*3)));
     var perNwCost = envFactor*wNodeM;   // cost added per +1 worker node (across all environments)
     var maxByBudget = perNwCost>0 ? Math.floor((budget-otherTotal)/perNwCost) : nWneed;
-    var nW = Math.max(1, Math.min(nWneed, Math.max(1, maxByBudget)));
-    var budgetCapped = nW < nWneed;
+    var nWauto = Math.max(1, Math.min(nWneed, Math.max(1, maxByBudget)));
+    var nW = (NODE_OV.u1!=null && NODE_OV.u1>=1) ? NODE_OV.u1 : nWauto;   // manual override wins
+    var budgetCapped = (NODE_OV.u1==null) && (nW < nWneed);
 
     var totalSlots=nW*jobsPerNode;
     var running=Math.min(peakN,totalSlots);
@@ -666,7 +683,8 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var rgn = pKey==="azure" ? (REGION_LABEL[boq.region]||prov.region) : prov.region;
     var rows=[];
     function addRow(cat,svcRole,name,regionType,desc,m,s){
-      rows.push({ cat:cat, type:SVC[svcRole][pKey], name:name,
+      var type=SVC[svcRole][pKey];
+      rows.push({ cat:cat, type:type, name:name, key:cat+"|"+name+"|"+type,
         region: regionType==="ai"?prov.aiRegion:rgn, desc:desc, monthly:m, upfront:0, savings:(s==null?m:s) });
     }
     var envTxt = envFactor>1 ? " × "+envFactor+" environments" : "";
@@ -676,15 +694,16 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       "Block Blob / object storage, GPv2, <b>"+boq.stier+"</b> tier, <b>"+boq.redund.toUpperCase()+"</b> redundancy, <b>"+fmtN(effVolGB)+" GB</b>"+(boq.growth>0?" (incl "+boq.growth+"%/yr growth)":"")+".",
       storageFinal, storageFinal);
 
-    rows.push({ cat:"Compute", type:SVC.k8s[pKey], name:"userpool 1", region:rgn,
-      desc:"Primary worker node pool: <b>"+(nW*envFactor)+"× "+workerLabel+"</b> ("+tier.vcpu+" vCPU, "+tier.ram+" GB) × 730h"+envTxt+osTxt+"; ~"+jobsPerNode+" jobs/node.",
+    rows.push({ cat:"Compute", type:SVC.k8s[pKey], name:"userpool 1", region:rgn, key:"Compute|userpool 1|"+SVC.k8s[pKey],
+      nodeKey:"u1", nodeCount:nW, nodeLabel:workerLabel,
+      desc:workerLabel+" ("+tier.vcpu+" vCPU, "+tier.ram+" GB) × 730h"+envTxt+osTxt+"; ~"+jobsPerNode+" jobs/node.",
       monthly:workerFinalM, upfront:0, savings:workerFinalS, scaling:true });
     addRow("Compute","k8s","userpool 2","local",
-      "Secondary worker node pool: <b>"+(2*envFactor)+"× "+POOL2[pKey]+"</b> (8 vCPU, 32 GB) × 730h"+envTxt+osTxt+".",
-      pool2Final, pool2FinalS);
+      POOL2[pKey]+" (8 vCPU, 32 GB) × 730h"+envTxt+osTxt+".", pool2Final, pool2FinalS);
+    rows[rows.length-1].nodeKey="u2"; rows[rows.length-1].nodeCount=u2n; rows[rows.length-1].nodeLabel=POOL2[pKey];
     addRow("Compute","k8s","systempool","local",
-      "System node pool: <b>"+envFactor+"× "+POOLS[pKey]+"</b> (2 vCPU, 8 GB) × 730h"+envTxt+"; cluster system services.",
-      systemFinal, systemFinalS);
+      POOLS[pKey]+" (2 vCPU, 8 GB) × 730h"+envTxt+"; cluster system services.", systemFinal, systemFinalS);
+    rows[rows.length-1].nodeKey="sys"; rows[rows.length-1].nodeCount=sysn; rows[rows.length-1].nodeLabel=POOLS[pKey];
 
     addRow("Networking","network","—","local",
       "Virtual network + subnets; internal load balancing & DNS.", networkFinal, networkFinal);
@@ -716,6 +735,9 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     if(supportFinal>0) addRow("Support","support","—","local",
       "<b>"+({standard:"Standard",prodirect:"Professional Direct"}[boq.support]||boq.support)+"</b> support plan — flat monthly fee.", supportFinal, supportFinal);
 
+    // apply manual per-line monthly-cost overrides (edited directly in the table)
+    for(var oi=0;oi<rows.length;oi++){ var ov=COST_OV[rows[oi].key]; if(ov!=null && isFinite(ov)){ rows[oi].monthly=ov; rows[oi].savings=ov; rows[oi].overridden=true; } }
+
     var totM=0,totS=0,totU=0;
     for(var i=0;i<rows.length;i++){ totM+=rows[i].monthly; totS+=rows[i].savings; totU+=rows[i].upfront; }
     var applied = boq.pricing==="payg" ? totM : boq.pricing==="1yr" ? totS : totS*0.82;
@@ -739,13 +761,15 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     for(var i=0;i<r.rows.length;i++){
       var x=r.rows[i];
       var tag=x.scaling?"<span class='scaling-tag'>SCALES</span>":"";
+      var descHtml=(x.nodeKey ? "<input class='node-inp' data-nk='"+x.nodeKey+"' type='number' min='0' step='1' value='"+x.nodeCount+"' title='Edit node count'> × " : "")+x.desc;
+      var costVal=CUR==="INR" ? Math.round(x.monthly) : Math.round(x.monthly/FX);
       out+="<tr>"
         +"<td class='cat'>"+x.cat+"</td>"
         +"<td class='stype'>"+x.type+tag+"</td>"
         +"<td class='cname'>"+(x.name||"—")+"</td>"
         +"<td class='region'>"+x.region+"</td>"
-        +"<td class='desc-cell'>"+x.desc+"</td>"
-        +"<td class='num total'>"+money(x.monthly)+"</td>"
+        +"<td class='desc-cell'>"+descHtml+"</td>"
+        +"<td class='num total'><input class='cost-inp"+(x.overridden?" ov":"")+"' data-idx='"+i+"' value='"+costVal+"' title='Click to edit this line cost'></td>"
         +"<td class='num'>"+money(x.upfront)+"</td>"
         +"<td class='num savecol'>"+money(x.savings)+"</td>"
         +"</tr>";
@@ -908,6 +932,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       +"<div class='ct'>"+ico("<path d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2'/><rect x='9' y='3' width='6' height='4' rx='1'/><path d='M9 12h6M9 16h6'/>")+"Bill of Materials"
       +"<span class='spacer'></span>"
       +"<div class='cur-toggle' id='curToggle'><button data-cur='INR' class='"+(CUR==="INR"?"on":"")+"'>₹ INR</button><button data-cur='USD' class='"+(CUR==="USD"?"on":"")+"'>$ USD</button></div>"
+      +((Object.keys(NODE_OV).length||Object.keys(COST_OV).length) ? "<button class='reset-edits no-print' id='resetEdits' title='Clear manual edits'>"+ico("<path d='M3 12a9 9 0 109-9 9 9 0 00-7 3.3L3 8'/><path d='M3 3v5h5'/>")+"Reset edits</button>" : "")
       +"</div>"
       +"<div class='csub'>"+priceBadge()+" &nbsp;·&nbsp; "+providerNote+" &nbsp;·&nbsp; FX: US$1 = ₹"+FX.toFixed(2)+" (live).</div>"
       +"<div class='tablewrap'><table class='bom'><thead><tr>"
@@ -940,6 +965,28 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
         b.addEventListener("click",function(){ CUR=b.getAttribute("data-cur"); refresh(); });
       });
     }
+
+    // inline-editable node counts
+    $("report").querySelectorAll(".node-inp").forEach(function(inp){
+      inp.addEventListener("change",function(){
+        var nk=inp.getAttribute("data-nk"), v=inp.value.trim();
+        if(v==="") delete NODE_OV[nk]; else NODE_OV[nk]=Math.max(0, parseInt(v,10)||0);
+        refresh();
+      });
+    });
+    // inline-editable line costs
+    $("report").querySelectorAll(".cost-inp").forEach(function(inp){
+      inp.addEventListener("change",function(){
+        var idx=+inp.getAttribute("data-idx"), v=inp.value.trim();
+        var row=LAST&&LAST.rows&&LAST.rows[idx]; if(!row) return;
+        if(v===""){ delete COST_OV[row.key]; }
+        else { var num=parseFloat(v.replace(/[^0-9.\-]/g,"")); if(isFinite(num)) COST_OV[row.key]= CUR==="USD"? num*FX : num; }
+        refresh();
+      });
+    });
+    // reset-edits button
+    var re=$("resetEdits");
+    if(re) re.addEventListener("click",function(){ NODE_OV={}; COST_OV={}; refresh(); });
   }
 
   // ── live wiring ──
@@ -1082,7 +1129,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     $("cb_light").checked=true; $("cb_complex").checked=false; $("cb_digital").checked=false; $("cb_scanned").checked=false;
     $("cb_gptmini").checked=true; $("cb_gpt55").checked=true; $("cb_embed").checked=false;
     $("rb_rt").checked=true;
-    CUR="INR"; loadPrices();
+    NODE_OV={}; COST_OV={}; CUR="INR"; loadPrices();
   });
 
   loadPrices();
