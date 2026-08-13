@@ -651,24 +651,25 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
     <div class="fg"><label class="lbl">Gateway / WAF / LB</label>
       <select id="sel_gateway"><option value="none" selected>None</option><option value="lb">Load Balancer</option><option value="agw">Application Gateway</option><option value="waf">App Gateway + WAF</option></select></div>
 
-    <!-- ── AI / Machine Learning (OpenAI LLM spend) ── -->
+    <!-- ── AI / Machine Learning (Auditify AI monthly rate card) ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 14h.01M15 14h.01"/></svg></span>AI / Machine Learning</div>
-    <div class="hint">OpenAI model spend is derived from the document types selected above plus the monthly volumes and document sizes below.</div>
-    <div class="fg"><label class="lbl">Usage intensity</label>
-      <select id="sel_ai_scen"><option value="" selected>Auto (per document type)</option><option value="low">Light</option><option value="typ">Typical</option><option value="high">Heavy</option></select></div>
+    <div class="hint">Model spend from the Auditify AI rate card — workflow portfolio × reruns × schema-drift (Expected tier). One-time build cost shows as the AI line's upfront cost.</div>
     <div class="row2">
-      <div class="fg"><label class="lbl">Uploads / mo</label><input type="number" id="inp_ai_uploads" value="50" min="0" step="10"></div>
-      <div class="fg"><label class="lbl">Queries / mo</label><input type="number" id="inp_ai_queries" value="300" min="0" step="10"></div>
+      <div class="fg"><label class="lbl">Excel workflows</label><input type="number" id="inp_ai_excel" value="12" min="0" step="1"></div>
+      <div class="fg"><label class="lbl">PDF workflows</label><input type="number" id="inp_ai_pdf" value="4" min="0" step="1"></div>
     </div>
     <div class="row2">
-      <div class="fg"><label class="lbl">Workflows built / mo</label><input type="number" id="inp_ai_builds" value="10" min="0" step="1"></div>
-      <div class="fg"><label class="lbl">Workflow runs / mo</label><input type="number" id="inp_ai_runs" value="100" min="0" step="10"></div>
+      <div class="fg"><label class="lbl">SQL workflows</label><input type="number" id="inp_ai_sql" value="4" min="0" step="1"></div>
+      <div class="fg"><label class="lbl">Runs / workflow / mo</label><input type="number" id="inp_ai_runs" value="8" min="0" step="1"></div>
     </div>
     <div class="row2">
-      <div class="fg"><label class="lbl">Avg PDF pages</label><input type="number" id="inp_pdf_pages" value="20" min="1" step="1"></div>
-      <div class="fg"><label class="lbl">Avg Excel sheets</label><input type="number" id="inp_xls_sheets" value="3" min="1" step="1"></div>
+      <div class="fg"><label class="lbl">Schema drift <span class="sub">% of wf/mo</span></label><input type="number" id="inp_ai_drift" value="25" min="0" max="100" step="5"></div>
+      <div class="fg"><label class="lbl">Pages per PDF</label><input type="number" id="inp_pdf_pages" value="20" min="1" step="1"></div>
     </div>
-    <div class="fg"><label class="lbl">Avg tokens / call <span class="sub">thousands</span></label><div class="hint">Scales model token spend around a 40K-token baseline call.</div><input type="number" id="inp_ai_tokens" value="40" min="1" step="5"></div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Ad-hoc queries / mo</label><input type="number" id="inp_ai_queries" value="100" min="0" step="10"></div>
+      <div class="fg"><label class="lbl">Model price factor</label><input type="number" id="inp_ai_pf" value="1.0" min="0" step="0.1"></div>
+    </div>
 
     <!-- ── Commercial Terms ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Commercial Terms</div>
@@ -808,78 +809,32 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     pdfimg: { label:"PDF with images",    base:15, rate:2.00, cpu:2.0, mem:3.5, calc:"pdf",   scen:"high"            }
   };
 
-  // ── LLM (OpenAI) cost engine — ported from the Auditify LLM Cost Calculator ──
-  // Returns USD per single operation; multiply by monthly volume + FX for INR.
-  var LLM_K = 1000;
-  var LLM_MODELS = {
-    reason:     { name:"gpt-5.5",               inP:5.00, outP:30.00 },
-    fast:       { name:"gpt-5.4-mini",          inP:0.75, outP:4.50  },
-    vision:     { name:"gemini-3.5-flash",      inP:1.50, outP:9.00  },
-    visionLite: { name:"gemini-3.1-flash-lite", inP:0.25, outP:1.50  }
+  // ── Auditify AI monthly rate card (rev 2 verified) — replaces the old per-op LLM engine.
+  //   Unit economics in USD, tiers [floor, expected, budget]; "Expected" (index 1) is the quote.
+  var RC_EXTRACT = 0.1275;   // one reasoning extraction call: 7.5k in / 3k out @ $5/$30
+  var RC_OCR = 0.004;        // Mistral OCR list rate per page
+  var RC_U = {
+    createBase:  { excel:[1.80,3.50,20.00], pdf:[1.80,3.50,20.00], sql:[2.20,4.20,22.00] },
+    ingestFirst: { excel:[0.005,0.02,0.05], sql:[0.01,0.05,0.15] },   // pdf computed from pages
+    rerunBase:   { excel:[0.08,0.17,0.60],  pdf:[0.08,0.17,0.60],  sql:[0.10,0.20,0.70] },
+    rerunIngest: { excel:[0.002,0.01,0.05], sql:[0,0,0] },            // pdf computed from pages
+    repair:      [1.50,3.00,8.00],
+    query:       [0.15,0.40,1.00]
   };
-  var LLM_OCR = { name:"mistral-ocr-4-0", perPage:0.004 };
-  var LLM_AGENT = {
-    query:  { low:[20*LLM_K,2*LLM_K],   typ:[35*LLM_K,3.5*LLM_K], high:[90*LLM_K,9*LLM_K]  },
-    plan:   { low:[30*LLM_K,5*LLM_K],   typ:[80*LLM_K,15*LLM_K],  high:[150*LLM_K,30*LLM_K] },
-    exec:   { low:[100*LLM_K,20*LLM_K], typ:[200*LLM_K,40*LLM_K], high:[400*LLM_K,80*LLM_K] },
-    consol: { low:[10*LLM_K,2*LLM_K],   typ:[20*LLM_K,5*LLM_K],   high:[35*LLM_K,8*LLM_K]  },
-    rerun:  { low:[8*LLM_K,1.5*LLM_K],  typ:[15*LLM_K,3*LLM_K],   high:[250*LLM_K,50*LLM_K] }
-  };
-  function llmPdfChunks(pages){ return Math.max(1, Math.ceil(pages/12)); }
-  function llmLineItems(file, op, scen, pages, sheets){
-    var p=pages, sh=sheets, items=[];
-    function agent(key){ var t=LLM_AGENT[key][scen]; items.push({model:"reason",calls:1,inT:t[0],outT:t[1]}); }
-    var ch=llmPdfChunks(p);
-    var exCalls={low:1,typ:ch,high:Math.min(4,ch+1)}[scen];
-    if(op==="ingest"){
-      if(file==="excel"){
-        var sc={low:0,typ:1,high:2*sh}[scen];
-        if(sc>0) items.push({model:"fast",calls:sc,inT:4.5*LLM_K,outT:0.3*LLM_K});
-        if(sh>=15) items.push({model:"fast",calls:sh,inT:0.35*LLM_K,outT:0.05*LLM_K});
-      } else if(file==="pdf"){
-        items.push({model:"ocr",calls:p,inT:0,outT:0});
-        var redo={low:0,typ:Math.ceil(0.1*p),high:Math.ceil(0.2*p)}[scen];
-        if(redo>0) items.push({model:"visionLite",calls:redo,inT:2*LLM_K,outT:3*LLM_K});
-        if(p>=10) items.push({model:"fast",calls:Math.ceil(p/8),inT:1.8*LLM_K,outT:0.5*LLM_K});
-      } else {
-        items.push({model:"ocr",calls:1,inT:0,outT:0});
-        var r2={low:0,typ:1,high:3}[scen];
-        if(r2>0) items.push({model:"visionLite",calls:r2,inT:2*LLM_K,outT:3*LLM_K});
-      }
-    }
-    if(op==="query"){
-      agent("query");
-      if(file==="pdf"){
-        items.push({model:"reason",calls:exCalls,inT:7.5*LLM_K,outT:3*LLM_K});
-        if(scen==="high") items.push({model:"fast",calls:1,inT:5*LLM_K,outT:1*LLM_K});
-      }
-      if(file==="image") items.push({model:"vision",calls:{low:1,typ:1,high:3}[scen],inT:1.6*LLM_K,outT:1.5*LLM_K});
-    }
-    if(op==="create"){
-      agent("plan"); agent("exec"); agent("consol");
-      items.push({model:"fast",calls:1,inT:0.5*LLM_K,outT:0.05*LLM_K});
-      if(file==="pdf"){ var cc={low:1,typ:ch+1,high:2*ch}[scen]; items.push({model:"reason",calls:cc,inT:7.5*LLM_K,outT:3*LLM_K}); }
-      if(file==="image") items.push({model:"vision",calls:{low:1,typ:2,high:4}[scen],inT:1.6*LLM_K,outT:1.5*LLM_K});
-    }
-    if(op==="run"){
-      agent("rerun");
-      if(scen==="high"&&file!=="image") items.push({model:"fast",calls:1,inT:3*LLM_K,outT:0.5*LLM_K});
-      if(file==="pdf"){
-        items.push({model:"reason",calls:exCalls,inT:7.5*LLM_K,outT:3*LLM_K});
-        if(scen==="high") items.push({model:"fast",calls:1,inT:5*LLM_K,outT:1*LLM_K});
-      }
-      if(file==="image") items.push({model:"vision",calls:{low:1,typ:1,high:2}[scen],inT:1.6*LLM_K,outT:1.5*LLM_K});
-    }
-    return items;
-  }
-  // tokScale scales token-based model spend (OCR is per-page, unaffected).
-  function llmItemCost(it, tokScale){
-    if(it.model==="ocr") return it.calls*LLM_OCR.perPage;
-    var m=LLM_MODELS[it.model]; return it.calls*(it.inT*m.inP+it.outT*m.outP)/1e6*(tokScale||1);
-  }
-  function llmCellCost(file, op, scen, pages, sheets, tokScale){
-    return llmLineItems(file,op,scen,pages,sheets).reduce(function(a,it){return a+llmItemCost(it,tokScale);},0);
-  }
+  var RC_TYPES = ["excel","pdf","sql"];
+  function rcChunks(p){ return Math.max(1, Math.ceil(p/12)); }
+  function rcPdfIngest(p,t){ var reocr=[0,0.10,0.20][t]; var idx=p>=10?Math.ceil(p/8)*0.0012:0; return p*RC_OCR + reocr*p*0.005 + idx; }
+  function rcPdfCreateExtract(p,t){ return [1, rcChunks(p)+1, 2*rcChunks(p)][t]*RC_EXTRACT; }
+  function rcPdfRunExtract(p,t){ return [1, rcChunks(p), rcChunks(p)+1][t]*RC_EXTRACT; }
+  function rcCreate(type,t,st){ var c=RC_U.createBase[type][t]; if(type==="pdf") c+=rcPdfCreateExtract(st.pages,t)+rcPdfIngest(st.pages,t); else c+=RC_U.ingestFirst[type][t]; return c*st.pf; }
+  function rcRerun(type,t,st){ var c=RC_U.rerunBase[type][t]; if(type==="pdf") c+=rcPdfRunExtract(st.pages,t)+rcPdfIngest(st.pages,t); else c+=RC_U.rerunIngest[type][t]; return c*st.pf; }
+  function rcRepair(t,st){ return RC_U.repair[t]*st.pf; }
+  function rcQuery(t,st){ return RC_U.query[t]*st.pf; }
+  function rcTypeMonth(type,t,st){ var n=st.n[type]; var runs=n*st.runs; var drift=Math.min(runs, Math.round(n*st.driftPct/100));
+    var rerun=(runs-drift)*rcRerun(type,t,st), repair=drift*rcRepair(t,st); return { runs:runs, drift:drift, rerun:rerun, repair:repair, total:rerun+repair }; }
+  function rcMonth(t,st){ var rerun=0,repair=0; RC_TYPES.forEach(function(ty){ var m=rcTypeMonth(ty,t,st); rerun+=m.rerun; repair+=m.repair; });
+    var query=st.q*rcQuery(t,st); return { rerun:rerun, repair:repair, query:query, total:rerun+repair+query }; }
+  function rcSetup(t,st){ return RC_TYPES.reduce(function(a,ty){ return a+st.n[ty]*rcCreate(ty,t,st); },0); }
 
   // ── helpers ──
   function posToMB(p){ return Math.round(Math.pow(10, p/25)); }
@@ -1004,28 +959,25 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var SUP = { basic:0, standard:8600, prodirect:86000 };
     var supportFinal = (SUP[boq.support]||0)*factor;
 
-    // AI — OpenAI/LLM model spend, derived from the selected document types via the
-    // ported LLM cost engine × monthly operation volumes (uploads/queries/builds/runs).
-    var aiVol   = { ingest:gnum("inp_ai_uploads",50), query:gnum("inp_ai_queries",300), create:gnum("inp_ai_builds",10), run:gnum("inp_ai_runs",100) };
-    var aiPages = Math.max(1, Math.round(gnum("inp_pdf_pages",20)));
-    var aiSheets= Math.max(1, Math.round(gnum("inp_xls_sheets",3)));
-    var aiScenOverride = gval("sel_ai_scen","");   // "" → per-doc-type default scenario
-    var aiTokK  = Math.max(1, gnum("inp_ai_tokens",40));  // avg tokens per call (thousands)
-    var aiTokScale = aiTokK / 40;                          // baseline 40K/call → 1.0 (no change)
-    var LLM_OPS = ["ingest","query","create","run"];
-    // per selected doc type: blended monthly USD spend (all volume assumed on that type)
-    var aiPerType = sel.map(function(k){
-      var d=DTYPES[k], file=d.calc, scen=aiScenOverride||d.scen;
-      var sheets = (k==="hexcel") ? Math.max(15,aiSheets) : aiSheets;
-      var usd=0;
-      LLM_OPS.forEach(function(op){ usd += llmCellCost(file,op,scen,aiPages,sheets,aiTokScale)*aiVol[op]; });
-      return { k:k, label:d.label, usd:usd };
-    });
-    // multiple types selected → the monthly volume is a blend across them (average)
-    var aiUsdMonthly = aiPerType.length ? aiPerType.reduce(function(a,x){return a+x.usd;},0)/aiPerType.length : 0;
-    var aiTotalFinal = aiUsdMonthly * FX;   // → INR (LLM list prices, no cloud region factor)
-    boq.ai = { uploads:aiVol.ingest, queries:aiVol.query, builds:aiVol.create, runs:aiVol.run,
-      pages:aiPages, sheets:aiSheets, tokK:aiTokK, scen:aiScenOverride, usdMonthly:aiUsdMonthly, types:sel.slice() };
+    // AI — Auditify AI monthly rate card (Expected tier). Monthly run-rate → BOM monthly;
+    // one-time build cost → BOM upfront. Values in USD × live FX → INR (no cloud factor).
+    var aiSt = {
+      n:{ excel:Math.max(0,Math.round(gnum("inp_ai_excel",12))), pdf:Math.max(0,Math.round(gnum("inp_ai_pdf",4))), sql:Math.max(0,Math.round(gnum("inp_ai_sql",4))) },
+      runs:Math.max(0,gnum("inp_ai_runs",8)), driftPct:Math.min(100,Math.max(0,gnum("inp_ai_drift",25))),
+      pages:Math.max(1,Math.round(gnum("inp_pdf_pages",20))), q:Math.max(0,gnum("inp_ai_queries",100)),
+      pf:Math.max(0,gnum("inp_ai_pf",1))
+    };
+    var aiMonthExp = rcMonth(1, aiSt);            // Expected tier monthly run-rate (USD)
+    var aiSetupExp = rcSetup(1, aiSt);            // Expected one-time build (USD)
+    var aiUsdMonthly = aiMonthExp.total;
+    var aiTotalFinal = aiUsdMonthly * FX;         // INR monthly
+    var aiUpfrontFinal = aiSetupExp * FX;         // INR one-time build (shown as upfront)
+    var aiWorkflows = aiSt.n.excel + aiSt.n.pdf + aiSt.n.sql;
+    boq.ai = { excel:aiSt.n.excel, pdf:aiSt.n.pdf, sql:aiSt.n.sql, workflows:aiWorkflows,
+      runs:aiSt.runs, driftPct:aiSt.driftPct, pages:aiSt.pages, q:aiSt.q, pf:aiSt.pf,
+      usdMonthly:aiUsdMonthly, usdSetup:aiSetupExp,
+      floor:rcMonth(0,aiSt).total, budget:rcMonth(2,aiSt).total,
+      rerun:aiMonthExp.rerun, repair:aiMonthExp.repair, query:aiMonthExp.query };
 
     // fixed monthly cost of everything EXCEPT the scaling worker pool (userpool 1)
     var otherTotal = storageFinal + pool2Final + systemFinal + networkFinal + dbFinal
@@ -1088,14 +1040,13 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     addRow("Security","secrets","—","local",
       "Secrets / keys vault: ~<b>"+fmtN(boq.kv)+"K</b> operations / month.", kvFinal, kvFinal);
 
-    if(aiTotalFinal>0){
-      var aiTypeLbl = sel.map(function(k){return DTYPES[k].label;}).join(", ");
-      var scenLbl = aiScenOverride ? ({low:"light",typ:"typical",high:"heavy"}[aiScenOverride]) : "per-type";
-      addRow("AI + Machine Learning","ai","OpenAI LLM","ai",
-        "Model spend (gpt-5.5 reasoning + gpt-5.4-mini fast tier + Mistral OCR / vision) for <b>"+aiTypeLbl+"</b> ("+scenLbl+" intensity) — "
-        +"<b>"+fmtN(aiVol.ingest)+"</b> uploads, <b>"+fmtN(aiVol.query)+"</b> queries, <b>"+fmtN(aiVol.create)+"</b> workflow builds, <b>"+fmtN(aiVol.run)+"</b> runs / mo; "
-        +"PDFs ~"+fmtN(aiPages)+" pages, Excel ~"+fmtN(aiSheets)+" sheets, ~<b>"+fmtN(aiTokK)+"K tokens/call</b>. Pay-per-token (≈ $"+fmtN(Math.round(aiUsdMonthly))+"/mo).",
+    if(aiTotalFinal>0 || aiUpfrontFinal>0){
+      addRow("AI + Machine Learning","ai","Auditify AI","ai",
+        "Auditify AI rate card (Expected tier) — <b>"+fmtN(aiWorkflows)+"</b> workflows ("+fmtN(aiSt.n.excel)+" Excel · "+fmtN(aiSt.n.pdf)+" PDF · "+fmtN(aiSt.n.sql)+" SQL), "
+        +"<b>"+fmtN(aiSt.runs)+"</b> runs/workflow/mo, <b>"+fmtN(aiSt.driftPct)+"%</b> schema-drift; PDFs ~"+fmtN(aiSt.pages)+" pages; <b>"+fmtN(aiSt.q)+"</b> ad-hoc queries/mo"
+        +(aiSt.pf!==1?" · price factor "+aiSt.pf:"")+". Monthly run-rate ≈ $"+fmtN(Math.round(aiUsdMonthly))+"; one-time build ≈ $"+fmtN(Math.round(aiSetupExp))+" (upfront). Floor–Budget: $"+fmtN(Math.round(boq.ai.floor))+"–$"+fmtN(Math.round(boq.ai.budget))+"/mo.",
         aiTotalFinal, aiTotalFinal);
+      rows[rows.length-1].upfront = aiUpfrontFinal;
     }
 
     if(supportFinal>0) addRow("Support","support","—","local",
@@ -1246,7 +1197,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var docLbls={excel:"Excel",hexcel:"Heavy weight Excel",pdf:"PDF",pdfimg:"PDF with images"};
     var docTxt=(r.sel||[]).map(function(k){return docLbls[k]||k;}).join(", ")||"—";
     var aiTxt = b.ai
-      ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo · "+fmtN(b.ai.uploads)+" up / "+fmtN(b.ai.queries)+" q / "+fmtN(b.ai.builds)+" build / "+fmtN(b.ai.runs)+" runs · ~"+fmtN(b.ai.tokK)+"K tok/call")
+      ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo + $"+fmtN(Math.round(b.ai.usdSetup))+" build · "+fmtN(b.ai.workflows)+" wf ("+fmtN(b.ai.excel)+"E/"+fmtN(b.ai.pdf)+"P/"+fmtN(b.ai.sql)+"S) · "+fmtN(b.ai.runs)+" runs/wf · "+fmtN(b.ai.driftPct)+"% drift · "+fmtN(b.ai.q)+" queries")
       : "—";
     return [
       ["Concurrent users", fmtN(b.users)],
@@ -1256,7 +1207,7 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       ["Storage", fmtN(r.effVolGB)+" GB"],
       ["Database", b.dbEngine==="none"?"None":((ENG[b.dbEngine])+" · "+b.dbVcores+" vCore · "+fmtN(b.dbSize)+" GB"+(b.dbHA?" · HA":""))],
       ["Networking", b.endpoints+" endpoint(s) · "+fmtN(b.egress)+" GB egress · "+(GWL[b.gateway]||b.gateway)],
-      ["AI (OpenAI LLM)", aiTxt],
+      ["AI (Auditify rate card)", aiTxt],
       ["Pricing", (PR[b.pricing])]
     ];
   }
@@ -1596,7 +1547,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       sel_workload:"aks", inp_data_vol:1024,
       sel_dbengine:"postgres", inp_dbvcores:2, inp_dbsize:200, sel_dbha:"no",
       inp_endpoints:0, inp_egress:200, sel_gateway:"none",
-      sel_ai_scen:"", inp_ai_uploads:50, inp_ai_queries:300, inp_ai_builds:10, inp_ai_runs:100, inp_pdf_pages:20, inp_xls_sheets:3, inp_ai_tokens:40,
+      inp_ai_excel:12, inp_ai_pdf:4, inp_ai_sql:4, inp_ai_runs:8, inp_ai_drift:25, inp_pdf_pages:20, inp_ai_queries:100, inp_ai_pf:1.0,
       sel_cloud:"azure", sel_pricing:"payg" };
     for(var k in d){ if($(k)) $(k).value=d[k]; }
     $("cb_excel").checked=true; $("cb_hexcel").checked=false; $("cb_pdf").checked=false; $("cb_pdfimg").checked=false;
@@ -1620,8 +1571,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     if(m.dbEngine) sv("sel_dbengine", m.dbEngine);
     if(m.dbHA) sv("sel_dbha", m.dbHA);
     if(m.pricing) sv("sel_pricing", m.pricing);
-    sv("inp_ai_uploads", m.uploads); sv("inp_ai_queries", m.queries);
-    sv("inp_ai_builds", m.builds); sv("inp_ai_runs", m.runs);
+    sv("inp_ai_queries", m.queries); sv("inp_ai_runs", m.runs);
     var dtProvided = m.docTypes && m.docTypes.length;
     if(dtProvided){
       sc("cb_excel",  m.docTypes.indexOf("Excel")>=0);
@@ -1645,10 +1595,10 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       ["DB data (GB)","inp_dbsize",false],["DB High Availability","sel_dbha",has(m.dbHA)],
       ["Private endpoints","inp_endpoints",false],["Egress (GB/mo)","inp_egress",false],
       ["Gateway / WAF / LB","sel_gateway",false],
-      ["AI uploads / mo","inp_ai_uploads",has(m.uploads)],["AI queries / mo","inp_ai_queries",has(m.queries)],
-      ["AI workflow builds / mo","inp_ai_builds",has(m.builds)],["AI workflow runs / mo","inp_ai_runs",has(m.runs)],
-      ["Avg PDF pages","inp_pdf_pages",false],["Avg Excel sheets","inp_xls_sheets",false],
-      ["Avg tokens / call","inp_ai_tokens",false],["AI usage intensity","sel_ai_scen",false],
+      ["AI Excel workflows","inp_ai_excel",false],["AI PDF workflows","inp_ai_pdf",false],
+      ["AI SQL workflows","inp_ai_sql",false],["AI runs / workflow / mo","inp_ai_runs",has(m.runs)],
+      ["AI schema drift (%)","inp_ai_drift",false],["Pages per PDF","inp_pdf_pages",false],
+      ["AI ad-hoc queries / mo","inp_ai_queries",has(m.queries)],["AI model price factor","inp_ai_pf",false],
       ["Pricing preference","sel_pricing",has(m.pricing)]
     ];
     BOQ_ASSUMED = FIELDS.filter(function(f){ return !f[2]; })
