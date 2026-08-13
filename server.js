@@ -293,10 +293,59 @@ async function notionComments(pageId) {
     return (j.results || []).map((c) => ({ text: (c.rich_text || []).map((t) => t.plain_text).join(""), ts: c.created_time }));
   } catch (e) { return []; }
 }
+// Create a new page (card) in the tracker database from a sales intake submission.
+async function notionCreatePage(payload) {
+  if (!NOTION_TOKEN) throw new Error("Notion isn't connected yet — set NOTION_TOKEN (integration with Insert-content permission, shared with the database) in Render.");
+  const dbRes = await fetch("https://api.notion.com/v1/databases/" + NOTION_DB_ID, {
+    headers: { Authorization: "Bearer " + NOTION_TOKEN, "Notion-Version": NOTION_VER }
+  });
+  if (!dbRes.ok) { const t = await dbRes.text(); throw new Error("Notion schema " + dbRes.status + ": " + t.slice(0, 200)); }
+  const db = await dbRes.json();
+  const schema = db.properties || {};
+  const props = {};
+  function keyFor(name) { return Object.keys(schema).find((k) => k.toLowerCase() === String(name).toLowerCase()); }
+  function setProp(name, value) {
+    if (value == null || String(value).trim() === "") return;
+    const key = keyFor(name); if (!key) return;
+    const t = schema[key].type, v = String(value);
+    if (t === "title") props[key] = { title: [{ text: { content: v.slice(0, 1900) } }] };
+    else if (t === "rich_text") props[key] = { rich_text: [{ text: { content: v.slice(0, 1900) } }] };
+    else if (t === "select") props[key] = { select: { name: v.slice(0, 90) } };
+    else if (t === "status") props[key] = { status: { name: v.slice(0, 90) } };
+    else if (t === "multi_select") props[key] = { multi_select: v.split(/;|,/).map((s) => s.trim()).filter(Boolean).map((n) => ({ name: n.slice(0, 90) })) };
+    else if (t === "date") props[key] = { date: { start: v.slice(0, 10) } };
+    else if (t === "url") props[key] = { url: v };
+    else if (t === "number") { const n = parseFloat(v); if (isFinite(n)) props[key] = { number: n }; }
+  }
+  const defaults = payload.defaults || {}, mapped = payload.mapped || {};
+  Object.keys(defaults).forEach((k) => setProp(k, defaults[k]));
+  Object.keys(mapped).forEach((k) => setProp(k, mapped[k]));
+  const titleKey = Object.keys(schema).find((k) => schema[k].type === "title");
+  if (titleKey && !props[titleKey]) props[titleKey] = { title: [{ text: { content: String(mapped.Client || "New client").slice(0, 1900) } }] };
+  const blocks = (payload.blocks || []).filter((b) => b && b.value != null && String(b.value).trim() !== "").slice(0, 95)
+    .map((b) => ({ object: "block", type: "bulleted_list_item", bulleted_list_item: { rich_text: [{ text: { content: (b.label + ": " + b.value).slice(0, 1900) } }] } }));
+  const children = [{ object: "block", type: "heading_2", heading_2: { rich_text: [{ text: { content: "Sales intake details" } }] } }].concat(blocks);
+  const cr = await fetch("https://api.notion.com/v1/pages", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + NOTION_TOKEN, "Notion-Version": NOTION_VER, "Content-Type": "application/json" },
+    body: JSON.stringify({ parent: { database_id: NOTION_DB_ID }, properties: props, children: children })
+  });
+  const cj = await cr.json();
+  if (!cr.ok) throw new Error("Notion create " + cr.status + ": " + JSON.stringify(cj).slice(0, 300));
+  return { ok: true, url: cj.url || "", id: cj.id || "" };
+}
+
+// Shared, editable intake-form definition (file store; seeded by the page if empty)
+const FORMDEF_FILE = process.env.FORMDEF_FILE || path.join(__dirname, "form-def.json");
+function formDefLoad() { try { return JSON.parse(fs.readFileSync(FORMDEF_FILE, "utf8")); } catch (e) { return null; } }
+function formDefSave(d) { fs.writeFileSync(FORMDEF_FILE, JSON.stringify(d)); }
+
 function njson(res, code, obj) {
-  res.writeHead(code, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
+  res.writeHead(code, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,PUT,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Cache-Control": "no-store" });
   res.end(JSON.stringify(obj));
 }
+function readBody(req, cb) { let b = ""; req.on("data", (c) => { b += c; if (b.length > 3e6) req.destroy(); }); req.on("end", () => cb(b)); }
 
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost");
@@ -310,6 +359,27 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === "/api/notion-comments") {
     try { njson(res, 200, { comments: await notionComments(u.searchParams.get("page") || "") }); }
     catch (e) { njson(res, 200, { comments: [] }); }
+    return;
+  }
+
+  // ── Card 3: shared intake-form definition (GET/PUT) ──
+  if (u.pathname === "/api/form-def") {
+    if (req.method === "OPTIONS") { njson(res, 204, {}); return; }
+    if (req.method === "GET") { njson(res, 200, { def: formDefLoad() }); return; }
+    if (req.method === "PUT" || req.method === "POST") {
+      readBody(req, (b) => { try { const p = JSON.parse(b || "{}"); formDefSave(p.def); njson(res, 200, { ok: true }); } catch (e) { njson(res, 400, { error: String((e && e.message) || e) }); } });
+      return;
+    }
+    njson(res, 405, { error: "method not allowed" }); return;
+  }
+  // ── Card 3: create a new client card in Notion from a submission ──
+  if (u.pathname === "/api/create-client") {
+    if (req.method === "OPTIONS") { njson(res, 204, {}); return; }
+    if (req.method !== "POST") { njson(res, 405, { error: "method not allowed" }); return; }
+    readBody(req, async (b) => {
+      try { const p = JSON.parse(b || "{}"); njson(res, 200, await notionCreatePage(p)); }
+      catch (e) { njson(res, 200, { ok: false, error: String((e && e.message) || e) }); }
+    });
     return;
   }
 

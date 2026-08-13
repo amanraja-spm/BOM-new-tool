@@ -199,8 +199,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* ── Welcome / launcher page ── */
 #welcome{display:none}
 #tracker{display:none}
+#clientform{display:none}
 body.home #welcome{display:flex}
 body.app-tracker #tracker{display:flex}
+body.app-client #clientform{display:flex}
 body:not(.app-bom) > header{display:none !important}
 body:not(.app-bom) > .layout{display:none !important}
 #welcome{min-height:100vh;flex-direction:column;background:
@@ -312,6 +314,62 @@ body:not(.app-bom) > .layout{display:none !important}
 .tk-mini .row .m{color:var(--ink-3)}
 .tk-updated{font-size:11px;color:var(--ink-3);text-align:right;margin-top:4px}
 
+/* ── Add a New Client (Card 3) — intake form ── */
+#clientform{flex-direction:column;height:100vh;background:var(--bg)}
+.cf-wrap{max-width:820px;margin:0 auto;padding:22px 24px 60px}
+.cf-intro{font-size:13px;color:var(--ink-2);background:var(--brand-50);border:1px solid var(--brand-100);border-radius:12px;padding:12px 16px;margin-bottom:20px;line-height:1.5}
+.cf-sec{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px 8px;margin-bottom:16px}
+.cf-sec-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--brand);margin-bottom:14px}
+.cf-sec-h .sn{flex:1}
+.cf-q{margin-bottom:15px;position:relative}
+.cf-q>label{display:block;font-size:13px;font-weight:650;color:var(--ink);margin-bottom:6px}
+.cf-q .req{color:#c0392b;margin-left:3px}
+.cf-q input[type=text],.cf-q input[type=number],.cf-q input[type=date],.cf-q select,.cf-q textarea{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:13.5px;font-family:inherit;color:var(--ink);outline:none;background:#fff;transition:border-color .15s,box-shadow .15s}
+.cf-q input:focus,.cf-q select:focus,.cf-q textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50)}
+.cf-q textarea{min-height:70px;resize:vertical}
+.cf-checks{display:flex;flex-wrap:wrap;gap:8px}
+.cf-check{display:inline-flex;align-items:center;gap:7px;font-size:13px;border:1.5px solid var(--line);border-radius:9px;padding:7px 12px;cursor:pointer;background:#fff}
+.cf-check input{accent-color:var(--brand);width:15px;height:15px}
+.cf-check.on{border-color:var(--brand);background:var(--brand-50)}
+.cf-qtools{position:absolute;top:0;right:0;display:none;gap:4px}
+body.cf-edit .cf-qtools{display:flex}
+body.cf-edit .cf-q{border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
+.cf-qtools button,.cf-sectools button{border:none;background:var(--line-2);width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--ink-2)}
+.cf-qtools button:hover,.cf-sectools button:hover{background:var(--line)}
+.cf-sectools{display:inline-flex;gap:4px}
+.cf-addq{display:none;margin:2px 0 10px;border:1.5px dashed var(--line);background:none;color:var(--ink-3);font-family:inherit;font-weight:650;font-size:12.5px;padding:8px 12px;border-radius:9px;cursor:pointer}
+body.cf-edit .cf-addq{display:inline-block}
+.cf-addq:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-50)}
+.cf-addsec{display:none}
+body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
+.cf-submit-row{display:flex;align-items:center;gap:14px;justify-content:flex-end;margin-top:20px}
+.cf-submit{background:var(--brand);color:#fff;border:none;border-radius:11px;padding:12px 26px;font-family:inherit;font-size:14px;font-weight:750;cursor:pointer;box-shadow:var(--shadow-sm)}
+.cf-submit:hover{background:var(--brand-600)}
+.cf-submit:disabled{opacity:.6;cursor:default}
+.cf-msg{font-size:13px;font-weight:600}
+.cf-msg.ok{color:var(--ok)}.cf-msg.err{color:var(--warn)}
+.cf-success{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:30px;text-align:center}
+.cf-success .big{font-size:44px}
+.cf-success h2{font-size:19px;font-weight:800;color:var(--ink);margin:10px 0 6px}
+.cf-success p{color:var(--ink-2);font-size:13.5px;margin-bottom:16px}
+.cf-success a.btn,.cf-success button.btn{display:inline-flex;align-items:center;gap:7px;margin:0 6px;text-decoration:none;border:1.5px solid var(--brand-100);background:#fff;color:var(--brand);font-family:inherit;font-size:13px;font-weight:700;border-radius:10px;padding:9px 16px;cursor:pointer}
+.cf-success a.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+/* shared modal (used by the form editor) */
+.tk-modal{display:none;position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.5);align-items:flex-start;justify-content:center;padding:52px 16px;overflow:auto}
+.tk-modal.on{display:flex}
+.tk-modal-card{background:#fff;border-radius:16px;width:100%;max-width:520px;box-shadow:0 24px 60px rgba(16,24,40,.28);overflow:hidden}
+.cf-ed{padding:22px 24px}
+.cf-ed h3{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:16px}
+.cf-ed label{display:block;font-size:12px;font-weight:700;color:var(--ink-3);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.4px}
+.cf-ed input[type=text],.cf-ed select,.cf-ed textarea{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;font-size:13.5px;font-family:inherit;outline:none}
+.cf-ed input:focus,.cf-ed select:focus,.cf-ed textarea:focus{border-color:var(--brand)}
+.cf-ed .rowck{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px}
+.cf-ed-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.cf-ed-foot button{border:none;font-family:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:9px 16px;cursor:pointer}
+.cf-ed-foot .save{background:var(--brand);color:#fff}.cf-ed-foot .cancel{background:var(--line-2);color:var(--ink-2)}
+@media(max-width:560px){.cf-wrap{padding:16px}}
+
 /* Print → Save as PDF: show only the report, full width, keep colors */
 @media print{
   @page{margin:14mm}
@@ -362,10 +420,11 @@ body:not(.app-bom) > .layout{display:none !important}
         <span class="wl-cta">Open tool <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
-      <div class="wl-card locked" aria-disabled="true">
-        <span class="wl-badge">Coming soon</span>
-        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+      <div class="wl-card active" id="card_client" role="button" tabindex="0">
+        <span class="wl-badge live">Live</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="4"/><path d="M2 20v-1a6 6 0 016-6h2"/><path d="M17 11v6M14 14h6"/></svg></span>
         <h3>Add a New Client</h3>
+        <span class="wl-cta">Open form <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
       <div class="wl-card locked" aria-disabled="true">
@@ -642,6 +701,20 @@ body:not(.app-bom) > .layout{display:none !important}
   </div>
   <div class="tk-body"><div class="tk-dash" id="tk_dash"></div></div>
 </section>
+
+<!-- ── Add a New Client (Card 3) — sales intake form ── -->
+<section id="clientform">
+  <div class="tk-top">
+    <button class="tk-home" id="cf_home" title="Back to all tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+    </button>
+    <div class="tk-title">🧾 <span>Add a New Client</span></div>
+    <span class="tk-src" id="cf_src"></span>
+    <button class="tk-refresh" id="cf_customize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Customize form</button>
+  </div>
+  <div class="tk-body"><div class="cf-wrap" id="cf_wrap"></div></div>
+</section>
+<div class="tk-modal" id="cf_modal"><div class="tk-modal-card" id="cf_modal_card"></div></div>
 
 <script>
 (function () {
@@ -1370,10 +1443,10 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   // ── Welcome launcher: switch between the home page and each tool view ──
   function showView(v){
-    document.body.classList.remove("home","app-bom","app-tracker");
-    document.body.classList.add(v);
+    document.body.className=v;
     window.scrollTo(0,0);
     if(v==="app-tracker" && window.__trackerEnter) window.__trackerEnter();
+    if(v==="app-client" && window.__clientEnter) window.__clientEnter();
   }
   window.__showView = showView;                 // used by the tracker module
   if(!document.body.classList.contains("home")) document.body.classList.add("home");
@@ -1669,6 +1742,209 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   if($("tk_home")) $("tk_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
   if($("tk_refresh")) $("tk_refresh").addEventListener("click",load);
+})();
+</script>
+
+<!-- ══════════ Add a New Client (Card 3) — sales intake form ══════════ -->
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+  var NOTION_PROPS=["","Client","Type / Product","Deployment Method","POC","Overall Timeline","Stage","Status"];
+
+  var DEFAULT_FORM={ seq:100, sections:[
+    {id:"client",title:"Client & Contact",questions:[
+      {id:"client",label:"Client / Company name",type:"text",required:true,notion:"Client"},
+      {id:"industry",label:"Industry / Sector",type:"text"},
+      {id:"contact_name",label:"Primary contact name",type:"text"},
+      {id:"contact_email",label:"Contact email",type:"text"},
+      {id:"contact_phone",label:"Contact phone",type:"text"},
+      {id:"sales_owner",label:"Sales owner (our POC)",type:"text",notion:"POC"},
+      {id:"engaged_on",label:"Date of first engagement",type:"date"}
+    ]},
+    {id:"scope",title:"Product & Scope",questions:[
+      {id:"product",label:"Product(s) of interest",type:"multi",options:["Auditify","Irame app","CCM","AI Concierge","Other"],notion:"Type / Product"},
+      {id:"method",label:"Deployment method",type:"select",options:["Upload","Integration","Datalake","Deployment (PDF)","CCM","Not sure"],notion:"Deployment Method"},
+      {id:"usecase",label:"Primary use case / problem to solve",type:"textarea"},
+      {id:"golive",label:"Target go-live date",type:"date",notion:"Overall Timeline"}
+    ]},
+    {id:"scale",title:"Users & Scale",questions:[
+      {id:"users",label:"Concurrent users",type:"number"},
+      {id:"users12",label:"Total users (12 months)",type:"number"},
+      {id:"peak",label:"Peak parallel submissions / jobs",type:"number"},
+      {id:"doctypes",label:"Document types processed",type:"multi",options:["Excel","Heavy weight Excel","PDF","PDF with images"]},
+      {id:"docsize",label:"Avg document size / pages",type:"text"},
+      {id:"volume",label:"Monthly document / upload volume",type:"number"}
+    ]},
+    {id:"data",title:"Data & Compliance",questions:[
+      {id:"datavol",label:"Data volume (GB)",type:"number"},
+      {id:"sources",label:"Data sources / systems to integrate",type:"textarea"},
+      {id:"compliance",label:"Compliance / data-residency needs",type:"multi",options:["None","GDPR","HIPAA","SOC 2","RBI","Data residency","Other"]}
+    ]},
+    {id:"infra",title:"Cloud & Infrastructure",questions:[
+      {id:"cloud",label:"Preferred cloud provider",type:"select",options:["Azure","AWS","GCP","Client's own / on-prem","No preference"]},
+      {id:"region",label:"Preferred region / country",type:"text"},
+      {id:"db",label:"Database engine preference",type:"select",options:["PostgreSQL","Azure SQL","MySQL","Cosmos DB","None","No preference"]},
+      {id:"ha",label:"High availability required?",type:"select",options:["Yes","No","Not sure"]},
+      {id:"network",label:"Private networking / endpoints needed?",type:"select",options:["Yes","No","Not sure"]}
+    ]},
+    {id:"ai",title:"AI / LLM Usage",questions:[
+      {id:"queries",label:"Expected queries / month",type:"number"},
+      {id:"workflows",label:"Workflows to build / month",type:"number"},
+      {id:"runs",label:"Workflow runs / month",type:"number"},
+      {id:"model",label:"Model preference",type:"select",options:["OpenAI (best quality)","OpenAI budget","Google","No preference"]}
+    ]},
+    {id:"commercial",title:"Commercial",questions:[
+      {id:"pricing",label:"Pricing preference",type:"select",options:["Pay-as-you-go","1-year commit","3-year commit","Not sure"]},
+      {id:"budget",label:"Indicative budget",type:"text"},
+      {id:"support",label:"Support plan needs",type:"select",options:["Standard","Business","Enterprise","Not sure"]},
+      {id:"urgency",label:"Decision timeline / urgency",type:"text"}
+    ]},
+    {id:"notes",title:"Notes",questions:[
+      {id:"notes",label:"Additional requirements / notes",type:"textarea"}
+    ]}
+  ]};
+
+  var FORM=null, EDIT=false;
+
+  function saveDef(){
+    try{ localStorage.setItem("cf_def",JSON.stringify(FORM)); }catch(e){}
+    fetch("/api/form-def",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({def:FORM})}).catch(function(){});
+  }
+  function loadDef(cb){
+    fetch("/api/form-def",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){
+      if(j&&j.def&&j.def.sections){ FORM=j.def; } else { FORM=JSON.parse(JSON.stringify(DEFAULT_FORM)); saveDef(); }
+      cb();
+    }).catch(function(){
+      try{ var s=localStorage.getItem("cf_def"); FORM=s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_FORM)); }catch(e){ FORM=JSON.parse(JSON.stringify(DEFAULT_FORM)); }
+      cb();
+    });
+  }
+
+  function field(q){
+    var id="cf_"+q.id;
+    if(q.type==="textarea") return "<textarea id='"+id+"'></textarea>";
+    if(q.type==="number") return "<input type='number' id='"+id+"'>";
+    if(q.type==="date") return "<input type='date' id='"+id+"'>";
+    if(q.type==="select") return "<select id='"+id+"'><option value=''>— select —</option>"+(q.options||[]).map(function(o){return "<option value='"+esc(o)+"'>"+esc(o)+"</option>";}).join("")+"</select>";
+    if(q.type==="multi") return "<div class='cf-checks' id='"+id+"'>"+(q.options||[]).map(function(o){return "<label class='cf-check'><input type='checkbox' value='"+esc(o)+"'>"+esc(o)+"</label>";}).join("")+"</div>";
+    return "<input type='text' id='"+id+"'>";
+  }
+  function qtools(si,qi){ return "<div class='cf-qtools'><button data-eq='"+si+","+qi+"' title='Edit'>✎</button><button data-dq='"+si+","+qi+"' title='Delete'>✕</button></div>"; }
+
+  function render(){
+    var src=$("cf_src"); if(src){ src.className="tk-src snap"; src.textContent=EDIT?"Editing form — changes save automatically":""; }
+    var h="<div class='cf-intro'>Sales team: fill this in whenever you engage a new client. On submit it creates a new card in the Notion Deployment Tracker with all the details needed to prepare a BOQ. Use <b>Customize form</b> (top-right) to add or edit questions.</div>";
+    FORM.sections.forEach(function(sec,si){
+      h+="<div class='cf-sec'><div class='cf-sec-h'><span class='sn'>"+esc(sec.title)+"</span>"+(EDIT?"<span class='cf-sectools'><button data-es='"+si+"' title='Rename section'>✎</button><button data-ds='"+si+"' title='Delete section'>✕</button></span>":"")+"</div>";
+      sec.questions.forEach(function(q,qi){
+        h+="<div class='cf-q'><label>"+esc(q.label)+(q.required?"<span class='req'>*</span>":"")+"</label>"+field(q)+qtools(si,qi)+"</div>";
+      });
+      h+="<button class='cf-addq' data-aq='"+si+"'>+ Add question</button></div>";
+    });
+    h+="<button class='cf-addsec tk-refresh' style='background:var(--brand);color:#fff;border:none' id='cf_addsec'>+ Add section</button>";
+    h+="<div class='cf-submit-row'><span class='cf-msg' id='cf_msg'></span><button class='cf-submit' id='cf_submit'>Submit — create client card</button></div>";
+    $("cf_wrap").innerHTML=h;
+    bind();
+  }
+
+  function bind(){
+    var w=$("cf_wrap");
+    // multi chip toggling
+    Array.prototype.forEach.call(w.querySelectorAll(".cf-check input"),function(cb){ cb.addEventListener("change",function(){ cb.parentNode.classList.toggle("on",cb.checked); }); });
+    if($("cf_submit")) $("cf_submit").addEventListener("click",submit);
+    // builder
+    Array.prototype.forEach.call(w.querySelectorAll("[data-aq]"),function(b){ b.addEventListener("click",function(){ editQuestion(+b.getAttribute("data-aq"),-1); }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-eq]"),function(b){ b.addEventListener("click",function(){ var p=b.getAttribute("data-eq").split(","); editQuestion(+p[0],+p[1]); }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-dq]"),function(b){ b.addEventListener("click",function(){ var p=b.getAttribute("data-dq").split(","); if(confirm("Delete this question?")){ FORM.sections[+p[0]].questions.splice(+p[1],1); saveDef(); render(); } }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-es]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-es"); var nm=prompt("Section title:",FORM.sections[si].title); if(nm){ FORM.sections[si].title=nm; saveDef(); render(); } }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-ds]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-ds"); if(confirm("Delete this whole section?")){ FORM.sections.splice(si,1); saveDef(); render(); } }); });
+    if($("cf_addsec")) $("cf_addsec").addEventListener("click",function(){ var nm=prompt("New section title:"); if(nm){ FORM.sections.push({id:"s"+(++FORM.seq),title:nm,questions:[]}); saveDef(); render(); } });
+  }
+
+  // add (qi=-1) or edit a question via modal
+  function editQuestion(si,qi){
+    var q=qi<0?{id:"q"+(++FORM.seq),label:"",type:"text",options:[],required:false,notion:""}:FORM.sections[si].questions[qi];
+    var isNew=qi<0;
+    var typeOpts=["text","textarea","number","date","select","multi"].map(function(t){return "<option value='"+t+"'"+(q.type===t?" selected":"")+">"+t+"</option>";}).join("");
+    var notionOpts=NOTION_PROPS.map(function(n){return "<option value='"+esc(n)+"'"+((q.notion||"")===n?" selected":"")+">"+(n||"— none —")+"</option>";}).join("");
+    $("cf_modal_card").innerHTML="<div class='cf-ed'><h3>"+(isNew?"Add question":"Edit question")+"</h3>"
+      +"<label>Question label</label><input type='text' id='cfe_label' value='"+esc(q.label)+"'>"
+      +"<label>Answer type</label><select id='cfe_type'>"+typeOpts+"</select>"
+      +"<div id='cfe_optwrap'><label>Options (one per line — for dropdown / checkboxes)</label><textarea id='cfe_opts' style='min-height:80px'>"+esc((q.options||[]).join("\n"))+"</textarea></div>"
+      +"<label>Send this answer to Notion property</label><select id='cfe_notion'>"+notionOpts+"</select>"
+      +"<div class='rowck'><input type='checkbox' id='cfe_req' "+(q.required?"checked":"")+"><label style='margin:0;text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink)'>Required</label></div>"
+      +"<div class='cf-ed-foot'><button class='cancel' id='cfe_cancel'>Cancel</button><button class='save' id='cfe_save'>Save</button></div></div>";
+    $("cf_modal").classList.add("on");
+    function syncOpt(){ $("cfe_optwrap").style.display=/select|multi/.test($("cfe_type").value)?"block":"none"; }
+    syncOpt(); $("cfe_type").addEventListener("change",syncOpt);
+    $("cfe_cancel").addEventListener("click",closeEd);
+    $("cfe_save").addEventListener("click",function(){
+      var label=$("cfe_label").value.trim(); if(!label){ $("cfe_label").focus(); return; }
+      q.label=label; q.type=$("cfe_type").value;
+      q.options=/select|multi/.test(q.type)?$("cfe_opts").value.split("\n").map(function(s){return s.trim();}).filter(Boolean):[];
+      q.required=$("cfe_req").checked; q.notion=$("cfe_notion").value||undefined;
+      if(isNew) FORM.sections[si].questions.push(q);
+      saveDef(); closeEd(); render();
+    });
+  }
+  function closeEd(){ $("cf_modal").classList.remove("on"); }
+
+  function submit(){
+    var msg=$("cf_msg"), btn=$("cf_submit");
+    // gather
+    var mapped={Stage:undefined}, blocks=[], missing=[];
+    var mappedObj={}; var titleVal="";
+    FORM.sections.forEach(function(sec){ sec.questions.forEach(function(q){
+      var el=$("cf_"+q.id), val="";
+      if(q.type==="multi"){ if(el){ val=Array.prototype.slice.call(el.querySelectorAll("input:checked")).map(function(c){return c.value;}).join(", "); } }
+      else if(el){ val=el.value; }
+      val=(val||"").trim();
+      if(q.required && !val) missing.push(q.label);
+      if(q.notion==="Client") titleVal=val;
+      if(q.notion && val) mappedObj[q.notion]=val;
+      if(val) blocks.push({label:q.label,value:val});
+    });});
+    if(missing.length){ msg.className="cf-msg err"; msg.textContent="Please fill: "+missing.join(", "); return; }
+    var payload={ mapped:mappedObj, defaults:{Stage:"Requirement Gathering",Status:"To be Picked"}, blocks:blocks };
+    msg.className="cf-msg"; msg.textContent="Submitting…"; btn.disabled=true;
+    fetch("/api/create-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+      .then(function(r){return r.json();}).then(function(j){
+        btn.disabled=false;
+        if(j&&j.ok){ success(titleVal||mappedObj.Client||"New client", j.url); }
+        else { notConnected(payload, (j&&j.error)||"Could not create the Notion card."); }
+      }).catch(function(){ btn.disabled=false; notConnected(payload,"Network error."); });
+  }
+
+  function success(name,url){
+    $("cf_wrap").innerHTML="<div class='cf-success'><div class='big'>✅</div><h2>Client card created</h2>"
+      +"<p><b>"+esc(name)+"</b> has been added to the Notion Deployment Tracker with all the intake details.</p>"
+      +(url?"<a class='btn primary' href='"+esc(url)+"' target='_blank' rel='noopener'>Open the new card in Notion ↗</a>":"")
+      +"<button class='btn' id='cf_again'>+ Add another client</button></div>";
+    $("cf_again").addEventListener("click",render);
+  }
+  function notConnected(payload,err){
+    var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    var durl=URL.createObjectURL(blob);
+    $("cf_wrap").insertAdjacentHTML("afterbegin","");
+    var msg=$("cf_msg"); if(msg){ msg.className="cf-msg err"; msg.textContent="Notion isn't connected yet, so the card wasn't created. Your entries are saved below to hand off manually."; }
+    // show a fallback panel at top
+    var panel=document.createElement("div"); panel.className="cf-intro"; panel.style.borderColor="var(--warn)"; panel.style.background="var(--warn-bg)";
+    panel.innerHTML="<b>Notion not connected.</b> To auto-create cards, connect the Notion integration (with Insert permission) in Render. Meanwhile: <a href='"+durl+"' download='client-intake.json'>download this submission</a>. <span style='color:var(--ink-3)'>Details: "+esc(err)+"</span>";
+    $("cf_wrap").insertBefore(panel,$("cf_wrap").firstChild);
+    window.scrollTo(0,0);
+  }
+
+  var loadedOnce=false;
+  window.__clientEnter=function(){ if(loadedOnce) return; loadedOnce=true; loadDef(render); };
+  if($("card_client")){
+    $("card_client").addEventListener("click",function(){ if(window.__showView) window.__showView("app-client"); });
+    $("card_client").addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(window.__showView) window.__showView("app-client"); } });
+  }
+  if($("cf_home")) $("cf_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
+  if($("cf_customize")) $("cf_customize").addEventListener("click",function(){ EDIT=!EDIT; document.body.classList.toggle("cf-edit",EDIT); $("cf_customize").innerHTML=EDIT?"✓ Done editing":"✎ Customize form"; render(); });
+  if($("cf_modal")) $("cf_modal").addEventListener("click",function(e){ if(e.target===$("cf_modal")) closeEd(); });
 })();
 </script>
 </body>
