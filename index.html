@@ -244,16 +244,73 @@ body:not(.app-bom) > .layout{display:none !important}
 .tk-top{display:flex;align-items:center;gap:14px;padding:12px 22px;background:linear-gradient(120deg,#16395c 0%,var(--brand) 55%,var(--brand-500) 100%);color:#fff;box-shadow:0 2px 14px rgba(16,57,92,.25);flex-shrink:0}
 .tk-home{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:9px;color:#fff;cursor:pointer}
 .tk-home:hover{background:rgba(255,255,255,.26)}.tk-home svg{width:17px;height:17px}
-.tk-title{font-size:16px;font-weight:750;display:flex;align-items:center;gap:8px;flex:1}
+.tk-title{font-size:16px;font-weight:750;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tk-src{margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;background:rgba(255,255,255,.14);color:#fff}
+.tk-src.live{background:rgba(154,245,226,.2);color:#d6fff4}
+.tk-src.snap{background:rgba(255,201,163,.2);color:#ffe0cb}
+.tk-refresh{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;font-family:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:7px 12px;cursor:pointer}
+.tk-refresh:hover{background:rgba(255,255,255,.26)}.tk-refresh svg{width:14px;height:14px}
+.tk-refresh.spin svg{animation:tkspin 1s linear infinite}
+@keyframes tkspin{to{transform:rotate(360deg)}}
 .tk-open{display:inline-flex;align-items:center;gap:7px;text-decoration:none;background:#fff;color:var(--brand);font-size:13px;font-weight:700;border-radius:9px;padding:8px 14px}
 .tk-open:hover{background:#eef4fb}.tk-open svg{width:14px;height:14px}
-.tk-body{flex:1;position:relative;overflow:hidden}
-.tk-body iframe{width:100%;height:100%;border:0;display:block;background:#fff}
-.tk-note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;pointer-events:none}
-.tk-note .card{pointer-events:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);max-width:440px;padding:22px 24px;text-align:center}
-.tk-note h3{font-size:16px;font-weight:750;color:var(--ink);margin-bottom:8px}
-.tk-note p{font-size:13px;color:var(--ink-2);line-height:1.55}
-.tk-note a{color:var(--brand);font-weight:700}
+.tk-body{flex:1;overflow:auto;background:var(--bg)}
+.tk-dash{padding:22px 26px 40px;max-width:1240px;margin:0 auto}
+
+/* KPI cards */
+.tk-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.tk-kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.tk-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand-100)}
+.tk-kpi.hi::before{background:linear-gradient(var(--brand),var(--accent))}
+.tk-kpi.warn::before{background:var(--warn)}.tk-kpi.ok::before{background:var(--ok)}.tk-kpi.due::before{background:#e0a200}
+.tk-kpi .k{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3)}
+.tk-kpi .v{font-size:30px;font-weight:800;color:var(--ink);line-height:1.1;margin-top:6px}
+.tk-kpi.warn .v{color:var(--warn)}.tk-kpi.ok .v{color:var(--ok)}.tk-kpi.due .v{color:#b47900}
+.tk-kpi .s{font-size:11px;color:var(--ink-3);margin-top:2px}
+@media(max-width:1080px){.tk-kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.tk-kpis{grid-template-columns:repeat(2,1fr)}}
+
+.tk-grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.tk-grid2{grid-template-columns:1fr}}
+.tk-panel{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px}
+.tk-panel h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--brand);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.tk-panel h3 .cnt{color:var(--ink-3);font-weight:700}
+
+/* attention list */
+.tk-att{display:flex;flex-direction:column;gap:10px}
+.tk-item{border:1px solid var(--line-2);border-radius:11px;padding:12px 14px;border-left:4px solid var(--ink-3)}
+.tk-item.late{border-left-color:var(--warn);background:linear-gradient(90deg,var(--warn-bg),transparent 60%)}
+.tk-item.soon{border-left-color:#e0a200;background:linear-gradient(90deg,#fff8ea,transparent 60%)}
+.tk-item.slip{border-left-color:#c2529b}
+.tk-i-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tk-i-top .nm{font-size:14px;font-weight:800;color:var(--ink)}
+.tk-i-top a.nm:hover{color:var(--brand);text-decoration:underline}
+.tk-badge{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.3px}
+.tk-badge.late{background:var(--warn-bg);color:var(--warn)}
+.tk-badge.soon{background:#fff3e3;color:#b47900}
+.tk-badge.slip{background:#fbe8f3;color:#a02e7c}
+.tk-chip{font-size:11px;font-weight:650;padding:2px 8px;border-radius:6px;background:var(--line-2);color:var(--ink-2)}
+.tk-i-reason{font-size:12.5px;color:var(--ink-2);margin-top:7px;line-height:1.5}
+.tk-i-reason b{color:var(--ink)}
+.tk-i-cmt{font-size:12px;color:var(--ink-3);margin-top:6px;padding-left:10px;border-left:2px solid var(--line);font-style:italic}
+.tk-empty{font-size:13px;color:var(--ink-3);padding:8px 0}
+
+/* bars */
+.tk-bars{display:flex;flex-direction:column;gap:9px}
+.tk-barrow{display:grid;grid-template-columns:150px 1fr 34px;align-items:center;gap:10px;font-size:12.5px}
+.tk-barrow .bn{color:var(--ink-2);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-barrow .bt{height:16px;background:var(--line-2);border-radius:5px;overflow:hidden}
+.tk-barrow .bf{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--brand),var(--brand-500))}
+.tk-barrow .bv{text-align:right;font-weight:700;color:var(--ink)}
+
+/* delivered list */
+.tk-mini{display:flex;flex-direction:column;gap:6px}
+.tk-mini .row{display:flex;align-items:center;gap:10px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line-2)}
+.tk-mini .row:last-child{border-bottom:none}
+.tk-mini .row .d{width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0}
+.tk-mini .row .n{font-weight:700;color:var(--ink);flex:1}
+.tk-mini .row .m{color:var(--ink-3)}
+.tk-updated{font-size:11px;color:var(--ink-3);text-align:right;margin-top:4px}
 
 /* Print → Save as PDF: show only the report, full width, keep colors */
 @media print{
@@ -578,16 +635,12 @@ body:not(.app-bom) > .layout{display:none !important}
     <button class="tk-home" id="tk_home" title="Back to all tools">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
     </button>
-    <div class="tk-title">🚀 <span>Deployment Tracker</span></div>
+    <div class="tk-title">🚀 <span>Deployment Dashboard</span></div>
+    <span class="tk-src" id="tk_src"></span>
+    <button class="tk-refresh" id="tk_refresh" title="Refresh from Notion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9 9 0 017 3.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-7-3.3L3 16"/><path d="M3 21v-5h5"/></svg> Refresh</button>
     <a class="tk-open" id="tk_open" href="https://app.notion.com/p/3ad76329d1e1801283f1f2580ba1c088?v=34f76329d1e183ed8a1c08bdc476e0ae" target="_blank" rel="noopener">Open in Notion <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
   </div>
-  <div class="tk-body">
-    <div class="tk-note"><div class="card">
-      <h3>Loading the Notion Stage board…</h3>
-      <p>If it stays blank, the Notion page needs <b>Share → Publish to web</b> turned on so it can be embedded. You can always <a href="https://app.notion.com/p/3ad76329d1e1801283f1f2580ba1c088?v=34f76329d1e183ed8a1c08bdc476e0ae" target="_blank" rel="noopener">open it in Notion</a>.</p>
-    </div></div>
-    <iframe id="tk_frame" src="https://app.notion.com/p/3ad76329d1e1801283f1f2580ba1c088?v=34f76329d1e183ed8a1c08bdc476e0ae" title="Deployment Tracker — Stage" loading="lazy"></iframe>
-  </div>
+  <div class="tk-body"><div class="tk-dash" id="tk_dash"></div></div>
 </section>
 
 <script>
@@ -1469,16 +1522,153 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 })();
 </script>
 
-<!-- ── Deployment Tracker (Card 2): show the live Notion Stage board ── -->
+<!-- ── Deployment Dashboard (Card 2): business view of the Notion tracker ── -->
 <script>
 (function(){
   "use strict";
   var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  var NOTION_URL="https://app.notion.com/p/3ad76329d1e1801283f1f2580ba1c088?v=34f76329d1e183ed8a1c08bdc476e0ae";
+
+  // Pipeline order (open stages, then Closed)
+  var STAGES=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
+
+  // Baked-in snapshot (used until NOTION_TOKEN is configured on the server)
+  var SNAPSHOT=[
+    ["DS Group","","","","Not Started","On Hold","","","","",""],["Indigo CCM","","","","Not Started","On Hold","","","","",""],["Airtel Africa","","","","Not Started","On Hold","","","","",""],["Jio Platform","","","","Not Started","On Hold","","","","",""],["AFG","","","","Not Started","On Hold","","","","",""],["Havells","","","","Not Started","On Hold","","","","",""],["Alkem","","","","Not Started","On Hold","","","","",""],["Mankind","","","","Not Started","On Hold","","","","",""],["Sun Pharma","","","","Not Started","On Hold","","","","",""],["Protiviti","","","","Not Started","On Hold","","","","",""],
+    ["Air India","","","Aman","To be Picked","Requirement Gathering","","","","",""],["PWC - AIXL","Expense Validation","Upload","Aman","To be Picked","Requirement Gathering","","","","",""],["ICICI","Azure Cloud","Deployment","Aman","To be Picked","Requirement Gathering","","","","",""],["Landmarkgroup","","","Aman","To be Picked","Requirement Gathering","","","","",""],["PVR","","","Aman","To be Picked","Requirement Gathering","","","","",""],
+    ["HCL","Auditify","Integration (Upload)","Aman","To be Picked","Infra Prep (Client)","2026-08-07","","","",""],
+    ["GT","Auditify","Upload","Deepak","In Progress","Deployment (irame)","2026-07-24","2026-08-27","Vaibhav","2026-08-13","https://drive.google.com/drive/folders/1jliDdRyXe3bsgfGS--DU7MviGyPHWOFl"],
+    ["AMLI","App irame","Datalake","Deepak","In Progress","Test & Bug FIx PProd","2026-06-15","2026-08-20","Vaibhav","2026-08-20",""],
+    ["Trident","Auditify","Synaps Setup; Integration; SQL QnA; Automated workflows","Akshat","In Progress","Data Source Integration","2026-07-31","2026-08-10","Akshat","2026-08-10",""],
+    ["JSW - New","Auditify","Integration","Deepak","In Progress","Data Source Integration","2026-07-24","2026-08-18","Tushar Goel","2026-08-13",""],
+    ["PWC - Akasa","CCM","Integration / Upload","Deepak","In Progress","Workflow Creation","2026-07-15","2026-08-05","Ankit","2026-08-08","https://drive.google.com/drive/folders/1ogSKFPxYGNzll_5sMhyteGYg06mDXQp9"],
+    ["TACO","Auditify","Upload -> CCM","Deepak","In Progress","Workflow Creation","2026-07-20","2026-08-07","Yash Gupta","","https://drive.google.com/drive/folders/1o-xMe3ZIyLvqFu404ujEAVPYBu1mQZ4v"],
+    ["PWC (internal)","Auditify","Upload","Aman","In Progress","Vendor Testing","2026-07-23","2026-08-11","","",""],
+    ["CK Birla","Auditify","Upload","Aman","Done","Infra VAPT - Vendor","2026-07-23","","","",""],
+    ["GT","Irame","Deployment","Tushar Goel","Done","Closed","2026-07-01","","","",""],["JSW - Earlier - uat","Auditify","Integration","Tushar Goel","Done","Closed","2026-06-26","","","",""],["GT","App irame","Upload","Tushar Goel","Done","Closed","2026-05-01","","","",""],["TACO","App irame","Upload","Tushar Goel","Done","Closed","2026-06-17","","","",""],["Indigo new","Auditify","Upload","Saurabh P","Done","Closed","2026-06-28","","","",""],["Indigo earlier","Auditify","Upload","Saurabh P","Done","Closed","2026-06-15","","","",""],["PwC","AI Concierge","Deployment (PDF)","Tushar Goel","Done","Closed","2026-06-13","","","",""],["Trident","App irame","Integration (datalake)","Akshat","Done","Closed","2026-07-10","","","",""],["AMLI","Auditify","Datalake","Deepak","Done","Closed","2026-07-22","","","",""],["Danube Properties","Auditify","Upload","Deepak","Done","Closed","2026-07-22","","","",""]
+  ].map(function(a){ return {client:a[0],product:a[1],method:a[2],poc:a[3],status:a[4],stage:a[5],overall:a[6],actual:a[7],stageOwner:a[8],stageTimeline:a[9],docLink:a[10],url:NOTION_URL}; });
+
+  var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function parse(s){ if(!s) return null; var d=new Date(String(s).slice(0,10)+"T00:00:00"); return isNaN(d)?null:d; }
+  function fmt(d){ if(!d) return ""; return MON[d.getMonth()]+" "+d.getDate(); }
+  function today(){ var t=new Date(); return new Date(t.getFullYear(),t.getMonth(),t.getDate()); }
+  function days(a,b){ return Math.round((b-a)/86400000); }
+
+  function classify(r){
+    var st=r.stage||"", T=today();
+    if(st==="Closed"||/^closed$/i.test(r.status||"")) return {cat:"closed"};
+    if(st==="On Hold") return {cat:"onhold"};
+    var ov=parse(r.overall), ac=parse(r.actual), slip=(ov&&ac&&ac>ov)?days(ov,ac):0;
+    if(/^done$/i.test(r.status||"")) return {cat:"ontrack",doneStage:true,slip:slip};
+    var due=parse(r.stageTimeline)||parse(r.actual)||parse(r.overall);
+    if(!due) return {cat:"notime",slip:slip};
+    if(due<T) return {cat:"late",lateDays:days(due,T),due:due,slip:slip};
+    if(days(T,due)<=7) return {cat:"soon",inDays:days(T,due),due:due,slip:slip};
+    return {cat:"ontrack",due:due,slip:slip};
+  }
+  function reason(r,c){
+    if(c.cat==="late") return "Overdue in <b>"+esc(r.stage)+"</b> — stage was due <b>"+fmt(c.due)+"</b> ("+c.lateDays+" day"+(c.lateDays===1?"":"s")+" ago)."+(c.slip?" Projected go-live "+fmt(parse(r.actual))+" is "+c.slip+"d past target.":"");
+    if(c.cat==="soon") return "Due in <b>"+c.inDays+" day"+(c.inDays===1?"":"s")+"</b> ("+fmt(c.due)+") in <b>"+esc(r.stage)+"</b>.";
+    if(c.cat==="slip"||(c.cat==="ontrack"&&c.slip)) return "On track, but projected completion <b>"+fmt(parse(r.actual))+"</b> is "+c.slip+"d past original target "+fmt(parse(r.overall))+".";
+    return "";
+  }
+  function ownerOf(r){ return r.stageOwner||r.poc||""; }
+
+  var DATA=null, SOURCE="snapshot", UPDATED="";
+
+  function render(){
+    var recs=DATA;
+    var closed=[],active=[],onhold=[],late=[],soon=[],slip=[],notime=[],ontrack=[];
+    recs.forEach(function(r){ var c=classify(r); r.__c=c;
+      if(c.cat==="closed"){closed.push(r);return;}
+      if(c.cat==="onhold"){onhold.push(r);return;}
+      active.push(r);
+      if(c.cat==="late")late.push(r); else if(c.cat==="soon")soon.push(r); else if(c.cat==="notime")notime.push(r); else {ontrack.push(r); if(c.slip)slip.push(r);}
+    });
+    late.sort(function(a,b){return b.__c.lateDays-a.__c.lateDays;});
+    soon.sort(function(a,b){return a.__c.inDays-b.__c.inDays;});
+    var onTrackCount=ontrack.length+soon.length;
+
+    function kpi(cls,k,v,s){ return "<div class='tk-kpi "+cls+"'><div class='k'>"+k+"</div><div class='v'>"+v+"</div><div class='s'>"+s+"</div></div>"; }
+    var kpis="<div class='tk-kpis'>"
+      +kpi("hi","Total projects",recs.length,active.length+" active · "+closed.length+" delivered")
+      +kpi("ok","Delivered",closed.length,"stage = Closed")
+      +kpi("","In progress",active.length,onhold.length+" also on hold")
+      +kpi("","On hold",onhold.length,"not started")
+      +kpi("warn","Delayed",late.length,late.length?"need attention now":"none overdue 🎉")
+      +kpi("due","Due ≤ 7 days",soon.length,onTrackCount+" on track total")
+      +"</div>";
+
+    // attention list
+    function item(r){ var c=r.__c; var cls=c.cat==="late"?"late":c.cat==="soon"?"soon":"slip";
+      var badge=c.cat==="late"?"<span class='tk-badge late'>Delayed "+c.lateDays+"d</span>":c.cat==="soon"?"<span class='tk-badge soon'>Due "+c.inDays+"d</span>":"<span class='tk-badge slip'>Slipping "+c.slip+"d</span>";
+      var own=ownerOf(r);
+      return "<div class='tk-item "+cls+"' data-page='"+esc(r.id||"")+"'>"
+        +"<div class='tk-i-top'>"+(r.url?"<a class='nm' href='"+esc(r.url)+"' target='_blank' rel='noopener'>"+esc(r.client)+"</a>":"<span class='nm'>"+esc(r.client)+"</span>")+badge
+        +(r.stage?"<span class='tk-chip'>"+esc(r.stage)+"</span>":"")+(own?"<span class='tk-chip'>👤 "+esc(own)+"</span>":"")+(r.product?"<span class='tk-chip'>"+esc(r.product)+"</span>":"")+"</div>"
+        +"<div class='tk-i-reason'>"+reason(r,c)+"</div>"
+        +"<div class='tk-i-cmt' data-cmt style='display:none'></div></div>";
+    }
+    var attList=late.concat(soon).concat(slip.filter(function(r){return soon.indexOf(r)<0;}));
+    var att="<div class='tk-panel'><h3>⚠️ Needs attention <span class='cnt'>· "+attList.length+"</span></h3>"
+      +(attList.length?"<div class='tk-att'>"+attList.map(item).join("")+"</div>":"<div class='tk-empty'>Nothing overdue or due within 7 days. All active projects are on track. 🎉</div>")
+      +"</div>";
+
+    // pipeline by stage (open only)
+    var openByStage=STAGES.filter(function(s){return s!=="Closed";}).map(function(s){ return {name:s,n:recs.filter(function(r){return r.stage===s;}).length}; });
+    var maxOpen=Math.max(1,Math.max.apply(null,openByStage.map(function(x){return x.n;})));
+    var pipe="<div class='tk-panel'><h3>Pipeline by stage <span class='cnt'>· "+(active.length+onhold.length)+" open</span></h3><div class='tk-bars'>"
+      +openByStage.map(function(x){ return "<div class='tk-barrow'><span class='bn'>"+esc(x.name)+"</span><span class='bt'><span class='bf' style='width:"+(x.n/maxOpen*100)+"%'></span></span><span class='bv'>"+x.n+"</span></div>"; }).join("")+"</div></div>";
+
+    // workload by owner (active)
+    var own={}; active.forEach(function(r){ var o=ownerOf(r)||"Unassigned"; own[o]=(own[o]||0)+1; });
+    var ownArr=Object.keys(own).map(function(k){return {name:k,n:own[k]};}).sort(function(a,b){return b.n-a.n;});
+    var maxOwn=Math.max(1,Math.max.apply(null,ownArr.map(function(x){return x.n;})));
+    var work="<div class='tk-panel'><h3>Active workload by owner</h3><div class='tk-bars'>"
+      +(ownArr.length?ownArr.map(function(x){ return "<div class='tk-barrow'><span class='bn'>"+esc(x.name)+"</span><span class='bt'><span class='bf' style='width:"+(x.n/maxOwn*100)+"%'></span></span><span class='bv'>"+x.n+"</span></div>"; }).join(""):"<div class='tk-empty'>—</div>")+"</div></div>";
+
+    // recently delivered
+    var delivered=closed.slice().sort(function(a,b){ var da=parse(a.overall),db=parse(b.overall); return (db?db:0)-(da?da:0); });
+    var deliv="<div class='tk-panel'><h3>Delivered <span class='cnt'>· "+closed.length+"</span></h3><div class='tk-mini'>"
+      +delivered.map(function(r){ return "<div class='row'><span class='d'></span><span class='n'>"+esc(r.client)+"</span><span class='m'>"+esc(r.product||"")+(r.overall?" · "+fmt(parse(r.overall)):"")+"</span></div>"; }).join("")+"</div></div>";
+
+    $("tk_dash").innerHTML=kpis+"<div class='tk-grid2'><div>"+att+work+"</div><div>"+pipe+deliv+"</div></div>"
+      +"<div class='tk-updated'>Source: "+(SOURCE==="notion"?"live Notion":"baked-in snapshot")+(UPDATED?" · updated "+new Date(UPDATED).toLocaleString():"")+"</div>";
+
+    // source pill
+    var sp=$("tk_src"); if(sp){ sp.className="tk-src "+(SOURCE==="notion"?"live":"snap"); sp.textContent=SOURCE==="notion"?"● Live from Notion":"● Snapshot (connect Notion for live)"; }
+
+    // enrich late items with their latest Notion comment (why it's delaying)
+    if(SOURCE==="notion"){
+      late.slice(0,10).forEach(function(r){ if(!r.id) return;
+        fetch("/api/notion-comments?page="+encodeURIComponent(r.id)).then(function(x){return x.json();}).then(function(j){
+          var cs=(j&&j.comments)||[]; if(!cs.length) return; var last=cs[cs.length-1];
+          var el=$("tk_dash").querySelector(".tk-item[data-page='"+r.id+"'] [data-cmt]");
+          if(el&&last.text){ el.style.display="block"; el.textContent="💬 "+last.text+(last.ts?" — "+new Date(last.ts).toLocaleDateString():""); }
+        }).catch(function(){});
+      });
+    }
+  }
+
+  function load(){
+    var rb=$("tk_refresh"); if(rb) rb.classList.add("spin");
+    fetch("/api/notion",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){
+      if(j&&j.source==="notion"&&j.records&&j.records.length){ DATA=j.records; SOURCE="notion"; UPDATED=j.updated||""; }
+      else { DATA=SNAPSHOT; SOURCE="snapshot"; UPDATED=""; }
+      render();
+    }).catch(function(){ DATA=SNAPSHOT; SOURCE="snapshot"; render(); })
+    .then(function(){ if(rb) rb.classList.remove("spin"); });
+  }
+
+  var loadedOnce=false;
+  window.__trackerEnter=function(){ if(!loadedOnce){ loadedOnce=true; load(); } };
   if($("card_tracker")){
     $("card_tracker").addEventListener("click",function(){ if(window.__showView) window.__showView("app-tracker"); });
     $("card_tracker").addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(window.__showView) window.__showView("app-tracker"); } });
   }
   if($("tk_home")) $("tk_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
+  if($("tk_refresh")) $("tk_refresh").addEventListener("click",load);
 })();
 </script>
 </body>

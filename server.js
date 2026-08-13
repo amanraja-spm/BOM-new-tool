@@ -211,8 +211,107 @@ async function getAwsPrices(region) {
   return data;
 }
 
+// ── Notion (Deployment Tracker) live read — used by Card 2 dashboard ──────
+// Configure via env: NOTION_TOKEN (integration secret) + NOTION_DB_ID (database id).
+// Without them, /api/notion returns {source:"snapshot"} and the page uses its baked-in snapshot.
+const NOTION_TOKEN = process.env.NOTION_TOKEN || "";
+const NOTION_DB_ID = (process.env.NOTION_DB_ID || "3ad76329d1e1801283f1f2580ba1c088").replace(/-/g, "");
+const NOTION_VER = "2022-06-28";
+let notionCache = null;
+const NOTION_TTL = 60 * 1000;
+
+function nText(p) {
+  if (!p) return "";
+  switch (p.type) {
+    case "title": return (p.title || []).map((t) => t.plain_text).join("");
+    case "rich_text": return (p.rich_text || []).map((t) => t.plain_text).join("");
+    case "select": return p.select ? p.select.name : "";
+    case "status": return p.status ? p.status.name : "";
+    case "multi_select": return (p.multi_select || []).map((s) => s.name).join(", ");
+    case "people": return (p.people || []).map((x) => x.name || "").filter(Boolean).join(", ");
+    case "date": return p.date ? p.date.start : "";
+    case "url": return p.url || "";
+    case "email": return p.email || "";
+    case "phone_number": return p.phone_number || "";
+    case "number": return p.number != null ? String(p.number) : "";
+    case "checkbox": return p.checkbox ? "yes" : "";
+    case "formula": return p.formula ? (p.formula.string || (p.formula.date && p.formula.date.start) || (p.formula.number != null ? String(p.formula.number) : "")) : "";
+    default: return "";
+  }
+}
+function npick(props, names) {
+  for (const n of names) if (props[n] != null) return props[n];
+  const keys = Object.keys(props);
+  for (const n of names) { const k = keys.find((k) => k.toLowerCase() === n.toLowerCase()); if (k) return props[k]; }
+  return null;
+}
+async function notionQuery() {
+  if (!NOTION_TOKEN) return { source: "snapshot", records: [] };
+  if (notionCache && Date.now() - notionCache.at < NOTION_TTL) return notionCache.data;
+  let results = [], cursor = undefined, guard = 0;
+  do {
+    const body = { page_size: 100 }; if (cursor) body.start_cursor = cursor;
+    const r = await fetch("https://api.notion.com/v1/databases/" + NOTION_DB_ID + "/query", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + NOTION_TOKEN, "Notion-Version": NOTION_VER, "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) { const t = await r.text(); throw new Error("Notion " + r.status + ": " + t.slice(0, 300)); }
+    const j = await r.json();
+    results = results.concat(j.results || []);
+    cursor = j.has_more ? j.next_cursor : undefined; guard++;
+  } while (cursor && guard < 25);
+  const records = results.map((pg) => {
+    const P = pg.properties || {};
+    return {
+      id: pg.id, url: pg.url,
+      client: nText(npick(P, ["Client", "Name"])),
+      product: nText(npick(P, ["Type / Product", "Type/Product", "Product"])),
+      method: nText(npick(P, ["Deployment Method", "Method"])),
+      poc: nText(npick(P, ["POC"])),
+      status: nText(npick(P, ["Status"])),
+      stage: nText(npick(P, ["Stage"])),
+      overall: nText(npick(P, ["Overall Timeline"])),
+      actual: nText(npick(P, ["Actual Completion"])),
+      stageOwner: nText(npick(P, ["Stage Owner"])),
+      stageTimeline: nText(npick(P, ["Stage Timeline"])),
+      docLink: nText(npick(P, ["Doc Link"]))
+    };
+  }).filter((r) => r.client);
+  const data = { source: "notion", records: records, updated: new Date().toISOString() };
+  notionCache = { at: Date.now(), data: data };
+  return data;
+}
+async function notionComments(pageId) {
+  if (!NOTION_TOKEN || !pageId) return [];
+  try {
+    const r = await fetch("https://api.notion.com/v1/comments?block_id=" + pageId, {
+      headers: { Authorization: "Bearer " + NOTION_TOKEN, "Notion-Version": NOTION_VER }
+    });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.results || []).map((c) => ({ text: (c.rich_text || []).map((t) => t.plain_text).join(""), ts: c.created_time }));
+  } catch (e) { return []; }
+}
+function njson(res, code, obj) {
+  res.writeHead(code, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
+  res.end(JSON.stringify(obj));
+}
+
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost");
+
+  // ── Card 2 dashboard: live tracker records + per-page comments ──
+  if (u.pathname === "/api/notion") {
+    try { njson(res, 200, await notionQuery()); }
+    catch (e) { njson(res, 200, { source: "error", error: String((e && e.message) || e), records: [] }); }
+    return;
+  }
+  if (u.pathname === "/api/notion-comments") {
+    try { njson(res, 200, { comments: await notionComments(u.searchParams.get("page") || "") }); }
+    catch (e) { njson(res, 200, { comments: [] }); }
+    return;
+  }
 
   if (u.pathname === "/api/prices") {
     const region = u.searchParams.get("region") || "centralindia";
