@@ -1860,8 +1860,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       : "<button class='cf-submit cf-create' id='cf_create'>Create card on Notion</button>";
     leftH+="<div class='cf-actionbox'>"+createBtn+"<span class='cf-msg' id='cf_create_msg'></span></div>";
     rightH+="<div class='cf-actionbox'><button class='cf-submit' id='cf_boq'>Request a BOQ</button><span class='cf-msg' id='cf_boq_msg'></span></div>";
-    var intro="<div class='cf-intro'>Sales team: capture a new client here. <b>Left</b> — client &amp; product basics; the <b>Create card on Notion</b> button logs them in the Deployment Tracker. <b>Right</b> — the technical &amp; commercial detail; <b>Request a BOQ</b> attaches it all to that card. Use <b>Customize form</b> to add or edit questions.</div>";
-    $("cf_wrap").innerHTML=intro+"<div class='cf-cols'><div class='cf-col'>"+leftH+"</div><div class='cf-col'>"+rightH+"</div></div>";
+    $("cf_wrap").innerHTML="<div class='cf-cols'><div class='cf-col'>"+leftH+"</div><div class='cf-col'>"+rightH+"</div></div>";
     bind();
   }
 
