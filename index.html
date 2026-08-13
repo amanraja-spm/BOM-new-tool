@@ -1599,6 +1599,31 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     EXCLUDED={}; CUR="INR"; loadPrices();
   });
 
+  // ── Hook used by Card 3 "Request a BOQ": push intake answers into this sizing
+  //    engine and recompute, so the user sees a BOQ prepared from their details. ──
+  window.__applyBOQInputs = function(m){
+    m = m || {};
+    function sv(id,v){ var e=$(id); if(e && v!=null && v!=="") e.value=v; }
+    function sc(id,b){ var e=$(id); if(e) e.checked=!!b; }
+    if(m.cloud) sv("sel_cloud", m.cloud);
+    if(m.region) sv("sel_region", m.region);
+    sv("inp_users", m.users); sv("sl_peak", m.peak); sv("inp_data_vol", m.dataVol);
+    if(m.dbEngine) sv("sel_dbengine", m.dbEngine);
+    if(m.dbHA) sv("sel_dbha", m.dbHA);
+    if(m.pricing) sv("sel_pricing", m.pricing);
+    sv("inp_ai_uploads", m.uploads); sv("inp_ai_queries", m.queries);
+    sv("inp_ai_builds", m.builds); sv("inp_ai_runs", m.runs);
+    if(m.docTypes && m.docTypes.length){
+      sc("cb_excel",  m.docTypes.indexOf("Excel")>=0);
+      sc("cb_hexcel", m.docTypes.indexOf("Heavy weight Excel")>=0);
+      sc("cb_pdf",    m.docTypes.indexOf("PDF")>=0);
+      sc("cb_pdfimg", m.docTypes.indexOf("PDF with images")>=0);
+    }
+    try{ loadPrices(); }catch(e){ try{ refresh(); }catch(e2){} }
+  };
+  // expose Card 1's region <option> markup so Card 3 can reuse the exact dropdown
+  window.__regionOptionsHTML = function(){ var s=$("sel_region"); return s?s.innerHTML:""; };
+
   loadPrices();
 })();
 </script>
@@ -1792,7 +1817,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     ]},
     {id:"infra",title:"Cloud & Infrastructure",questions:[
       {id:"cloud",label:"Preferred cloud provider",type:"select",options:["Azure","AWS","GCP","Client's own / on-prem","No preference"]},
-      {id:"region",label:"Preferred region / country",type:"text"},
+      {id:"region",label:"Preferred region / country",type:"region"},
       {id:"db",label:"Database engine preference",type:"select",options:["PostgreSQL","Azure SQL","MySQL","Cosmos DB","None","No preference"]},
       {id:"ha",label:"High availability required?",type:"select",options:["Yes","No","Not sure"]},
       {id:"network",label:"Private networking / endpoints needed?",type:"select",options:["Yes","No","Not sure"]}
@@ -1820,13 +1845,20 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     try{ localStorage.setItem("cf_def",JSON.stringify(FORM)); }catch(e){}
     fetch("/api/form-def",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({def:FORM})}).catch(function(){});
   }
+  function migrate(){
+    var changed=false;
+    (FORM.sections||[]).forEach(function(s){ (s.questions||[]).forEach(function(q){
+      if((q.id==="region" || /region|country/i.test(q.label||"")) && q.type!=="region"){ q.type="region"; changed=true; }
+    }); });
+    if(changed) saveDef();
+  }
   function loadDef(cb){
     fetch("/api/form-def",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){
       if(j&&j.def&&j.def.sections){ FORM=j.def; } else { FORM=JSON.parse(JSON.stringify(DEFAULT_FORM)); saveDef(); }
-      cb();
+      migrate(); cb();
     }).catch(function(){
       try{ var s=localStorage.getItem("cf_def"); FORM=s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_FORM)); }catch(e){ FORM=JSON.parse(JSON.stringify(DEFAULT_FORM)); }
-      cb();
+      migrate(); cb();
     });
   }
 
@@ -1836,6 +1868,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     if(q.type==="number") return "<input type='number' id='"+id+"'>";
     if(q.type==="date") return "<input type='date' id='"+id+"'>";
     if(q.type==="select") return "<select id='"+id+"'><option value=''>— select —</option>"+(q.options||[]).map(function(o){return "<option value='"+esc(o)+"'>"+esc(o)+"</option>";}).join("")+"</select>";
+    if(q.type==="region"){ var opts=(window.__regionOptionsHTML?window.__regionOptionsHTML():""); return "<select id='"+id+"' class='cf-region'>"+(opts||"<option value=''>— select region —</option>")+"</select>"; }
     if(q.type==="multi") return "<div class='cf-checks' id='"+id+"'>"+(q.options||[]).map(function(o){return "<label class='cf-check'><input type='checkbox' value='"+esc(o)+"'>"+esc(o)+"</label>";}).join("")+"</div>";
     return "<input type='text' id='"+id+"'>";
   }
@@ -1882,7 +1915,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function editQuestion(si,qi){
     var q=qi<0?{id:"q"+(++FORM.seq),label:"",type:"text",options:[],required:false,notion:""}:FORM.sections[si].questions[qi];
     var isNew=qi<0;
-    var typeOpts=["text","textarea","number","date","select","multi"].map(function(t){return "<option value='"+t+"'"+(q.type===t?" selected":"")+">"+t+"</option>";}).join("");
+    var typeOpts=["text","textarea","number","date","select","multi","region"].map(function(t){return "<option value='"+t+"'"+(q.type===t?" selected":"")+">"+t+"</option>";}).join("");
     var notionOpts=NOTION_PROPS.map(function(n){return "<option value='"+esc(n)+"'"+((q.notion||"")===n?" selected":"")+">"+(n||"— none —")+"</option>";}).join("");
     $("cf_modal_card").innerHTML="<div class='cf-ed'><h3>"+(isNew?"Add question":"Edit question")+"</h3>"
       +"<label>Question label</label><input type='text' id='cfe_label' value='"+esc(q.label)+"'>"
@@ -1946,28 +1979,41 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       }).catch(function(){ if(btn) btn.disabled=false; notConnected($("cf_create_msg"),payload,"Network error."); });
   }
 
-  function requestBOQ(){
-    var msg=$("cf_boq_msg"), btn=$("cf_boq");
+  // read one answer by question id (string, or array for multi)
+  function ans(id){
+    var q=null; FORM.sections.forEach(function(s){ s.questions.forEach(function(x){ if(x.id===id) q=x; }); });
+    if(!q) return "";
+    var el=$("cf_"+id);
+    if(q.type==="multi") return el?Array.prototype.slice.call(el.querySelectorAll("input:checked")).map(function(c){return c.value;}):[];
+    return el?el.value:"";
+  }
+  // map intake answers → Card 1 sizing-engine inputs
+  function boqMap(){
+    var CL={"Azure":"azure","AWS":"aws","GCP":"gcp"},
+        DB={"PostgreSQL":"postgres","Azure SQL":"sql","MySQL":"mysql","Cosmos DB":"cosmos","None":"none"},
+        PR={"Pay-as-you-go":"payg","1-year commit":"1yr","3-year commit":"3yr"};
+    return {
+      region:ans("region"), users:ans("users"), peak:ans("peak"), dataVol:ans("datavol"),
+      cloud:CL[ans("cloud")]||"", dbEngine:DB[ans("db")]||"", dbHA:/^yes$/i.test(ans("ha"))?"yes":"",
+      pricing:PR[ans("pricing")]||"", uploads:ans("volume"), queries:ans("queries"),
+      builds:ans("workflows"), runs:ans("runs"), docTypes:ans("doctypes")
+    };
+  }
+  // best-effort: log/append the intake to the Notion card (non-blocking)
+  function boqNotion(){
     var right=collect("right");
-    function doAppend(){
-      var m=$("cf_boq_msg"), b=$("cf_boq");
-      m.className="cf-msg"; m.textContent="Requesting BOQ…"; if(b) b.disabled=true;
-      fetch("/api/append-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pageId:CREATED.pageId,heading:"BOQ requested — "+new Date().toLocaleDateString(),blocks:right.blocks})})
-        .then(function(r){return r.json();}).then(function(j){ var m2=$("cf_boq_msg"), b2=$("cf_boq"); if(b2) b2.disabled=false;
-          if(j&&j.ok){ if(m2){ m2.className="cf-msg ok"; m2.innerHTML="✅ BOQ requested — detail attached to the card. "+(CREATED.url?"<a href='"+esc(CREATED.url)+"' target='_blank' rel='noopener'>Open in Notion ↗</a>":""); } }
-          else notConnected(m2,{pageId:CREATED.pageId,blocks:right.blocks},(j&&j.error)||"Could not attach the BOQ detail.");
-        }).catch(function(){ var m2=$("cf_boq_msg"); if($("cf_boq"))$("cf_boq").disabled=false; notConnected(m2,{blocks:right.blocks},"Network error."); });
-    }
-    if(CREATED&&CREATED.pageId){ doAppend(); return; }
-    // no card yet → create from the left first, then attach the BOQ detail
+    function append(){ fetch("/api/append-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pageId:CREATED.pageId,heading:"BOQ requested — "+new Date().toLocaleDateString(),blocks:right.blocks})}).catch(function(){}); }
+    if(CREATED&&CREATED.pageId){ append(); return; }
     var left=collect("left");
-    if(left.missing.length || (!left.mapped.Client && !left.titleVal)){ msg.className="cf-msg err"; msg.textContent="Add the client name (left) and click ‘Create card on Notion’ first."; return; }
-    msg.className="cf-msg"; msg.textContent="Creating card…"; if(btn) btn.disabled=true;
+    if(!left.mapped.Client && !left.titleVal) return;   // no client name → skip Notion silently
     fetch("/api/create-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mapped:left.mapped,defaults:{Stage:"Requirement Gathering",Status:"To be Picked"},blocks:left.blocks})})
-      .then(function(r){return r.json();}).then(function(j){
-        if(j&&j.ok){ CREATED={pageId:j.id,url:j.url}; markCreated(); doAppend(); }
-        else { if(btn) btn.disabled=false; notConnected($("cf_boq_msg"),{mapped:left.mapped,blocks:left.blocks.concat(right.blocks)},(j&&j.error)||"Could not create the card."); }
-      }).catch(function(){ if(btn) btn.disabled=false; notConnected($("cf_boq_msg"),{blocks:right.blocks},"Network error."); });
+      .then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ CREATED={pageId:j.id,url:j.url}; append(); } }).catch(function(){});
+  }
+  // Request a BOQ → prepare the BOQ from these details using Card 1, and show it
+  function requestBOQ(){
+    if(window.__applyBOQInputs) window.__applyBOQInputs(boqMap());
+    try{ boqNotion(); }catch(e){}
+    if(window.__showView) window.__showView("app-bom");
   }
 
   var loadedOnce=false;
