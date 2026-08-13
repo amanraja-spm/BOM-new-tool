@@ -316,7 +316,15 @@ body:not(.app-bom) > .layout{display:none !important}
 
 /* ── Add a New Client (Card 3) — intake form ── */
 #clientform{flex-direction:column;height:100vh;background:var(--bg)}
-.cf-wrap{max-width:820px;margin:0 auto;padding:22px 24px 60px}
+.cf-wrap{max-width:1160px;margin:0 auto;padding:22px 24px 60px}
+.cf-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+@media(max-width:860px){.cf-cols{grid-template-columns:1fr}}
+.cf-col{min-width:0}
+.cf-actionbox{position:sticky;bottom:0;background:linear-gradient(180deg,transparent,var(--bg) 40%);padding-top:10px;margin-top:4px}
+.cf-create{background:#0f766e}
+.cf-create:hover{background:#0b5f58}
+.cf-actionbox .cf-submit{width:100%}
+.cf-actionbox .cf-msg{display:block;margin-top:8px;text-align:center}
 .cf-intro{font-size:13px;color:var(--ink-2);background:var(--brand-50);border:1px solid var(--brand-100);border-radius:12px;padding:12px 16px;margin-bottom:20px;line-height:1.5}
 .cf-sec{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px 8px;margin-bottom:16px}
 .cf-sec-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--brand);margin-bottom:14px}
@@ -1833,34 +1841,42 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   function qtools(si,qi){ return "<div class='cf-qtools'><button data-eq='"+si+","+qi+"' title='Edit'>✎</button><button data-dq='"+si+","+qi+"' title='Delete'>✕</button></div>"; }
 
+  var CREATED=null;  // {pageId,url} once the Notion card is created this session
+  function secCol(sec){ return sec.col || (["client","scope"].indexOf(sec.id)>=0 ? "left" : "right"); }
+
   function render(){
     var src=$("cf_src"); if(src){ src.className="tk-src snap"; src.textContent=EDIT?"Editing form — changes save automatically":""; }
-    var h="<div class='cf-intro'>Sales team: fill this in whenever you engage a new client. On submit it creates a new card in the Notion Deployment Tracker with all the details needed to prepare a BOQ. Use <b>Customize form</b> (top-right) to add or edit questions.</div>";
-    FORM.sections.forEach(function(sec,si){
-      h+="<div class='cf-sec'><div class='cf-sec-h'><span class='sn'>"+esc(sec.title)+"</span>"+(EDIT?"<span class='cf-sectools'><button data-es='"+si+"' title='Rename section'>✎</button><button data-ds='"+si+"' title='Delete section'>✕</button></span>":"")+"</div>";
-      sec.questions.forEach(function(q,qi){
-        h+="<div class='cf-q'><label>"+esc(q.label)+(q.required?"<span class='req'>*</span>":"")+"</label>"+field(q)+qtools(si,qi)+"</div>";
-      });
-      h+="<button class='cf-addq' data-aq='"+si+"'>+ Add question</button></div>";
-    });
-    h+="<button class='cf-addsec tk-refresh' style='background:var(--brand);color:#fff;border:none' id='cf_addsec'>+ Add section</button>";
-    h+="<div class='cf-submit-row'><span class='cf-msg' id='cf_msg'></span><button class='cf-submit' id='cf_submit'>Submit — create client card</button></div>";
-    $("cf_wrap").innerHTML=h;
+    function sectionHtml(sec,si){
+      var h="<div class='cf-sec'><div class='cf-sec-h'><span class='sn'>"+esc(sec.title)+"</span>"+(EDIT?"<span class='cf-sectools'><button data-mv='"+si+"' title='Move to other column'>⇄</button><button data-es='"+si+"' title='Rename section'>✎</button><button data-ds='"+si+"' title='Delete section'>✕</button></span>":"")+"</div>";
+      sec.questions.forEach(function(q,qi){ h+="<div class='cf-q'><label>"+esc(q.label)+(q.required?"<span class='req'>*</span>":"")+"</label>"+field(q)+qtools(si,qi)+"</div>"; });
+      return h+"<button class='cf-addq' data-aq='"+si+"'>+ Add question</button></div>";
+    }
+    var leftH="",rightH="";
+    FORM.sections.forEach(function(sec,si){ if(secCol(sec)==="left") leftH+=sectionHtml(sec,si); else rightH+=sectionHtml(sec,si); });
+    leftH+="<button class='cf-addsec' data-addcol='left'>+ Add section (left)</button>";
+    rightH+="<button class='cf-addsec' data-addcol='right'>+ Add section (right)</button>";
+    var createBtn = CREATED
+      ? "<a class='cf-submit cf-create' style='display:block;text-align:center;text-decoration:none' href='"+esc(CREATED.url||"#")+"' target='_blank' rel='noopener'>✓ Card created — open in Notion</a>"
+      : "<button class='cf-submit cf-create' id='cf_create'>Create card on Notion</button>";
+    leftH+="<div class='cf-actionbox'>"+createBtn+"<span class='cf-msg' id='cf_create_msg'></span></div>";
+    rightH+="<div class='cf-actionbox'><button class='cf-submit' id='cf_boq'>Request a BOQ</button><span class='cf-msg' id='cf_boq_msg'></span></div>";
+    var intro="<div class='cf-intro'>Sales team: capture a new client here. <b>Left</b> — client &amp; product basics; the <b>Create card on Notion</b> button logs them in the Deployment Tracker. <b>Right</b> — the technical &amp; commercial detail; <b>Request a BOQ</b> attaches it all to that card. Use <b>Customize form</b> to add or edit questions.</div>";
+    $("cf_wrap").innerHTML=intro+"<div class='cf-cols'><div class='cf-col'>"+leftH+"</div><div class='cf-col'>"+rightH+"</div></div>";
     bind();
   }
 
   function bind(){
     var w=$("cf_wrap");
-    // multi chip toggling
     Array.prototype.forEach.call(w.querySelectorAll(".cf-check input"),function(cb){ cb.addEventListener("change",function(){ cb.parentNode.classList.toggle("on",cb.checked); }); });
-    if($("cf_submit")) $("cf_submit").addEventListener("click",submit);
-    // builder
+    if($("cf_create")) $("cf_create").addEventListener("click",createCard);
+    if($("cf_boq")) $("cf_boq").addEventListener("click",requestBOQ);
     Array.prototype.forEach.call(w.querySelectorAll("[data-aq]"),function(b){ b.addEventListener("click",function(){ editQuestion(+b.getAttribute("data-aq"),-1); }); });
     Array.prototype.forEach.call(w.querySelectorAll("[data-eq]"),function(b){ b.addEventListener("click",function(){ var p=b.getAttribute("data-eq").split(","); editQuestion(+p[0],+p[1]); }); });
     Array.prototype.forEach.call(w.querySelectorAll("[data-dq]"),function(b){ b.addEventListener("click",function(){ var p=b.getAttribute("data-dq").split(","); if(confirm("Delete this question?")){ FORM.sections[+p[0]].questions.splice(+p[1],1); saveDef(); render(); } }); });
     Array.prototype.forEach.call(w.querySelectorAll("[data-es]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-es"); var nm=prompt("Section title:",FORM.sections[si].title); if(nm){ FORM.sections[si].title=nm; saveDef(); render(); } }); });
     Array.prototype.forEach.call(w.querySelectorAll("[data-ds]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-ds"); if(confirm("Delete this whole section?")){ FORM.sections.splice(si,1); saveDef(); render(); } }); });
-    if($("cf_addsec")) $("cf_addsec").addEventListener("click",function(){ var nm=prompt("New section title:"); if(nm){ FORM.sections.push({id:"s"+(++FORM.seq),title:nm,questions:[]}); saveDef(); render(); } });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-mv]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-mv"); FORM.sections[si].col=(secCol(FORM.sections[si])==="left"?"right":"left"); saveDef(); render(); }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-addcol]"),function(b){ b.addEventListener("click",function(){ var nm=prompt("New section title:"); if(nm){ FORM.sections.push({id:"s"+(++FORM.seq),title:nm,col:b.getAttribute("data-addcol"),questions:[]}); saveDef(); render(); } }); });
   }
 
   // add (qi=-1) or edit a question via modal
@@ -1891,49 +1907,68 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   function closeEd(){ $("cf_modal").classList.remove("on"); }
 
-  function submit(){
-    var msg=$("cf_msg"), btn=$("cf_submit");
-    // gather
-    var mapped={Stage:undefined}, blocks=[], missing=[];
-    var mappedObj={}; var titleVal="";
-    FORM.sections.forEach(function(sec){ sec.questions.forEach(function(q){
-      var el=$("cf_"+q.id), val="";
-      if(q.type==="multi"){ if(el){ val=Array.prototype.slice.call(el.querySelectorAll("input:checked")).map(function(c){return c.value;}).join(", "); } }
-      else if(el){ val=el.value; }
-      val=(val||"").trim();
-      if(q.required && !val) missing.push(q.label);
-      if(q.notion==="Client") titleVal=val;
-      if(q.notion && val) mappedObj[q.notion]=val;
-      if(val) blocks.push({label:q.label,value:val});
-    });});
-    if(missing.length){ msg.className="cf-msg err"; msg.textContent="Please fill: "+missing.join(", "); return; }
-    var payload={ mapped:mappedObj, defaults:{Stage:"Requirement Gathering",Status:"To be Picked"}, blocks:blocks };
-    msg.className="cf-msg"; msg.textContent="Submitting…"; btn.disabled=true;
-    fetch("/api/create-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-      .then(function(r){return r.json();}).then(function(j){
-        btn.disabled=false;
-        if(j&&j.ok){ success(titleVal||mappedObj.Client||"New client", j.url); }
-        else { notConnected(payload, (j&&j.error)||"Could not create the Notion card."); }
-      }).catch(function(){ btn.disabled=false; notConnected(payload,"Network error."); });
+  // gather answers for a column ("left" / "right" / "all")
+  function collect(col){
+    var mapped={}, blocks=[], missing=[], titleVal="";
+    FORM.sections.forEach(function(sec){ if(col!=="all" && secCol(sec)!==col) return;
+      sec.questions.forEach(function(q){
+        var el=$("cf_"+q.id), val="";
+        if(q.type==="multi"){ if(el) val=Array.prototype.slice.call(el.querySelectorAll("input:checked")).map(function(c){return c.value;}).join(", "); }
+        else if(el) val=el.value;
+        val=(val||"").trim();
+        if(q.required && !val) missing.push(q.label);
+        if(q.notion==="Client") titleVal=val;
+        if(q.notion && val) mapped[q.notion]=val;
+        if(val) blocks.push({label:q.label,value:val});
+      });
+    });
+    return { mapped:mapped, blocks:blocks, missing:missing, titleVal:titleVal };
+  }
+  function markCreated(){
+    var box=($("cf_create")&&$("cf_create").parentNode) || document.querySelector(".cf-col .cf-actionbox");
+    if(box) box.innerHTML="<a class='cf-submit cf-create' style='display:block;text-align:center;text-decoration:none' href='"+esc(CREATED.url||"#")+"' target='_blank' rel='noopener'>✓ Card created — open in Notion</a><span class='cf-msg ok'>Logged in the Deployment Tracker ✓</span>";
+  }
+  function notConnected(msgEl,payload,err){
+    var durl=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
+    if(msgEl){ msgEl.className="cf-msg err"; msgEl.innerHTML="Notion isn’t connected yet — <a href='"+durl+"' download='client-intake.json'>download this submission</a> to hand off manually. <span style='color:var(--ink-3)'>("+esc(err)+")</span>"; }
   }
 
-  function success(name,url){
-    $("cf_wrap").innerHTML="<div class='cf-success'><div class='big'>✅</div><h2>Client card created</h2>"
-      +"<p><b>"+esc(name)+"</b> has been added to the Notion Deployment Tracker with all the intake details.</p>"
-      +(url?"<a class='btn primary' href='"+esc(url)+"' target='_blank' rel='noopener'>Open the new card in Notion ↗</a>":"")
-      +"<button class='btn' id='cf_again'>+ Add another client</button></div>";
-    $("cf_again").addEventListener("click",render);
+  function createCard(){
+    var msg=$("cf_create_msg"), btn=$("cf_create");
+    var g=collect("left");
+    if(g.missing.length){ msg.className="cf-msg err"; msg.textContent="Please fill: "+g.missing.join(", "); return; }
+    if(!g.mapped.Client && !g.titleVal){ msg.className="cf-msg err"; msg.textContent="Enter the client / company name."; return; }
+    var payload={ mapped:g.mapped, defaults:{Stage:"Requirement Gathering",Status:"To be Picked"}, blocks:g.blocks };
+    msg.className="cf-msg"; msg.textContent="Creating card…"; if(btn) btn.disabled=true;
+    fetch("/api/create-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+      .then(function(r){return r.json();}).then(function(j){
+        if(j&&j.ok){ CREATED={pageId:j.id,url:j.url}; markCreated(); }
+        else { if(btn) btn.disabled=false; notConnected($("cf_create_msg"),payload,(j&&j.error)||"Could not create the card."); }
+      }).catch(function(){ if(btn) btn.disabled=false; notConnected($("cf_create_msg"),payload,"Network error."); });
   }
-  function notConnected(payload,err){
-    var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-    var durl=URL.createObjectURL(blob);
-    $("cf_wrap").insertAdjacentHTML("afterbegin","");
-    var msg=$("cf_msg"); if(msg){ msg.className="cf-msg err"; msg.textContent="Notion isn't connected yet, so the card wasn't created. Your entries are saved below to hand off manually."; }
-    // show a fallback panel at top
-    var panel=document.createElement("div"); panel.className="cf-intro"; panel.style.borderColor="var(--warn)"; panel.style.background="var(--warn-bg)";
-    panel.innerHTML="<b>Notion not connected.</b> To auto-create cards, connect the Notion integration (with Insert permission) in Render. Meanwhile: <a href='"+durl+"' download='client-intake.json'>download this submission</a>. <span style='color:var(--ink-3)'>Details: "+esc(err)+"</span>";
-    $("cf_wrap").insertBefore(panel,$("cf_wrap").firstChild);
-    window.scrollTo(0,0);
+
+  function requestBOQ(){
+    var msg=$("cf_boq_msg"), btn=$("cf_boq");
+    var right=collect("right");
+    function doAppend(){
+      var m=$("cf_boq_msg"), b=$("cf_boq");
+      m.className="cf-msg"; m.textContent="Requesting BOQ…"; if(b) b.disabled=true;
+      fetch("/api/append-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pageId:CREATED.pageId,heading:"BOQ requested — "+new Date().toLocaleDateString(),blocks:right.blocks})})
+        .then(function(r){return r.json();}).then(function(j){ var m2=$("cf_boq_msg"), b2=$("cf_boq"); if(b2) b2.disabled=false;
+          if(j&&j.ok){ if(m2){ m2.className="cf-msg ok"; m2.innerHTML="✅ BOQ requested — detail attached to the card. "+(CREATED.url?"<a href='"+esc(CREATED.url)+"' target='_blank' rel='noopener'>Open in Notion ↗</a>":""); } }
+          else notConnected(m2,{pageId:CREATED.pageId,blocks:right.blocks},(j&&j.error)||"Could not attach the BOQ detail.");
+        }).catch(function(){ var m2=$("cf_boq_msg"); if($("cf_boq"))$("cf_boq").disabled=false; notConnected(m2,{blocks:right.blocks},"Network error."); });
+    }
+    if(CREATED&&CREATED.pageId){ doAppend(); return; }
+    // no card yet → create from the left first, then attach the BOQ detail
+    var left=collect("left");
+    if(left.missing.length || (!left.mapped.Client && !left.titleVal)){ msg.className="cf-msg err"; msg.textContent="Add the client name (left) and click ‘Create card on Notion’ first."; return; }
+    msg.className="cf-msg"; msg.textContent="Creating card…"; if(btn) btn.disabled=true;
+    fetch("/api/create-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mapped:left.mapped,defaults:{Stage:"Requirement Gathering",Status:"To be Picked"},blocks:left.blocks})})
+      .then(function(r){return r.json();}).then(function(j){
+        if(j&&j.ok){ CREATED={pageId:j.id,url:j.url}; markCreated(); doAppend(); }
+        else { if(btn) btn.disabled=false; notConnected($("cf_boq_msg"),{mapped:left.mapped,blocks:left.blocks.concat(right.blocks)},(j&&j.error)||"Could not create the card."); }
+      }).catch(function(){ if(btn) btn.disabled=false; notConnected($("cf_boq_msg"),{blocks:right.blocks},"Network error."); });
   }
 
   var loadedOnce=false;

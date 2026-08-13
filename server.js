@@ -335,6 +335,24 @@ async function notionCreatePage(payload) {
   return { ok: true, url: cj.url || "", id: cj.id || "" };
 }
 
+// Append content (BOQ request detail) to an existing tracker card.
+async function notionAppend(pageId, heading, blocks) {
+  if (!NOTION_TOKEN) throw new Error("Notion isn't connected yet.");
+  if (!pageId) throw new Error("Missing page id.");
+  const children = [];
+  if (heading) children.push({ object: "block", type: "heading_3", heading_3: { rich_text: [{ text: { content: String(heading).slice(0, 1900) } }] } });
+  (blocks || []).forEach((b) => { if (b && b.value != null && String(b.value).trim() !== "") children.push({ object: "block", type: "bulleted_list_item", bulleted_list_item: { rich_text: [{ text: { content: (b.label + ": " + b.value).slice(0, 1900) } }] } }); });
+  if (!children.length) return { ok: true, empty: true };
+  const r = await fetch("https://api.notion.com/v1/blocks/" + pageId + "/children", {
+    method: "PATCH",
+    headers: { Authorization: "Bearer " + NOTION_TOKEN, "Notion-Version": NOTION_VER, "Content-Type": "application/json" },
+    body: JSON.stringify({ children: children.slice(0, 95) })
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error("Notion append " + r.status + ": " + JSON.stringify(j).slice(0, 300));
+  return { ok: true };
+}
+
 // Shared, editable intake-form definition (file store; seeded by the page if empty)
 const FORMDEF_FILE = process.env.FORMDEF_FILE || path.join(__dirname, "form-def.json");
 function formDefLoad() { try { return JSON.parse(fs.readFileSync(FORMDEF_FILE, "utf8")); } catch (e) { return null; } }
@@ -378,6 +396,15 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== "POST") { njson(res, 405, { error: "method not allowed" }); return; }
     readBody(req, async (b) => {
       try { const p = JSON.parse(b || "{}"); njson(res, 200, await notionCreatePage(p)); }
+      catch (e) { njson(res, 200, { ok: false, error: String((e && e.message) || e) }); }
+    });
+    return;
+  }
+  if (u.pathname === "/api/append-client") {
+    if (req.method === "OPTIONS") { njson(res, 204, {}); return; }
+    if (req.method !== "POST") { njson(res, 405, { error: "method not allowed" }); return; }
+    readBody(req, async (b) => {
+      try { const p = JSON.parse(b || "{}"); njson(res, 200, await notionAppend(p.pageId, p.heading, p.blocks)); }
       catch (e) { njson(res, 200, { ok: false, error: String((e && e.message) || e) }); }
     });
     return;
