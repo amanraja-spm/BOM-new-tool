@@ -1532,13 +1532,16 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     function section(rowIdx,label){ as.mergeCells("A"+rowIdx+":B"+rowIdx); var s=as.getCell("A"+rowIdx);
       s.value=label; s.font={bold:true,size:11,color:{argb:BRAND}}; s.alignment={vertical:"middle",indent:1};
       s.fill={type:"pattern",pattern:"solid",fgColor:{argb:LIGHT}}; as.getRow(rowIdx).height=22; }
+    function kvRow(k,v,kcol){ var row=as.getRow(ar);
+      row.getCell(1).value=k; row.getCell(1).font={size:10,bold:true,color:{argb:kcol||SUB}}; row.getCell(1).alignment={vertical:"top",indent:1};
+      row.getCell(2).value=v; row.getCell(2).font={size:10,color:{argb:INK}}; row.getCell(2).alignment={vertical:"top",wrapText:true};
+      row.getCell(1).border=bd(); row.getCell(2).border=bd(); ar++; }
     var ar=3; section(ar,"Requirements summary"); ar++;
-    boqItems(r).forEach(function(kv){
-      var row=as.getRow(ar);
-      row.getCell(1).value=kv[0]; row.getCell(1).font={size:10,bold:true,color:{argb:SUB}}; row.getCell(1).alignment={vertical:"top",indent:1};
-      row.getCell(2).value=kv[1]; row.getCell(2).font={size:10,color:{argb:INK}}; row.getCell(2).alignment={vertical:"top",wrapText:true};
-      row.getCell(1).border=bd(); row.getCell(2).border=bd(); ar++;
-    });
+    boqItems(r).forEach(function(kv){ kvRow(kv[0],kv[1]); });
+    if(BOQ_ASSUMED && BOQ_ASSUMED.length){
+      ar++; section(ar,"Assumed inputs (not supplied in the client intake)"); ar++;
+      BOQ_ASSUMED.forEach(function(kv){ kvRow(kv.label, kv.value, "FFB47900"); });
+    }
     ar++; section(ar,"Key assumptions"); ar++;
     assumptionItems(r).forEach(function(txt,idx){
       var row=as.getRow(ar);
@@ -1562,6 +1565,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     bom.push(["TOTAL — monthly estimate","","","",r2(r.totM),r2(r.totU)]);
     var asrows=[["Assumptions & Requirements"],[],["Requirements summary"]];
     boqItems(r).forEach(function(kv){ asrows.push([kv[0],kv[1]]); });
+    if(BOQ_ASSUMED && BOQ_ASSUMED.length){ asrows.push([],["Assumed inputs (not supplied in the client intake)"]);
+      BOQ_ASSUMED.forEach(function(kv){ asrows.push([kv.label,kv.value]); }); }
     asrows.push([],["Key assumptions"]);
     assumptionItems(r).forEach(function(t,idx){ asrows.push([(idx+1)+".",stripTags(t)]); });
     if(typeof XLSX!=="undefined"){
@@ -1600,10 +1605,14 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   });
 
   // ── Hook used by Card 3 "Request a BOQ": push intake answers into this sizing
-  //    engine and recompute, so the user sees a BOQ prepared from their details. ──
+  //    engine and recompute, so the user sees a BOQ prepared from their details.
+  //    Fields the intake didn't provide are left at sensible defaults and recorded
+  //    as "assumed inputs" so they can be listed in the exported BOQ Excel. ──
+  var BOQ_ASSUMED = null;   // [{label,value}] for the last Request-a-BOQ run
   window.__applyBOQInputs = function(m){
     m = m || {};
-    function sv(id,v){ var e=$(id); if(e && v!=null && v!=="") e.value=v; }
+    function has(v){ return v!=null && v!=="" && !(Array.isArray(v)&&v.length===0); }
+    function sv(id,v){ var e=$(id); if(e && has(v)) e.value=v; }
     function sc(id,b){ var e=$(id); if(e) e.checked=!!b; }
     if(m.cloud) sv("sel_cloud", m.cloud);
     if(m.region) sv("sel_region", m.region);
@@ -1613,12 +1622,38 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     if(m.pricing) sv("sel_pricing", m.pricing);
     sv("inp_ai_uploads", m.uploads); sv("inp_ai_queries", m.queries);
     sv("inp_ai_builds", m.builds); sv("inp_ai_runs", m.runs);
-    if(m.docTypes && m.docTypes.length){
+    var dtProvided = m.docTypes && m.docTypes.length;
+    if(dtProvided){
       sc("cb_excel",  m.docTypes.indexOf("Excel")>=0);
       sc("cb_hexcel", m.docTypes.indexOf("Heavy weight Excel")>=0);
       sc("cb_pdf",    m.docTypes.indexOf("PDF")>=0);
       sc("cb_pdfimg", m.docTypes.indexOf("PDF with images")>=0);
     }
+    // record which BOQ inputs were assumed (not supplied by the intake form)
+    function disp(id){ var e=$(id); if(!e) return "";
+      if(id==="sl_typical") return fmtMB(posToMB(+e.value));
+      if(id==="sl_peak") return e.value+" workflows";
+      if(e.tagName==="SELECT") return e.options[e.selectedIndex]?e.options[e.selectedIndex].text:e.value;
+      return e.value; }
+    function docTypesVal(){ var a=[]; if($("cb_excel")&&$("cb_excel").checked)a.push("Excel"); if($("cb_hexcel")&&$("cb_hexcel").checked)a.push("Heavy weight Excel"); if($("cb_pdf")&&$("cb_pdf").checked)a.push("PDF"); if($("cb_pdfimg")&&$("cb_pdfimg").checked)a.push("PDF with images"); return a.join(", "); }
+    var FIELDS=[
+      ["Region","sel_region",has(m.region)],["Cloud provider","sel_cloud",has(m.cloud)],
+      ["Concurrent users","inp_users",has(m.users)],["Peak parallel submissions","sl_peak",has(m.peak)],
+      ["Typical file size","sl_typical",false],["Workload type","sel_workload",false],
+      ["Data volume (GB)","inp_data_vol",has(m.dataVol)],["Document types","__dt",!!dtProvided],
+      ["Database engine","sel_dbengine",has(m.dbEngine)],["DB vCores","inp_dbvcores",false],
+      ["DB data (GB)","inp_dbsize",false],["DB High Availability","sel_dbha",has(m.dbHA)],
+      ["Private endpoints","inp_endpoints",false],["Egress (GB/mo)","inp_egress",false],
+      ["Gateway / WAF / LB","sel_gateway",false],
+      ["AI uploads / mo","inp_ai_uploads",has(m.uploads)],["AI queries / mo","inp_ai_queries",has(m.queries)],
+      ["AI workflow builds / mo","inp_ai_builds",has(m.builds)],["AI workflow runs / mo","inp_ai_runs",has(m.runs)],
+      ["Avg PDF pages","inp_pdf_pages",false],["Avg Excel sheets","inp_xls_sheets",false],
+      ["Avg tokens / call","inp_ai_tokens",false],["AI usage intensity","sel_ai_scen",false],
+      ["Pricing preference","sel_pricing",has(m.pricing)]
+    ];
+    BOQ_ASSUMED = FIELDS.filter(function(f){ return !f[2]; })
+      .map(function(f){ return { label:f[0], value:(f[1]==="__dt"?docTypesVal():disp(f[1])) }; })
+      .filter(function(kv){ return kv.value!=="" && kv.value!=null; });
     try{ loadPrices(); }catch(e){ try{ refresh(); }catch(e2){} }
   };
   // expose Card 1's region <option> markup so Card 3 can reuse the exact dropdown
@@ -1852,13 +1887,15 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     }); });
     if(changed) saveDef();
   }
+  function localDef(){ try{ var s=localStorage.getItem("cf_def"); var d=s?JSON.parse(s):null; return (d&&d.sections&&d.sections.length)?d:null; }catch(e){ return null; } }
   function loadDef(cb){
     fetch("/api/form-def",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){
-      if(j&&j.def&&j.def.sections){ FORM=j.def; } else { FORM=JSON.parse(JSON.stringify(DEFAULT_FORM)); saveDef(); }
-      migrate(); cb();
+      if(j&&j.def&&j.def.sections&&j.def.sections.length){ FORM=j.def; migrate(); saveDef(); cb(); return; } // shared def on server
+      var L=localDef();
+      if(L){ FORM=L; migrate(); saveDef(); cb(); return; }   // server was reset → restore this browser's copy + re-share
+      FORM=JSON.parse(JSON.stringify(DEFAULT_FORM)); migrate(); saveDef(); cb();
     }).catch(function(){
-      try{ var s=localStorage.getItem("cf_def"); FORM=s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_FORM)); }catch(e){ FORM=JSON.parse(JSON.stringify(DEFAULT_FORM)); }
-      migrate(); cb();
+      var L=localDef(); FORM=L?L:JSON.parse(JSON.stringify(DEFAULT_FORM)); migrate(); cb();
     });
   }
 
