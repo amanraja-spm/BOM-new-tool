@@ -1571,12 +1571,13 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     if(m.dbEngine) sv("sel_dbengine", m.dbEngine);
     if(m.dbHA) sv("sel_dbha", m.dbHA);
     if(m.pricing) sv("sel_pricing", m.pricing);
-    // AI / ML — honour only the fields Card 3 supplies; assume every other AI field = 1
+    // AI / ML — honour the fields Card 3 supplies; assume representative rate-card
+    //   defaults for the rest (all captured in the BOQ Excel "Assumed inputs" section).
     function force(id,v){ var e=$(id); if(e) e.value=v; }
-    force("inp_ai_excel",1); force("inp_ai_pdf",1); force("inp_ai_sql",1);
-    force("inp_ai_drift",1); force("inp_pdf_pages",1); force("inp_ai_pf",1);
-    force("inp_ai_runs", has(m.runs)?m.runs:1);
-    force("inp_ai_queries", has(m.queries)?m.queries:1);
+    force("inp_ai_excel",12); force("inp_ai_pdf",4); force("inp_ai_sql",4);
+    force("inp_ai_drift",25); force("inp_pdf_pages",20); force("inp_ai_pf",1.0);
+    force("inp_ai_runs", has(m.runs)?m.runs:8);
+    force("inp_ai_queries", has(m.queries)?m.queries:100);
     var dtProvided = m.docTypes && m.docTypes.length;
     if(dtProvided){
       sc("cb_excel",  m.docTypes.indexOf("Excel")>=0);
