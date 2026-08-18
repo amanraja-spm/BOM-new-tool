@@ -200,11 +200,22 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 #welcome{display:none}
 #tracker{display:none}
 #clientform{display:none}
+#documents{display:none}
 body.home #welcome{display:flex}
 body.app-tracker #tracker{display:flex}
 body.app-client #clientform{display:flex}
+body.app-docs #documents{display:flex}
 body:not(.app-bom) > header{display:none !important}
 body:not(.app-bom) > .layout{display:none !important}
+/* Documents (Card 5) — Google Drive folder embed */
+#documents{flex-direction:column;height:100vh;background:var(--bg)}
+.doc-body{flex:1;position:relative;overflow:hidden}
+.doc-frame{width:100%;height:100%;border:0;display:block;background:#fff}
+.doc-note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;pointer-events:none}
+.doc-note .card{pointer-events:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);max-width:460px;padding:22px 24px;text-align:center}
+.doc-note h3{font-size:16px;font-weight:750;color:var(--ink);margin-bottom:8px}
+.doc-note p{font-size:13px;color:var(--ink-2);line-height:1.55}
+.doc-note a{color:var(--brand);font-weight:700}
 #welcome{min-height:100vh;flex-direction:column;background:
   radial-gradient(1200px 500px at 50% -8%,rgba(45,212,191,.10),transparent 60%),
   linear-gradient(180deg,#f7fafd 0%,var(--bg) 100%)}
@@ -441,10 +452,11 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
         <h3>Gantt Chart</h3>
       </div>
 
-      <div class="wl-card locked" aria-disabled="true">
-        <span class="wl-badge">Coming soon</span>
+      <div class="wl-card active" id="card_docs" role="button" tabindex="0">
+        <span class="wl-badge live">Live</span>
         <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>
-        <h3>Card 5</h3>
+        <h3>Documents</h3>
+        <span class="wl-cta">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
       <div class="wl-card locked" aria-disabled="true">
@@ -724,6 +736,24 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
   <div class="tk-body"><div class="cf-wrap" id="cf_wrap"></div></div>
 </section>
 <div class="tk-modal" id="cf_modal"><div class="tk-modal-card" id="cf_modal_card"></div></div>
+
+<!-- ── Documents (Card 5) — Google Drive folder embed ── -->
+<section id="documents">
+  <div class="tk-top">
+    <button class="tk-home" id="doc_home" title="Back to all tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+    </button>
+    <div class="tk-title">📁 <span>Documents</span></div>
+    <a class="tk-open" href="https://drive.google.com/drive/folders/11mpw8jB7iDARHH2mNpdpmG5kSNIt6oCT?usp=drive_link" target="_blank" rel="noopener">Open in Drive <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+  </div>
+  <div class="doc-body">
+    <div class="doc-note"><div class="card">
+      <h3>Loading documents from Google Drive…</h3>
+      <p>If nothing appears, the Drive folder needs link sharing set to <b>“Anyone with the link — Viewer”</b> so it can be embedded. You can always <a href="https://drive.google.com/drive/folders/11mpw8jB7iDARHH2mNpdpmG5kSNIt6oCT?usp=drive_link" target="_blank" rel="noopener">open it in Drive</a>.</p>
+    </div></div>
+    <iframe class="doc-frame" id="doc_frame" src="https://drive.google.com/embeddedfolderview?id=11mpw8jB7iDARHH2mNpdpmG5kSNIt6oCT#grid" title="Documents — Google Drive" loading="lazy"></iframe>
+  </div>
+</section>
 
 <script>
 (function () {
@@ -1415,6 +1445,13 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     cardBOM.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); showView("app-bom"); } });
   }
   if($("homeBtn")) $("homeBtn").addEventListener("click", function(){ showView("home"); });
+  // Card 5 — Documents (Google Drive embed)
+  var cardDocs=$("card_docs");
+  if(cardDocs){
+    cardDocs.addEventListener("click", function(){ showView("app-docs"); });
+    cardDocs.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); showView("app-docs"); } });
+  }
+  if($("doc_home")) $("doc_home").addEventListener("click", function(){ showView("home"); });
 
   // ── Download BOM as a polished, client-ready Excel (.xlsx) ──
   function stripTags(s){ var d=document.createElement("div"); d.innerHTML=String(s==null?"":s); return (d.textContent||d.innerText||"").replace(/\s+/g," ").trim(); }
