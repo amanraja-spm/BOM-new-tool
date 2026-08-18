@@ -1452,6 +1452,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     cardDocs.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); showView("app-docs"); } });
   }
   if($("doc_home")) $("doc_home").addEventListener("click", function(){ showView("home"); });
+  if($("doc_frame")) $("doc_frame").addEventListener("load", function(){ var n=document.querySelector("#documents .doc-note"); if(n) n.style.display="none"; });
 
   // ── Download BOM as a polished, client-ready Excel (.xlsx) ──
   function stripTags(s){ var d=document.createElement("div"); d.innerHTML=String(s==null?"":s); return (d.textContent||d.innerText||"").replace(/\s+/g," ").trim(); }
