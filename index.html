@@ -327,6 +327,43 @@ body:not(.app-bom) > .layout{display:none !important}
 .tk-mini .row .m{color:var(--ink-3)}
 .tk-updated{font-size:11px;color:var(--ink-3);text-align:right;margin-top:4px}
 
+/* ── CEO client-progress hero ── */
+.tk-hero{margin-bottom:16px}
+.tk-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;font-weight:650;color:var(--ink-3);margin-left:auto}
+.tk-legend span{display:inline-flex;align-items:center;gap:6px}
+.tk-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.tk-cp{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:1080px){.tk-cp{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:680px){.tk-cp{grid-template-columns:1fr}}
+.cp{border:1px solid var(--line-2);border-radius:12px;padding:13px 14px 12px;background:#fff;position:relative;overflow:hidden}
+.cp::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+.cp.late::before{background:var(--warn)}.cp.soon::before{background:#e0a200}.cp.ontrack::before{background:var(--ok)}.cp.notime::before{background:var(--brand-500)}
+.cp-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.cp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.cp.late .cp-dot{background:var(--warn)}.cp.soon .cp-dot{background:#e0a200}.cp.ontrack .cp-dot{background:var(--ok)}.cp.notime .cp-dot{background:var(--brand-500)}
+.cp-name{font-size:14px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+a.cp-name:hover{color:var(--brand);text-decoration:underline}
+.cp-badge{margin-left:auto;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;flex-shrink:0}
+.cp-badge.late{background:var(--warn-bg);color:var(--warn)}
+.cp-badge.soon{background:#fff3e3;color:#b47900}
+.cp-badge.ontrack{background:#e7f7ef;color:#127a4a}
+.cp-badge.notime{background:var(--brand-50,#eef4fb);color:var(--brand)}
+.cp-sub{font-size:11.5px;color:var(--ink-3);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap}
+.cp-sub b{color:var(--ink-2);font-weight:700}
+.cp-track{display:flex;gap:3px;margin-bottom:7px}
+.cp-seg{flex:1;height:7px;border-radius:3px;background:var(--line-2)}
+.cp.late .cp-seg.on{background:var(--warn)}.cp.soon .cp-seg.on{background:#e0a200}.cp.ontrack .cp-seg.on{background:var(--ok)}.cp.notime .cp-seg.on{background:var(--brand-500)}
+.cp-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px}
+.cp-stage{font-weight:750;color:var(--ink)}
+.cp-when{color:var(--ink-3);white-space:nowrap}
+.cp-when.od{color:var(--warn);font-weight:700}
+.cp-grp{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);margin:16px 0 9px;display:flex;align-items:center;gap:8px}
+.cp-grp:first-child{margin-top:2px}
+.cp-grp .ln{flex:1;height:1px;background:var(--line-2)}
+/* on-hold compact chips */
+.tk-hold{display:flex;flex-wrap:wrap;gap:8px}
+.tk-hold .h{font-size:12px;font-weight:650;color:var(--ink-2);background:var(--line-2);border-radius:7px;padding:5px 10px}
+
 /* ── Add a New Client (Card 3) + Request a BOQ (Card 6) — intake forms ── */
 #clientform,#boqform{flex-direction:column;height:100vh;background:var(--bg)}
 /* Save-to-Notion pending queue */
@@ -1703,20 +1740,30 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   // Pipeline order (open stages, then Closed)
   var STAGES=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
+  // Linear delivery pipeline used for the per-client progress bar (On Hold sits before the track)
+  var PIPE=["Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
+  function pipeIdx(stage){ var i=PIPE.indexOf(stage); return i; } // -1 = On Hold / not started
 
-  // Baked-in snapshot (used until NOTION_TOKEN is configured on the server)
+  // Baked-in snapshot — live pull from Notion Deployment Tracker (18 Aug 2026).
+  // Auto-replaced by live data once NOTION_TOKEN + NOTION_DB_ID are set on the server.
   var SNAPSHOT=[
-    ["DS Group","","","","Not Started","On Hold","","","","",""],["Indigo CCM","","","","Not Started","On Hold","","","","",""],["Airtel Africa","","","","Not Started","On Hold","","","","",""],["Jio Platform","","","","Not Started","On Hold","","","","",""],["AFG","","","","Not Started","On Hold","","","","",""],["Havells","","","","Not Started","On Hold","","","","",""],["Alkem","","","","Not Started","On Hold","","","","",""],["Mankind","","","","Not Started","On Hold","","","","",""],["Sun Pharma","","","","Not Started","On Hold","","","","",""],["Protiviti","","","","Not Started","On Hold","","","","",""],
-    ["Air India","","","Aman","To be Picked","Requirement Gathering","","","","",""],["PWC - AIXL","Expense Validation","Upload","Aman","To be Picked","Requirement Gathering","","","","",""],["ICICI","Azure Cloud","Deployment","Aman","To be Picked","Requirement Gathering","","","","",""],["Landmarkgroup","","","Aman","To be Picked","Requirement Gathering","","","","",""],["PVR","","","Aman","To be Picked","Requirement Gathering","","","","",""],
-    ["HCL","Auditify","Integration (Upload)","Aman","To be Picked","Infra Prep (Client)","2026-08-07","","","",""],
-    ["GT","Auditify","Upload","Deepak","In Progress","Deployment (irame)","2026-07-24","2026-08-27","Vaibhav","2026-08-13","https://drive.google.com/drive/folders/1jliDdRyXe3bsgfGS--DU7MviGyPHWOFl"],
+    // On hold / not started
+    ["Airtel Africa","","","","Not Started","On Hold","","","","",""],["Havells","CCM / Auditify","Integration","","Not Started","On Hold","","","","",""],["Jio Platform","Auditify","","","Not Started","On Hold","","","","",""],["Sun Pharma","","","","Not Started","On Hold","","","","",""],["Protiviti","","","","Not Started","On Hold","","","","",""],["DS Group","Auditify","POC","","Not Started","On Hold","","","","",""],["Mankind","Auditify","","","Not Started","On Hold","","","","",""],["Alkem","Auditify","","","Not Started","On Hold","","","","",""],["AFG","Auditify","","","Not Started","On Hold","","","","",""],["Indigo CCM","","","","Not Started","On Hold","","","","",""],
+    // Requirement gathering
+    ["Landmarkgroup","","","Aman","To be Picked","Requirement Gathering","","","","",""],["ICICI","Azure Cloud","Deployment","Aman","To be Picked","Requirement Gathering","","","","",""],["PVR","","","Aman","To be Picked","Requirement Gathering","","","","",""],["Air India","Auditify","","Aman","To be Picked","Requirement Gathering","","","","",""],["PWC - AIXL","Expense Validation","Upload","Aman","To be Picked","Requirement Gathering","","","","",""],
+    // Active pipeline
+    ["HCL","Auditify","Integration (Upload)","Aman","To be Picked","Infra Prep (Client)","2026-08-28","","","",""],
+    ["GT","Auditify","Upload","Deepak","In Progress","Deployment (irame)","2026-07-24","2026-08-27","Vaibhav","2026-08-13",""],
     ["AMLI","App irame","Datalake","Deepak","In Progress","Test & Bug FIx PProd","2026-06-15","2026-08-20","Vaibhav","2026-08-20",""],
-    ["Trident","Auditify","Synaps Setup; Integration; SQL QnA; Automated workflows","Akshat","In Progress","Data Source Integration","2026-07-31","2026-08-10","Akshat","2026-08-10",""],
+    ["CK Birla","Auditify","Upload","Aman","Done","Test & Bug FIx PProd","2026-07-23","","","",""],
+    ["Trident","Auditify / Synaps Setup","Integration (datalake); SQL QnA; Automated workflows; Schema training","Akshat","In Progress","Data Source Integration","2026-07-31","2026-08-10","Akshat","2026-08-10",""],
     ["JSW - New","Auditify","Integration","Deepak","In Progress","Data Source Integration","2026-07-24","2026-08-18","Tushar Goel","2026-08-13",""],
-    ["PWC - Akasa","CCM","Integration / Upload","Deepak","In Progress","Workflow Creation","2026-07-15","2026-08-05","Ankit","2026-08-08","https://drive.google.com/drive/folders/1ogSKFPxYGNzll_5sMhyteGYg06mDXQp9"],
-    ["TACO","Auditify","Upload -> CCM","Deepak","In Progress","Workflow Creation","2026-07-20","2026-08-07","Yash Gupta","","https://drive.google.com/drive/folders/1o-xMe3ZIyLvqFu404ujEAVPYBu1mQZ4v"],
-    ["PWC (internal)","Auditify","Upload","Aman","In Progress","Vendor Testing","2026-07-23","2026-08-11","","",""],
-    ["CK Birla","Auditify","Upload","Aman","Done","Infra VAPT - Vendor","2026-07-23","","","",""],
+    ["Akasa - Navitaire","","","Tushar Goel","","Data Source Integration","","","Tushar Goel","",""],
+    ["PWC - Akasa","CCM","Integration / Upload","Deepak","In Progress","Workflow Creation","2026-07-15","2026-08-05","Ankit","2026-08-08",""],
+    ["TACO","Auditify","Upload -> CCM","Deepak","In Progress","Workflow Creation","2026-07-20","2026-08-07","Yash Gupta","",""],
+    ["PwC Data Migration","","","Abhinav","","Workflow Creation","","","yash","",""],
+    ["PWC (internal)","Auditify","Upload","Aman","In Progress","Vendor Testing","2026-07-23","","","2026-08-11",""],
+    // Delivered / closed
     ["GT","Irame","Deployment","Tushar Goel","Done","Closed","2026-07-01","","","",""],["JSW - Earlier - uat","Auditify","Integration","Tushar Goel","Done","Closed","2026-06-26","","","",""],["GT","App irame","Upload","Tushar Goel","Done","Closed","2026-05-01","","","",""],["TACO","App irame","Upload","Tushar Goel","Done","Closed","2026-06-17","","","",""],["Indigo new","Auditify","Upload","Saurabh P","Done","Closed","2026-06-28","","","",""],["Indigo earlier","Auditify","Upload","Saurabh P","Done","Closed","2026-06-15","","","",""],["PwC","AI Concierge","Deployment (PDF)","Tushar Goel","Done","Closed","2026-06-13","","","",""],["Trident","App irame","Integration (datalake)","Akshat","Done","Closed","2026-07-10","","","",""],["AMLI","Auditify","Datalake","Deepak","Done","Closed","2026-07-22","","","",""],["Danube Properties","Auditify","Upload","Deepak","Done","Closed","2026-07-22","","","",""]
   ].map(function(a){ return {client:a[0],product:a[1],method:a[2],poc:a[3],status:a[4],stage:a[5],overall:a[6],actual:a[7],stageOwner:a[8],stageTimeline:a[9],docLink:a[10],url:NOTION_URL}; });
 
@@ -1804,7 +1851,33 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     var deliv="<div class='tk-panel'><h3>Delivered <span class='cnt'>· "+closed.length+"</span></h3><div class='tk-mini'>"
       +delivered.map(function(r){ return "<div class='row'><span class='d'></span><span class='n'>"+esc(r.client)+"</span><span class='m'>"+esc(r.product||"")+(r.overall?" · "+fmt(parse(r.overall)):"")+"</span></div>"; }).join("")+"</div></div>";
 
-    $("tk_dash").innerHTML=kpis+"<div class='tk-grid2'><div>"+att+work+"</div><div>"+pipe+deliv+"</div></div>"
+    // ── CEO hero: every active client's pipeline progress + status at a glance ──
+    function cpCard(r){ var c=r.__c, cat=c.cat, idx=pipeIdx(r.stage), filled=idx<0?0:idx+1;
+      var segs=""; for(var i=0;i<PIPE.length;i++){ segs+="<span class='cp-seg"+(i<filled?" on":"")+"'></span>"; }
+      var badge=cat==="late"?"<span class='cp-badge late'>Delayed "+c.lateDays+"d</span>"
+        :cat==="soon"?"<span class='cp-badge soon'>Due "+c.inDays+"d</span>"
+        :cat==="notime"?"<span class='cp-badge notime'>In pipeline</span>"
+        :"<span class='cp-badge ontrack'>On track</span>";
+      var own=ownerOf(r);
+      var when=cat==="late"?"<span class='cp-when od'>Overdue "+fmt(c.due)+"</span>"
+        :c.due?"<span class='cp-when'>Due "+fmt(c.due)+"</span>"
+        :(r.overall?"<span class='cp-when'>Target "+fmt(parse(r.overall))+"</span>":"");
+      var pct=idx<0?0:Math.round(filled/PIPE.length*100);
+      var nm=r.url?"<a class='cp-name' href='"+esc(r.url)+"' target='_blank' rel='noopener'>"+esc(r.client)+"</a>":"<span class='cp-name'>"+esc(r.client)+"</span>";
+      return "<div class='cp "+cat+"'>"
+        +"<div class='cp-head'><span class='cp-dot'></span>"+nm+badge+"</div>"
+        +"<div class='cp-sub'>"+(r.product?"<b>"+esc(r.product)+"</b>":"<b>—</b>")+(own?"<span>👤 "+esc(own)+"</span>":"")+"</div>"
+        +"<div class='cp-track'>"+segs+"</div>"
+        +"<div class='cp-foot'><span class='cp-stage'>"+esc(r.stage||"—")+" · "+pct+"%</span>"+when+"</div></div>";
+    }
+    function grp(title,arr){ if(!arr.length) return ""; return "<div class='cp-grp'>"+title+" <span style='color:var(--ink-3)'>· "+arr.length+"</span><span class='ln'></span></div><div class='tk-cp'>"+arr.map(cpCard).join("")+"</div>"; }
+    var heroBody=grp("⚠ Delayed",late)+grp("⏳ Due this week",soon)+grp("✓ On track",ontrack)+grp("• Early / in pipeline",notime);
+    var legend="<div class='tk-legend'><span><i style='background:var(--warn)'></i>Delayed</span><span><i style='background:#e0a200'></i>Due ≤7d</span><span><i style='background:var(--ok)'></i>On track</span><span><i style='background:var(--brand-500)'></i>Early</span></div>";
+    var hero="<div class='tk-panel tk-hero'><h3>Client progress <span class='cnt'>· "+active.length+" active</span>"+legend+"</h3>"+(active.length?heroBody:"<div class='tk-empty'>No active projects.</div>")+"</div>";
+
+    var holdPanel="<div class='tk-panel'><h3>On hold / not started <span class='cnt'>· "+onhold.length+"</span></h3>"+(onhold.length?"<div class='tk-hold'>"+onhold.map(function(r){return "<span class='h'>"+esc(r.client)+(r.product?" · "+esc(r.product):"")+"</span>";}).join("")+"</div>":"<div class='tk-empty'>—</div>")+"</div>";
+
+    $("tk_dash").innerHTML=kpis+hero+"<div class='tk-grid2'><div>"+att+deliv+"</div><div>"+pipe+work+holdPanel+"</div></div>"
       +"<div class='tk-updated'>Source: "+(SOURCE==="notion"?"live Notion":"baked-in snapshot")+(UPDATED?" · updated "+new Date(UPDATED).toLocaleString():"")+"</div>";
 
     // source pill
