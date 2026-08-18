@@ -200,10 +200,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 #welcome{display:none}
 #tracker{display:none}
 #clientform{display:none}
+#boqform{display:none}
 #documents{display:none}
 body.home #welcome{display:flex}
 body.app-tracker #tracker{display:flex}
 body.app-client #clientform{display:flex}
+body.app-boq #boqform{display:flex}
 body.app-docs #documents{display:flex}
 body:not(.app-bom) > header{display:none !important}
 body:not(.app-bom) > .layout{display:none !important}
@@ -325,9 +327,29 @@ body:not(.app-bom) > .layout{display:none !important}
 .tk-mini .row .m{color:var(--ink-3)}
 .tk-updated{font-size:11px;color:var(--ink-3);text-align:right;margin-top:4px}
 
-/* ── Add a New Client (Card 3) — intake form ── */
-#clientform{flex-direction:column;height:100vh;background:var(--bg)}
+/* ── Add a New Client (Card 3) + Request a BOQ (Card 6) — intake forms ── */
+#clientform,#boqform{flex-direction:column;height:100vh;background:var(--bg)}
+/* Save-to-Notion pending queue */
+.cf-queue{margin-top:26px}
+.cf-queue-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--brand);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.cf-qct{background:var(--warn-bg);color:var(--warn);font-size:11px;padding:2px 9px;border-radius:999px}
+.cf-queue-empty{font-size:13px;color:var(--ink-3);background:#fff;border:1px dashed var(--line);border-radius:12px;padding:16px 18px}
+.cf-scard{background:#fff;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;box-shadow:var(--shadow-sm);padding:14px 16px;margin-bottom:12px}
+.cf-scard .sc-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.cf-scard .sc-title{font-size:15px;font-weight:800;color:var(--ink)}
+.cf-scard .sc-ts{font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.cf-scard .sc-row{display:grid;grid-template-columns:180px 1fr;gap:10px;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line-2)}
+.cf-scard .sc-row:last-of-type{border-bottom:none}
+.cf-scard .sc-k{color:var(--ink-3);font-weight:650}
+.cf-scard .sc-v{color:var(--ink);font-weight:600;white-space:pre-wrap}
+.cf-scard .sc-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.cf-scard .sc-btn{border:1.5px solid var(--line);background:#fff;color:var(--ink-2);font-family:inherit;font-size:12px;font-weight:700;border-radius:8px;padding:6px 12px;cursor:pointer}
+.cf-scard .sc-btn:hover{background:var(--line-2)}
+.cf-scard .sc-del{color:#0f766e;border-color:#cdeae5}
+.cf-scard .sc-del:hover{background:#e6f7f4}
+@media(max-width:560px){.cf-scard .sc-row{grid-template-columns:1fr}}
 .cf-wrap{max-width:1160px;margin:0 auto;padding:22px 24px 60px}
+.cf-single{max-width:680px;margin:0 auto}
 .cf-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 @media(max-width:860px){.cf-cols{grid-template-columns:1fr}}
 .cf-col{min-width:0}
@@ -459,10 +481,11 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
         <span class="wl-cta">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
-      <div class="wl-card locked" aria-disabled="true">
-        <span class="wl-badge">Coming soon</span>
-        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 14h.01M15 14h.01"/></svg></span>
-        <h3>Card 6</h3>
+      <div class="wl-card active" id="card_boq6" role="button" tabindex="0">
+        <span class="wl-badge live">Live</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 7h6M9 11h6M9 15h4"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg></span>
+        <h3>Request a BOQ</h3>
+        <span class="wl-cta">Open form <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
     </div>
@@ -736,6 +759,18 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
   <div class="tk-body"><div class="cf-wrap" id="cf_wrap"></div></div>
 </section>
 <div class="tk-modal" id="cf_modal"><div class="tk-modal-card" id="cf_modal_card"></div></div>
+
+<!-- ── Request a BOQ (Card 6) — technical & commercial intake ── -->
+<section id="boqform">
+  <div class="tk-top">
+    <button class="tk-home" id="boq_home" title="Back to all tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+    </button>
+    <div class="tk-title">📄 <span>Request a BOQ</span></div>
+    <button class="tk-refresh" id="boq_customize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Customize form</button>
+  </div>
+  <div class="tk-body"><div class="cf-wrap" id="boq_wrap"></div></div>
+</section>
 
 <!-- ── Documents (Card 5) — Google Drive folder embed ── -->
 <section id="documents">
@@ -1436,6 +1471,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     window.scrollTo(0,0);
     if(v==="app-tracker" && window.__trackerEnter) window.__trackerEnter();
     if(v==="app-client" && window.__clientEnter) window.__clientEnter();
+    if(v==="app-boq" && window.__boqEnter) window.__boqEnter();
   }
   window.__showView = showView;                 // used by the tracker module
   if(!document.body.classList.contains("home")) document.body.classList.add("home");
@@ -1905,41 +1941,43 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   function qtools(si,qi){ return "<div class='cf-qtools'><button data-eq='"+si+","+qi+"' title='Edit'>✎</button><button data-dq='"+si+","+qi+"' title='Delete'>✕</button></div>"; }
 
-  var CREATED=null;  // {pageId,url} once the Notion card is created this session
   function secCol(sec){ return sec.col || (["client","scope"].indexOf(sec.id)>=0 ? "left" : "right"); }
 
-  function render(){
-    var src=$("cf_src"); if(src){ src.className="tk-src snap"; src.textContent=EDIT?"Editing form — changes save automatically":""; }
-    function sectionHtml(sec,si){
-      var h="<div class='cf-sec'><div class='cf-sec-h'><span class='sn'>"+esc(sec.title)+"</span>"+(EDIT?"<span class='cf-sectools'><button data-mv='"+si+"' title='Move to other column'>⇄</button><button data-es='"+si+"' title='Rename section'>✎</button><button data-ds='"+si+"' title='Delete section'>✕</button></span>":"")+"</div>";
-      sec.questions.forEach(function(q,qi){ h+="<div class='cf-q'><label>"+esc(q.label)+(q.required?"<span class='req'>*</span>":"")+"</label>"+field(q)+qtools(si,qi)+"</div>"; });
-      return h+"<button class='cf-addq' data-aq='"+si+"'>+ Add question</button></div>";
-    }
-    var leftH="",rightH="";
-    FORM.sections.forEach(function(sec,si){ if(secCol(sec)==="left") leftH+=sectionHtml(sec,si); else rightH+=sectionHtml(sec,si); });
-    leftH+="<button class='cf-addsec' data-addcol='left'>+ Add section (left)</button>";
-    rightH+="<button class='cf-addsec' data-addcol='right'>+ Add section (right)</button>";
-    var createBtn = CREATED
-      ? "<a class='cf-submit cf-create' style='display:block;text-align:center;text-decoration:none' href='"+esc(CREATED.url||"#")+"' target='_blank' rel='noopener'>✓ Card created — open in Notion</a>"
-      : "<button class='cf-submit cf-create' id='cf_create'>Create card on Notion</button>";
-    leftH+="<div class='cf-actionbox'>"+createBtn+"<span class='cf-msg' id='cf_create_msg'></span></div>";
-    rightH+="<div class='cf-actionbox'><button class='cf-submit' id='cf_boq'>Request a BOQ</button><span class='cf-msg' id='cf_boq_msg'></span></div>";
-    $("cf_wrap").innerHTML="<div class='cf-cols'><div class='cf-col'>"+leftH+"</div><div class='cf-col'>"+rightH+"</div></div>";
-    bind();
+  function sectionHtml(sec,si){
+    var h="<div class='cf-sec'><div class='cf-sec-h'><span class='sn'>"+esc(sec.title)+"</span>"+(EDIT?"<span class='cf-sectools'><button data-mv='"+si+"' title='Move to the other card'>⇄</button><button data-es='"+si+"' title='Rename section'>✎</button><button data-ds='"+si+"' title='Delete section'>✕</button></span>":"")+"</div>";
+    sec.questions.forEach(function(q,qi){ h+="<div class='cf-q'><label>"+esc(q.label)+(q.required?"<span class='req'>*</span>":"")+"</label>"+field(q)+qtools(si,qi)+"</div>"; });
+    return h+"<button class='cf-addq' data-aq='"+si+"'>+ Add question</button></div>";
   }
+  function renderCol(col, wrapId, actionsHtml){
+    var el=$(wrapId); if(!el) return;
+    var html="";
+    FORM.sections.forEach(function(sec,si){ if(secCol(sec)===col) html+=sectionHtml(sec,si); });
+    html+="<button class='cf-addsec' data-addcol='"+col+"'>+ Add section</button>"+actionsHtml;
+    el.innerHTML="<div class='cf-single'>"+html+"</div>"; bind(el);
+  }
+  function renderCard3(){
+    renderCol("left","cf_wrap",
+      "<div class='cf-actionbox'><button class='cf-submit cf-create' id='cf_save'>Save to Notion</button><span class='cf-msg' id='cf_save_msg'></span></div>"
+      +"<div class='cf-queue' id='cf_queue'></div>");
+    renderQueue();
+  }
+  function renderCard6(){
+    renderCol("right","boq_wrap",
+      "<div class='cf-actionbox'><button class='cf-submit' id='cf_boq'>Request a BOQ</button><span class='cf-msg' id='cf_boq_msg'></span></div>");
+  }
+  function renderAll(){ renderCard3(); renderCard6(); }
 
-  function bind(){
-    var w=$("cf_wrap");
+  function bind(w){
     Array.prototype.forEach.call(w.querySelectorAll(".cf-check input"),function(cb){ cb.addEventListener("change",function(){ cb.parentNode.classList.toggle("on",cb.checked); }); });
-    if($("cf_create")) $("cf_create").addEventListener("click",createCard);
-    if($("cf_boq")) $("cf_boq").addEventListener("click",requestBOQ);
+    var s=w.querySelector("#cf_save"); if(s) s.addEventListener("click",saveToNotion);
+    var bq=w.querySelector("#cf_boq"); if(bq) bq.addEventListener("click",requestBOQ);
     Array.prototype.forEach.call(w.querySelectorAll("[data-aq]"),function(b){ b.addEventListener("click",function(){ editQuestion(+b.getAttribute("data-aq"),-1); }); });
     Array.prototype.forEach.call(w.querySelectorAll("[data-eq]"),function(b){ b.addEventListener("click",function(){ var p=b.getAttribute("data-eq").split(","); editQuestion(+p[0],+p[1]); }); });
-    Array.prototype.forEach.call(w.querySelectorAll("[data-dq]"),function(b){ b.addEventListener("click",function(){ var p=b.getAttribute("data-dq").split(","); if(confirm("Delete this question?")){ FORM.sections[+p[0]].questions.splice(+p[1],1); saveDef(); render(); } }); });
-    Array.prototype.forEach.call(w.querySelectorAll("[data-es]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-es"); var nm=prompt("Section title:",FORM.sections[si].title); if(nm){ FORM.sections[si].title=nm; saveDef(); render(); } }); });
-    Array.prototype.forEach.call(w.querySelectorAll("[data-ds]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-ds"); if(confirm("Delete this whole section?")){ FORM.sections.splice(si,1); saveDef(); render(); } }); });
-    Array.prototype.forEach.call(w.querySelectorAll("[data-mv]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-mv"); FORM.sections[si].col=(secCol(FORM.sections[si])==="left"?"right":"left"); saveDef(); render(); }); });
-    Array.prototype.forEach.call(w.querySelectorAll("[data-addcol]"),function(b){ b.addEventListener("click",function(){ var nm=prompt("New section title:"); if(nm){ FORM.sections.push({id:"s"+(++FORM.seq),title:nm,col:b.getAttribute("data-addcol"),questions:[]}); saveDef(); render(); } }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-dq]"),function(b){ b.addEventListener("click",function(){ var p=b.getAttribute("data-dq").split(","); if(confirm("Delete this question?")){ FORM.sections[+p[0]].questions.splice(+p[1],1); saveDef(); renderAll(); } }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-es]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-es"); var nm=prompt("Section title:",FORM.sections[si].title); if(nm){ FORM.sections[si].title=nm; saveDef(); renderAll(); } }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-ds]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-ds"); if(confirm("Delete this whole section?")){ FORM.sections.splice(si,1); saveDef(); renderAll(); } }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-mv]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-mv"); FORM.sections[si].col=(secCol(FORM.sections[si])==="left"?"right":"left"); saveDef(); renderAll(); }); });
+    Array.prototype.forEach.call(w.querySelectorAll("[data-addcol]"),function(b){ b.addEventListener("click",function(){ var nm=prompt("New section title:"); if(nm){ FORM.sections.push({id:"s"+(++FORM.seq),title:nm,col:b.getAttribute("data-addcol"),questions:[]}); saveDef(); renderAll(); } }); });
   }
 
   // add (qi=-1) or edit a question via modal
@@ -1965,7 +2003,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       q.options=/select|multi/.test(q.type)?$("cfe_opts").value.split("\n").map(function(s){return s.trim();}).filter(Boolean):[];
       q.required=$("cfe_req").checked; q.notion=$("cfe_notion").value||undefined;
       if(isNew) FORM.sections[si].questions.push(q);
-      saveDef(); closeEd(); render();
+      saveDef(); closeEd(); renderAll();
     });
   }
   function closeEd(){ $("cf_modal").classList.remove("on"); }
@@ -1987,27 +2025,39 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     });
     return { mapped:mapped, blocks:blocks, missing:missing, titleVal:titleVal };
   }
-  function markCreated(){
-    var box=($("cf_create")&&$("cf_create").parentNode) || document.querySelector(".cf-col .cf-actionbox");
-    if(box) box.innerHTML="<a class='cf-submit cf-create' style='display:block;text-align:center;text-decoration:none' href='"+esc(CREATED.url||"#")+"' target='_blank' rel='noopener'>✓ Card created — open in Notion</a><span class='cf-msg ok'>Logged in the Deployment Tracker ✓</span>";
+  // ── Save to Notion → shared pending queue (the Notion team processes + deletes) ──
+  function clearLeftForm(){
+    FORM.sections.forEach(function(sec){ if(secCol(sec)!=="left")return; sec.questions.forEach(function(q){ var el=$("cf_"+q.id); if(!el)return; if(q.type==="multi"){ Array.prototype.forEach.call(el.querySelectorAll("input"),function(c){ c.checked=false; c.parentNode.classList.remove("on"); }); } else el.value=""; }); });
   }
-  function notConnected(msgEl,payload,err){
-    var durl=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
-    if(msgEl){ msgEl.className="cf-msg err"; msgEl.innerHTML="Notion isn’t connected yet — <a href='"+durl+"' download='client-intake.json'>download this submission</a> to hand off manually. <span style='color:var(--ink-3)'>("+esc(err)+")</span>"; }
-  }
-
-  function createCard(){
-    var msg=$("cf_create_msg"), btn=$("cf_create");
+  function saveToNotion(){
+    var msg=$("cf_save_msg"), btn=$("cf_save");
     var g=collect("left");
     if(g.missing.length){ msg.className="cf-msg err"; msg.textContent="Please fill: "+g.missing.join(", "); return; }
-    if(!g.mapped.Client && !g.titleVal){ msg.className="cf-msg err"; msg.textContent="Enter the client / company name."; return; }
-    var payload={ mapped:g.mapped, defaults:{Stage:"Requirement Gathering",Status:"To be Picked"}, blocks:g.blocks };
-    msg.className="cf-msg"; msg.textContent="Creating card…"; if(btn) btn.disabled=true;
-    fetch("/api/create-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-      .then(function(r){return r.json();}).then(function(j){
-        if(j&&j.ok){ CREATED={pageId:j.id,url:j.url}; markCreated(); }
-        else { if(btn) btn.disabled=false; notConnected($("cf_create_msg"),payload,(j&&j.error)||"Could not create the card."); }
-      }).catch(function(){ if(btn) btn.disabled=false; notConnected($("cf_create_msg"),payload,"Network error."); });
+    var client=g.titleVal||g.mapped.Client||"";
+    if(!client){ msg.className="cf-msg err"; msg.textContent="Enter the client / company name."; return; }
+    if(!g.blocks.length){ msg.className="cf-msg err"; msg.textContent="Fill in at least one field."; return; }
+    msg.className="cf-msg"; msg.textContent="Saving…"; if(btn) btn.disabled=true;
+    fetch("/api/submissions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",submission:{client:client,ts:new Date().toLocaleString(),fields:g.blocks}})})
+      .then(function(r){return r.json();}).then(function(j){ if(btn)btn.disabled=false;
+        if(j&&j.ok){ msg.className="cf-msg ok"; msg.textContent="Saved ✓ — added to the queue below for the Notion team."; clearLeftForm(); renderQueue(); }
+        else { msg.className="cf-msg err"; msg.textContent="Could not save — try again."; }
+      }).catch(function(){ if(btn)btn.disabled=false; msg.className="cf-msg err"; msg.textContent="Network error — not saved."; });
+  }
+  function subCard(s){
+    var rows=(s.fields||[]).map(function(f){ return "<div class='sc-row'><span class='sc-k'>"+esc(f.label)+"</span><span class='sc-v'>"+esc(f.value)+"</span></div>"; }).join("");
+    return "<div class='cf-scard'><div class='sc-top'><span class='sc-title'>"+esc(s.client||"Untitled client")+"</span><span class='sc-ts'>"+esc(s.ts||"")+"</span></div>"+rows
+      +"<div class='sc-actions'><button class='sc-btn' data-copy='"+esc(s.id)+"'>Copy details</button><button class='sc-btn sc-del' data-del='"+esc(s.id)+"'>Done — delete</button></div></div>";
+  }
+  var QUEUE=[];
+  function renderQueue(){
+    var el=$("cf_queue"); if(!el) return;
+    fetch("/api/submissions",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){
+      QUEUE=(j&&j.list)||[];
+      if(!QUEUE.length){ el.innerHTML="<div class='cf-queue-h'>Pending submissions</div><div class='cf-queue-empty'>Nothing pending. Saved client forms appear here for the Notion team to add, then delete.</div>"; return; }
+      el.innerHTML="<div class='cf-queue-h'>Pending — add to Notion, then delete <span class='cf-qct'>"+QUEUE.length+"</span></div>"+QUEUE.slice().reverse().map(subCard).join("");
+      Array.prototype.forEach.call(el.querySelectorAll("[data-del]"),function(b){ b.addEventListener("click",function(){ if(confirm("Delete this submission? Do this only after you've added it to Notion.")){ fetch("/api/submissions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"del",id:b.getAttribute("data-del")})}).then(function(){ renderQueue(); }); } }); });
+      Array.prototype.forEach.call(el.querySelectorAll("[data-copy]"),function(b){ b.addEventListener("click",function(){ var id=b.getAttribute("data-copy"); var s=QUEUE.filter(function(x){return x.id===id;})[0]; if(!s)return; var txt=(s.client||"")+"\n"+(s.fields||[]).map(function(f){return f.label+": "+f.value;}).join("\n"); if(navigator.clipboard){ navigator.clipboard.writeText(txt); b.textContent="Copied ✓"; setTimeout(function(){b.textContent="Copy details";},1500); } }); });
+    }).catch(function(){ el.innerHTML="<div class='cf-queue-empty'>Couldn't load the queue.</div>"; });
   }
 
   // read one answer by question id (string, or array for multi)
@@ -2030,31 +2080,28 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       builds:ans("workflows"), runs:ans("runs"), docTypes:ans("doctypes")
     };
   }
-  // best-effort: log/append the intake to the Notion card (non-blocking)
-  function boqNotion(){
-    var right=collect("right");
-    function append(){ fetch("/api/append-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pageId:CREATED.pageId,heading:"BOQ requested — "+new Date().toLocaleDateString(),blocks:right.blocks})}).catch(function(){}); }
-    if(CREATED&&CREATED.pageId){ append(); return; }
-    var left=collect("left");
-    if(!left.mapped.Client && !left.titleVal) return;   // no client name → skip Notion silently
-    fetch("/api/create-client",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mapped:left.mapped,defaults:{Stage:"Requirement Gathering",Status:"To be Picked"},blocks:left.blocks})})
-      .then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ CREATED={pageId:j.id,url:j.url}; append(); } }).catch(function(){});
-  }
-  // Request a BOQ → prepare the BOQ from these details using Card 1, and show it
+  // Request a BOQ (Card 6) → prepare the BOQ from these details using Card 1, and show it
   function requestBOQ(){
     if(window.__applyBOQInputs) window.__applyBOQInputs(boqMap());
-    try{ boqNotion(); }catch(e){}
     if(window.__showView) window.__showView("app-bom");
   }
 
+  // ── init / wiring ──
   var loadedOnce=false;
-  window.__clientEnter=function(){ if(loadedOnce) return; loadedOnce=true; loadDef(render); };
-  if($("card_client")){
-    $("card_client").addEventListener("click",function(){ if(window.__showView) window.__showView("app-client"); });
-    $("card_client").addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(window.__showView) window.__showView("app-client"); } });
-  }
+  function startQueuePoll(){ setInterval(function(){ if(document.body.className.indexOf("app-client")>=0 && $("cf_queue")) renderQueue(); }, 15000); }
+  function ensureLoaded(cb){ if(loadedOnce){ cb&&cb(); return; } loadedOnce=true; loadDef(function(){ renderAll(); startQueuePoll(); cb&&cb(); }); }
+  window.__clientEnter=function(){ ensureLoaded(function(){ renderQueue(); }); };
+  window.__boqEnter=function(){ ensureLoaded(); };
+  function toggleEdit(){ EDIT=!EDIT; document.body.classList.toggle("cf-edit",EDIT); var lbl=EDIT?"✓ Done editing":"✎ Customize form"; if($("cf_customize"))$("cf_customize").innerHTML=lbl; if($("boq_customize"))$("boq_customize").innerHTML=lbl; renderAll(); }
+
+  function cardOpen(id,view){ var c=$(id); if(!c) return;
+    c.addEventListener("click",function(){ if(window.__showView) window.__showView(view); });
+    c.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(window.__showView) window.__showView(view); } }); }
+  cardOpen("card_client","app-client"); cardOpen("card_boq6","app-boq");
   if($("cf_home")) $("cf_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
-  if($("cf_customize")) $("cf_customize").addEventListener("click",function(){ EDIT=!EDIT; document.body.classList.toggle("cf-edit",EDIT); $("cf_customize").innerHTML=EDIT?"✓ Done editing":"✎ Customize form"; render(); });
+  if($("boq_home")) $("boq_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
+  if($("cf_customize")) $("cf_customize").addEventListener("click",toggleEdit);
+  if($("boq_customize")) $("boq_customize").addEventListener("click",toggleEdit);
   if($("cf_modal")) $("cf_modal").addEventListener("click",function(e){ if(e.target===$("cf_modal")) closeEd(); });
 })();
 </script>

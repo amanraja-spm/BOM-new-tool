@@ -358,6 +358,11 @@ const FORMDEF_FILE = process.env.FORMDEF_FILE || path.join(__dirname, "form-def.
 function formDefLoad() { try { return JSON.parse(fs.readFileSync(FORMDEF_FILE, "utf8")); } catch (e) { return null; } }
 function formDefSave(d) { fs.writeFileSync(FORMDEF_FILE, JSON.stringify(d)); }
 
+// Shared "Save to Notion" submission queue (file store; the Notion team processes + deletes)
+const SUBMISSIONS_FILE = process.env.SUBMISSIONS_FILE || path.join(__dirname, "submissions.json");
+function subsLoad() { try { var a = JSON.parse(fs.readFileSync(SUBMISSIONS_FILE, "utf8")); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function subsSave(a) { fs.writeFileSync(SUBMISSIONS_FILE, JSON.stringify(a)); }
+
 function njson(res, code, obj) {
   res.writeHead(code, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,PUT,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Cache-Control": "no-store" });
@@ -390,7 +395,30 @@ const server = http.createServer(async (req, res) => {
     }
     njson(res, 405, { error: "method not allowed" }); return;
   }
-  // ── Card 3: create a new client card in Notion from a submission ──
+  // ── Card 3: shared "Save to Notion" submission queue ──
+  if (u.pathname === "/api/submissions") {
+    if (req.method === "OPTIONS") { njson(res, 204, {}); return; }
+    if (req.method === "GET") { njson(res, 200, { list: subsLoad() }); return; }
+    if (req.method === "POST") {
+      readBody(req, (b) => {
+        try {
+          const p = JSON.parse(b || "{}");
+          let list = subsLoad();
+          if (p.action === "add" && p.submission) {
+            const s = Object.assign({ id: "s" + Date.now().toString(36) + Math.floor(Math.random() * 1e4), savedAt: new Date().toISOString() }, p.submission);
+            list.push(s); if (list.length > 500) list = list.slice(-500);
+            subsSave(list); njson(res, 200, { ok: true, id: s.id });
+          } else if (p.action === "del" && p.id) {
+            subsSave(list.filter((x) => x.id !== p.id)); njson(res, 200, { ok: true });
+          } else { njson(res, 400, { error: "bad request" }); }
+        } catch (e) { njson(res, 400, { error: String((e && e.message) || e) }); }
+      });
+      return;
+    }
+    njson(res, 405, { error: "method not allowed" }); return;
+  }
+
+  // ── Card 3: create a new client card in Notion from a submission (legacy/API) ──
   if (u.pathname === "/api/create-client") {
     if (req.method === "OPTIONS") { njson(res, 204, {}); return; }
     if (req.method !== "POST") { njson(res, 405, { error: "method not allowed" }); return; }
