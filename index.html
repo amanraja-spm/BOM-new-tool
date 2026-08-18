@@ -262,7 +262,7 @@ body:not(.app-bom) > .layout{display:none !important}
 .tk-title{font-size:16px;font-weight:750;display:flex;align-items:center;gap:8px;flex-shrink:0}
 .tk-src{margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;background:rgba(255,255,255,.14);color:#fff}
 .tk-src.live{background:rgba(154,245,226,.2);color:#d6fff4}
-.tk-src.snap{background:rgba(255,201,163,.2);color:#ffe0cb}
+.tk-src.snap{background:rgba(180,214,250,.22);color:#dcebff}
 .tk-refresh{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;font-family:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:7px 12px;cursor:pointer}
 .tk-refresh:hover{background:rgba(255,255,255,.26)}.tk-refresh svg{width:14px;height:14px}
 .tk-refresh.spin svg{animation:tkspin 1s linear infinite}
@@ -1737,6 +1737,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var $=function(id){return document.getElementById(id);};
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
   var NOTION_URL="https://app.notion.com/p/3ad76329d1e1801283f1f2580ba1c088?v=34f76329d1e183ed8a1c08bdc476e0ae";
+  var SNAP_AS_OF="2026-08-18"; // date this snapshot was pulled from Notion; refreshed by the daily task
 
   // Pipeline order (open stages, then Closed)
   var STAGES=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
@@ -1877,11 +1878,12 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
     var holdPanel="<div class='tk-panel'><h3>On hold / not started <span class='cnt'>· "+onhold.length+"</span></h3>"+(onhold.length?"<div class='tk-hold'>"+onhold.map(function(r){return "<span class='h'>"+esc(r.client)+(r.product?" · "+esc(r.product):"")+"</span>";}).join("")+"</div>":"<div class='tk-empty'>—</div>")+"</div>";
 
+    var asOf=parse(SNAP_AS_OF); var asOfTxt=asOf?fmt(asOf)+", "+asOf.getFullYear():SNAP_AS_OF;
     $("tk_dash").innerHTML=kpis+hero+"<div class='tk-grid2'><div>"+att+deliv+"</div><div>"+pipe+work+holdPanel+"</div></div>"
-      +"<div class='tk-updated'>Source: "+(SOURCE==="notion"?"live Notion":"baked-in snapshot")+(UPDATED?" · updated "+new Date(UPDATED).toLocaleString():"")+"</div>";
+      +"<div class='tk-updated'>Source: Notion Deployment Tracker · "+(SOURCE==="notion"?"live"+(UPDATED?" · updated "+new Date(UPDATED).toLocaleString():""):"auto-synced daily · as of "+asOfTxt)+"</div>";
 
     // source pill
-    var sp=$("tk_src"); if(sp){ sp.className="tk-src "+(SOURCE==="notion"?"live":"snap"); sp.textContent=SOURCE==="notion"?"● Live from Notion":"● Snapshot (connect Notion for live)"; }
+    var sp=$("tk_src"); if(sp){ sp.className="tk-src "+(SOURCE==="notion"?"live":"snap"); sp.textContent=SOURCE==="notion"?"● Live from Notion":"● Synced from Notion · as of "+asOfTxt; }
 
     // enrich late items with their latest Notion comment (why it's delaying)
     if(SOURCE==="notion"){
