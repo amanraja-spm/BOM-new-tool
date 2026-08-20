@@ -362,7 +362,40 @@ a.cp-name:hover{color:var(--brand);text-decoration:underline}
 .cp-grp .ln{flex:1;height:1px;background:var(--line-2)}
 /* on-hold compact chips */
 .tk-hold{display:flex;flex-wrap:wrap;gap:8px}
-.tk-hold .h{font-size:12px;font-weight:650;color:var(--ink-2);background:var(--line-2);border-radius:7px;padding:5px 10px}
+.tk-hold .h{font-size:12px;font-weight:650;color:var(--ink-2);background:var(--line-2);border-radius:7px;padding:5px 10px;cursor:pointer;transition:background .12s}
+.tk-hold .h:hover{background:var(--line)}
+
+/* clickable affordance */
+.cp{cursor:pointer;transition:box-shadow .15s ease,transform .15s ease,border-color .15s ease}
+.cp:hover{box-shadow:0 8px 22px rgba(16,24,40,.10);transform:translateY(-2px);border-color:var(--line)}
+.tk-item{cursor:pointer;transition:box-shadow .15s ease}
+.tk-item:hover{box-shadow:0 5px 16px rgba(16,24,40,.09)}
+.tk-mini .row{cursor:pointer;border-radius:6px;padding-left:6px;padding-right:6px;margin:0 -6px}
+.tk-mini .row:hover{background:var(--bg)}
+
+/* per-client detail modal */
+.dt{padding:22px 24px 20px}
+.dt-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:15px}
+.dt-name{font-size:19px;font-weight:850;color:var(--ink);line-height:1.2}
+.dt-sub{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.dt-badge{margin-left:auto;font-size:11px;font-weight:800;padding:4px 11px;border-radius:7px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;flex-shrink:0}
+.dt-badge.late{background:var(--warn-bg);color:var(--warn)}.dt-badge.soon{background:#fff3e3;color:#b47900}.dt-badge.ok{background:#e7f7ef;color:#127a4a}.dt-badge.hold{background:var(--line-2);color:var(--ink-2)}.dt-badge.done{background:#e7f7ef;color:#127a4a}
+.dt-track{display:flex;gap:3px;margin-bottom:6px}
+.dt-seg{flex:1;height:8px;border-radius:3px;background:var(--line-2)}
+.dt-seg.on{background:var(--brand-500)}
+.dt-pct{font-size:11px;font-weight:700;color:var(--ink-3);margin-bottom:14px}
+.dt-note{font-size:12.5px;color:var(--ink-2);background:var(--warn-bg);border-radius:9px;padding:10px 12px;margin-bottom:15px;line-height:1.55}
+.dt-note b{color:var(--ink)}
+.dt-row{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-2);font-size:13px}
+.dt-row:last-child{border-bottom:none}
+.dt-k{color:var(--ink-3);font-weight:700}
+.dt-v{color:var(--ink);font-weight:600;word-break:break-word}
+.dt-v a{color:var(--brand);font-weight:700;text-decoration:none}.dt-v a:hover{text-decoration:underline}
+.dt-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}
+.dt-open{font-size:13px;font-weight:700;color:var(--brand);text-decoration:none}
+.dt-open:hover{text-decoration:underline}
+.dt-close{border:none;background:var(--line-2);color:var(--ink-2);font-family:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:9px 18px;cursor:pointer}
+.dt-close:hover{background:var(--line)}
 
 /* ── Add a New Client (Card 3) + Request a BOQ (Card 6) — intake forms ── */
 #clientform,#boqform{flex-direction:column;height:100vh;background:var(--bg)}
@@ -781,6 +814,7 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
     <a class="tk-open" id="tk_open" href="https://app.notion.com/p/3ad76329d1e1801283f1f2580ba1c088?v=34f76329d1e183ed8a1c08bdc476e0ae" target="_blank" rel="noopener">Open in Notion <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
   </div>
   <div class="tk-body"><div class="tk-dash" id="tk_dash"></div></div>
+  <div class="tk-modal" id="tk_modal"><div class="tk-modal-card"></div></div>
 </section>
 
 <!-- ── Add a New Client (Card 3) — sales intake form ── -->
@@ -1771,6 +1805,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   function parse(s){ if(!s) return null; var d=new Date(String(s).slice(0,10)+"T00:00:00"); return isNaN(d)?null:d; }
   function fmt(d){ if(!d) return ""; return MON[d.getMonth()]+" "+d.getDate(); }
+  function fmtLong(d){ if(!d) return ""; return MON[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear(); }
   function today(){ var t=new Date(); return new Date(t.getFullYear(),t.getMonth(),t.getDate()); }
   function days(a,b){ return Math.round((b-a)/86400000); }
 
@@ -1793,6 +1828,43 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     return "";
   }
   function ownerOf(r){ return r.stageOwner||r.poc||""; }
+
+  // ── per-client detail popup (all fields from the Notion record) ──
+  function dRow(k,v){ if(v==null||v==="") return ""; return "<div class='dt-row'><span class='dt-k'>"+esc(k)+"</span><span class='dt-v'>"+v+"</span></div>"; }
+  function openDetail(r){
+    if(!r) return;
+    var c=r.__c||classify(r);
+    var badge=c.cat==="late"?"<span class='dt-badge late'>Delayed "+c.lateDays+"d</span>"
+      :c.cat==="soon"?"<span class='dt-badge soon'>Due in "+c.inDays+"d</span>"
+      :c.cat==="onhold"?"<span class='dt-badge hold'>On hold</span>"
+      :c.cat==="closed"?"<span class='dt-badge done'>Delivered</span>"
+      :c.cat==="notime"?"<span class='dt-badge ok'>In pipeline</span>"
+      :"<span class='dt-badge ok'>On track</span>";
+    var idx=pipeIdx(r.stage), filled=idx<0?0:idx+1, pct=idx<0?0:Math.round(filled/PIPE.length*100);
+    var track="";
+    if(c.cat!=="onhold"){ var segs=""; for(var i=0;i<PIPE.length;i++){ segs+="<span class='dt-seg"+(i<filled?" on":"")+"'></span>"; }
+      track="<div class='dt-track'>"+segs+"</div><div class='dt-pct'>Stage "+(idx<0?0:filled)+" of "+PIPE.length+" · "+pct+"% through delivery pipeline</div>"; }
+    var rs=(c.cat==="late"||c.cat==="soon"||(c.cat==="ontrack"&&c.slip))?reason(r,c):"";
+    var note=rs?"<div class='dt-note'>"+rs+"</div>":"";
+    var rows=dRow("Product / Type",esc(r.product))
+      +dRow("Deployment method",esc(r.method))
+      +dRow("Current stage",esc(r.stage))
+      +dRow("Status",esc(r.status))
+      +dRow("POC",esc(r.poc))
+      +dRow("Stage owner",esc(r.stageOwner))
+      +dRow("Overall timeline",r.overall?fmtLong(parse(r.overall)):"")
+      +dRow("Stage due",r.stageTimeline?fmtLong(parse(r.stageTimeline)):"")
+      +dRow("Actual / projected completion",r.actual?fmtLong(parse(r.actual)):"")
+      +dRow("Doc link",r.docLink?"<a href='"+esc(r.docLink)+"' target='_blank' rel='noopener'>Open ↗</a>":"");
+    var html="<div class='dt'>"
+      +"<div class='dt-top'><div><div class='dt-name'>"+esc(r.client)+"</div><div class='dt-sub'>"+esc(r.product||"—")+"</div></div>"+badge+"</div>"
+      +track+note
+      +"<div class='dt-rows'>"+(rows||"<div class='tk-empty'>No further details recorded in Notion yet.</div>")+"</div>"
+      +"<div class='dt-foot'>"+(r.url?"<a class='dt-open' href='"+esc(r.url)+"' target='_blank' rel='noopener'>Open full record in Notion ↗</a>":"<span></span>")+"<button class='dt-close' data-close>Close</button></div>"
+      +"</div>";
+    var m=$("tk_modal"); if(!m) return; m.querySelector(".tk-modal-card").innerHTML=html; m.classList.add("on");
+  }
+  function closeDetail(){ var m=$("tk_modal"); if(m) m.classList.remove("on"); }
 
   var DATA=null, SOURCE="snapshot", UPDATED="";
 
@@ -1823,8 +1895,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     function item(r){ var c=r.__c; var cls=c.cat==="late"?"late":c.cat==="soon"?"soon":"slip";
       var badge=c.cat==="late"?"<span class='tk-badge late'>Delayed "+c.lateDays+"d</span>":c.cat==="soon"?"<span class='tk-badge soon'>Due "+c.inDays+"d</span>":"<span class='tk-badge slip'>Slipping "+c.slip+"d</span>";
       var own=ownerOf(r);
-      return "<div class='tk-item "+cls+"' data-page='"+esc(r.id||"")+"'>"
-        +"<div class='tk-i-top'>"+(r.url?"<a class='nm' href='"+esc(r.url)+"' target='_blank' rel='noopener'>"+esc(r.client)+"</a>":"<span class='nm'>"+esc(r.client)+"</span>")+badge
+      return "<div class='tk-item "+cls+"' data-page='"+esc(r.id||"")+"' data-ri='"+recs.indexOf(r)+"'>"
+        +"<div class='tk-i-top'><span class='nm'>"+esc(r.client)+"</span>"+badge
         +(r.stage?"<span class='tk-chip'>"+esc(r.stage)+"</span>":"")+(own?"<span class='tk-chip'>👤 "+esc(own)+"</span>":"")+(r.product?"<span class='tk-chip'>"+esc(r.product)+"</span>":"")+"</div>"
         +"<div class='tk-i-reason'>"+reason(r,c)+"</div>"
         +"<div class='tk-i-cmt' data-cmt style='display:none'></div></div>";
@@ -1850,7 +1922,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     // recently delivered
     var delivered=closed.slice().sort(function(a,b){ var da=parse(a.overall),db=parse(b.overall); return (db?db:0)-(da?da:0); });
     var deliv="<div class='tk-panel'><h3>Delivered <span class='cnt'>· "+closed.length+"</span></h3><div class='tk-mini'>"
-      +delivered.map(function(r){ return "<div class='row'><span class='d'></span><span class='n'>"+esc(r.client)+"</span><span class='m'>"+esc(r.product||"")+(r.overall?" · "+fmt(parse(r.overall)):"")+"</span></div>"; }).join("")+"</div></div>";
+      +delivered.map(function(r){ return "<div class='row' data-ri='"+recs.indexOf(r)+"'><span class='d'></span><span class='n'>"+esc(r.client)+"</span><span class='m'>"+esc(r.product||"")+(r.overall?" · "+fmt(parse(r.overall)):"")+"</span></div>"; }).join("")+"</div></div>";
 
     // ── CEO hero: every active client's pipeline progress + status at a glance ──
     function cpCard(r){ var c=r.__c, cat=c.cat, idx=pipeIdx(r.stage), filled=idx<0?0:idx+1;
@@ -1864,8 +1936,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
         :c.due?"<span class='cp-when'>Due "+fmt(c.due)+"</span>"
         :(r.overall?"<span class='cp-when'>Target "+fmt(parse(r.overall))+"</span>":"");
       var pct=idx<0?0:Math.round(filled/PIPE.length*100);
-      var nm=r.url?"<a class='cp-name' href='"+esc(r.url)+"' target='_blank' rel='noopener'>"+esc(r.client)+"</a>":"<span class='cp-name'>"+esc(r.client)+"</span>";
-      return "<div class='cp "+cat+"'>"
+      var nm="<span class='cp-name'>"+esc(r.client)+"</span>";
+      return "<div class='cp "+cat+"' data-ri='"+recs.indexOf(r)+"'>"
         +"<div class='cp-head'><span class='cp-dot'></span>"+nm+badge+"</div>"
         +"<div class='cp-sub'>"+(r.product?"<b>"+esc(r.product)+"</b>":"<b>—</b>")+(own?"<span>👤 "+esc(own)+"</span>":"")+"</div>"
         +"<div class='cp-track'>"+segs+"</div>"
@@ -1876,7 +1948,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     var legend="<div class='tk-legend'><span><i style='background:var(--warn)'></i>Delayed</span><span><i style='background:#e0a200'></i>Due ≤7d</span><span><i style='background:var(--ok)'></i>On track</span><span><i style='background:var(--brand-500)'></i>Early</span></div>";
     var hero="<div class='tk-panel tk-hero'><h3>Client progress <span class='cnt'>· "+active.length+" active</span>"+legend+"</h3>"+(active.length?heroBody:"<div class='tk-empty'>No active projects.</div>")+"</div>";
 
-    var holdPanel="<div class='tk-panel'><h3>On hold / not started <span class='cnt'>· "+onhold.length+"</span></h3>"+(onhold.length?"<div class='tk-hold'>"+onhold.map(function(r){return "<span class='h'>"+esc(r.client)+(r.product?" · "+esc(r.product):"")+"</span>";}).join("")+"</div>":"<div class='tk-empty'>—</div>")+"</div>";
+    var holdPanel="<div class='tk-panel'><h3>On hold / not started <span class='cnt'>· "+onhold.length+"</span></h3>"+(onhold.length?"<div class='tk-hold'>"+onhold.map(function(r){return "<span class='h' data-ri='"+recs.indexOf(r)+"'>"+esc(r.client)+(r.product?" · "+esc(r.product):"")+"</span>";}).join("")+"</div>":"<div class='tk-empty'>—</div>")+"</div>";
 
     var asOf=parse(SNAP_AS_OF); var asOfTxt=asOf?fmt(asOf)+", "+asOf.getFullYear():SNAP_AS_OF;
     $("tk_dash").innerHTML=kpis+hero+"<div class='tk-grid2'><div>"+att+deliv+"</div><div>"+pipe+work+holdPanel+"</div></div>"
@@ -1915,6 +1987,17 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   if($("tk_home")) $("tk_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
   if($("tk_refresh")) $("tk_refresh").addEventListener("click",load);
+
+  // open the per-client detail popup when any client card/row is clicked
+  if($("tk_dash")) $("tk_dash").addEventListener("click",function(e){
+    var el=e.target.closest("[data-ri]"); if(!el) return;
+    if(e.target.closest("a")) return; // let real links work
+    var ri=parseInt(el.getAttribute("data-ri"),10);
+    if(DATA&&DATA[ri]) openDetail(DATA[ri]);
+  });
+  var mdl=$("tk_modal");
+  if(mdl) mdl.addEventListener("click",function(e){ if(e.target===mdl||e.target.closest("[data-close]")) closeDetail(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeDetail(); });
 })();
 </script>
 
