@@ -201,11 +201,13 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 #tracker{display:none}
 #clientform{display:none}
 #boqform{display:none}
+#gantt{display:none}
 #documents{display:none}
 body.home #welcome{display:flex}
 body.app-tracker #tracker{display:flex}
 body.app-client #clientform{display:flex}
 body.app-boq #boqform{display:flex}
+body.app-gantt #gantt{display:flex}
 body.app-docs #documents{display:flex}
 body:not(.app-bom) > header{display:none !important}
 body:not(.app-bom) > .layout{display:none !important}
@@ -481,6 +483,57 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
 .cf-ed-foot .save{background:var(--brand);color:#fff}.cf-ed-foot .cancel{background:var(--line-2);color:var(--ink-2)}
 @media(max-width:560px){.cf-wrap{padding:16px}}
 
+/* ── Gantt Chart (Card 4) ── */
+#gantt{flex-direction:column;height:100vh;background:var(--bg)}
+.gt-wrap{padding:26px 26px 60px;max-width:920px;margin:0 auto;width:100%}
+.gt-intro{font-size:13.5px;color:var(--ink-2);line-height:1.6;margin-bottom:20px}
+.gt-card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:18px}
+.gt-card h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--brand);margin-bottom:16px}
+.gt-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+@media(max-width:640px){.gt-fields{grid-template-columns:1fr}}
+.gt-f label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.gt-f input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box}
+.gt-f input:focus{border-color:var(--brand)}
+.gt-f .req{color:var(--warn)}
+/* stage table */
+.gt-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.gt-tbl th{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);text-align:left;padding:0 8px 9px;border-bottom:1px solid var(--line)}
+.gt-tbl td{padding:6px 8px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.gt-tbl tr.off td{opacity:.42}
+.gt-tbl input[type=text]{width:100%;padding:7px 9px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box}
+.gt-tbl input[type=number]{width:64px;padding:7px 8px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;outline:none;text-align:center}
+.gt-tbl input:focus{border-color:var(--brand)}
+.gt-tbl .ck{width:16px;height:16px;accent-color:var(--brand);cursor:pointer}
+.gt-th-inc,.gt-td-inc{width:34px;text-align:center}
+.gt-th-par,.gt-td-par{width:74px;text-align:center}
+.gt-th-days,.gt-td-days{width:72px;text-align:center}
+.gt-th-x,.gt-td-x{width:30px;text-align:center}
+.gt-del{border:none;background:none;color:var(--ink-3);font-size:17px;cursor:pointer;line-height:1;padding:2px 4px;border-radius:6px}
+.gt-del:hover{background:var(--warn-bg);color:var(--warn)}
+.gt-add{margin-top:14px;display:inline-flex;align-items:center;gap:7px;border:1.5px dashed var(--line);background:var(--bg);color:var(--ink-2);font-family:inherit;font-size:13px;font-weight:700;border-radius:10px;padding:9px 16px;cursor:pointer}
+.gt-add:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-50)}
+.gt-hint{font-size:11.5px;color:var(--ink-3);margin-top:8px}
+.gt-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:6px}
+.gt-summary{font-size:13px;color:var(--ink-2)}
+.gt-summary b{color:var(--ink)}
+.gt-gen{background:var(--brand);color:#fff;border:none;border-radius:11px;padding:13px 28px;font-family:inherit;font-size:14.5px;font-weight:750;cursor:pointer;box-shadow:var(--shadow-sm);display:inline-flex;align-items:center;gap:9px}
+.gt-gen:hover{background:var(--brand-600)}
+.gt-gen:disabled{opacity:.55;cursor:default}
+.gt-gen svg{width:17px;height:17px}
+.gt-msg{font-size:13px;font-weight:600;margin-top:12px}
+.gt-msg.ok{color:var(--ok)}.gt-msg.err{color:var(--warn)}
+/* live preview */
+.gt-prev{overflow:auto;border:1px solid var(--line-2);border-radius:10px;margin-top:4px}
+.gt-ptable{border-collapse:collapse;font-size:11px;white-space:nowrap}
+.gt-ptable td,.gt-ptable th{border:1px solid var(--line-2);padding:3px 6px}
+.gt-ptable th{background:#f4f2f7;font-weight:700;color:var(--ink-2);text-align:center;font-size:10px}
+.gt-ptable .nm{text-align:left;font-weight:600;color:var(--ink);position:sticky;left:0;background:#fff;min-width:190px;max-width:190px;overflow:hidden;text-overflow:ellipsis}
+.gt-ptable tr.ph .nm{background:#fde9d9;font-weight:800}
+.gt-ptable tr.ph td{background:#fdf1e8}
+.gt-ptable .bar{background:var(--brand-500)}
+.gt-ptable tr.ph .bar{background:#f0a366}
+.gt-ptable .mh{background:#ece8f2;font-weight:800;color:var(--ink);text-align:center}
+
 /* Print → Save as PDF: show only the report, full width, keep colors */
 @media print{
   @page{margin:14mm}
@@ -538,10 +591,11 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
         <span class="wl-cta">Open form <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
-      <div class="wl-card locked" aria-disabled="true">
-        <span class="wl-badge">Coming soon</span>
-        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>
+      <div class="wl-card active" id="card_gantt" role="button" tabindex="0">
+        <span class="wl-badge live">Live</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h10M3 9h14M3 14h8M3 19h12"/></svg></span>
         <h3>Gantt Chart</h3>
+        <span class="wl-cta">Open tool <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
       <div class="wl-card active" id="card_docs" role="button" tabindex="0">
@@ -841,6 +895,18 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
     <button class="tk-refresh" id="boq_customize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Customize form</button>
   </div>
   <div class="tk-body"><div class="cf-wrap" id="boq_wrap"></div></div>
+</section>
+
+<!-- ── Gantt Chart (Card 4) — project-plan builder + Excel export ── -->
+<section id="gantt">
+  <div class="tk-top">
+    <button class="tk-home" id="gt_home" title="Back to all tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+    </button>
+    <div class="tk-title">📊 <span>Gantt Chart</span></div>
+    <button class="tk-refresh" id="gt_reset" title="Reset stages to the standard template"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9 9 0 017 3.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-7-3.3L3 16"/><path d="M3 21v-5h5"/></svg> Reset template</button>
+  </div>
+  <div class="tk-body"><div class="gt-wrap" id="gt_wrap"></div></div>
 </section>
 
 <!-- ── Documents (Card 5) — Google Drive folder embed ── -->
@@ -1543,6 +1609,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     if(v==="app-tracker" && window.__trackerEnter) window.__trackerEnter();
     if(v==="app-client" && window.__clientEnter) window.__clientEnter();
     if(v==="app-boq" && window.__boqEnter) window.__boqEnter();
+    if(v==="app-gantt" && window.__ganttEnter) window.__ganttEnter();
   }
   window.__showView = showView;                 // used by the tracker module
   if(!document.body.classList.contains("home")) document.body.classList.add("home");
@@ -2261,6 +2328,189 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   if($("cf_customize")) $("cf_customize").addEventListener("click",toggleEdit);
   if($("boq_customize")) $("boq_customize").addEventListener("click",toggleEdit);
   if($("cf_modal")) $("cf_modal").addEventListener("click",function(e){ if(e.target===$("cf_modal")) closeEd(); });
+})();
+</script>
+
+<!-- ══════════ Gantt Chart (Card 4) — project-plan builder + Excel export ══════════ -->
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+  var LS="irame_gantt_def_v1";
+  // Standard delivery template — derived from an ideal project plan (stages + typical working-day durations)
+  var TEMPLATE=[
+    {name:"Requirement gathering", owner:"Client + PwC + Irame", days:5, parallel:false},
+    {name:"Infra provisioning (client end)", owner:"Client", days:5, parallel:false},
+    {name:"Reconciliation logic understanding", owner:"Client + PwC + Irame", days:16, parallel:true},
+    {name:"Infra validation", owner:"Irame", days:2, parallel:false},
+    {name:"Deployment on Dev environment", owner:"Irame", days:6, parallel:false},
+    {name:"Data source integration", owner:"Irame", days:4, parallel:false},
+    {name:"Application testing (UAT)", owner:"Client", days:5, parallel:false},
+    {name:"Workflow creation & UAT (Dev)", owner:"Irame + PwC", days:10, parallel:false},
+    {name:"Go-live (move to Prod)", owner:"Client + Irame", days:6, parallel:false},
+    {name:"UAT in Prod & final go-live", owner:"Client + Irame + PwC", days:9, parallel:false}
+  ];
+
+  var META={project:"",client:"",start:""};
+  var STAGES=null;
+
+  function clone(a){ return JSON.parse(JSON.stringify(a)); }
+  function fresh(){ return clone(TEMPLATE).map(function(s){ s.include=true; return s; }); }
+  function load(){ try{ var raw=localStorage.getItem(LS); if(raw){ var o=JSON.parse(raw); if(o&&o.stages&&o.stages.length){ STAGES=o.stages; if(o.meta){ META.project=o.meta.project||""; META.client=o.meta.client||""; META.start=o.meta.start||""; } return; } } }catch(e){}
+    STAGES=fresh(); }
+  function persist(){ try{ localStorage.setItem(LS, JSON.stringify({stages:STAGES, meta:META})); }catch(e){} }
+
+  // ── business-day date helpers (Mon–Fri) ──
+  function isWknd(d){ var g=d.getDay(); return g===0||g===6; }
+  function stripTime(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
+  function firstBiz(d){ var x=stripTime(d); while(isWknd(x)){ x.setDate(x.getDate()+1); } return x; }
+  function nextBiz(d){ var x=stripTime(d); do{ x.setDate(x.getDate()+1); }while(isWknd(x)); return x; }
+  function addBiz(start,days){ var x=firstBiz(start); var n=Math.max(1,days||1); for(var i=1;i<n;i++){ x=nextBiz(x); } return x; }
+  function bizDays(from,to){ var out=[]; var x=firstBiz(from); var end=stripTime(to); while(x<=end){ out.push(new Date(x)); x=nextBiz(x); } return out; }
+  function parseDate(s){ if(!s) return null; var d=new Date(s+"T00:00:00"); return isNaN(d)?null:d; }
+  var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var MONF=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  function fmt(d){ return MON[d.getMonth()]+" "+d.getDate(); }
+  function iso(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+
+  // ── schedule included stages sequentially; "parallel" runs alongside the previous mainline stage ──
+  function schedule(){
+    var start=parseDate(META.start); if(!start) return null;
+    var cursor=firstBiz(start), lastMainStart=null, out=[];
+    STAGES.forEach(function(s){ if(!s.include) return;
+      var st,en;
+      if(s.parallel && lastMainStart){ st=new Date(lastMainStart); en=addBiz(st,s.days); }
+      else { st=new Date(cursor); en=addBiz(st,s.days); cursor=nextBiz(en); lastMainStart=st; }
+      out.push({s:s,start:st,end:en});
+    });
+    return out;
+  }
+  function projSpan(sch){ var s=sch[0].start, e=sch[0].end; sch.forEach(function(r){ if(r.start<s)s=r.start; if(r.end>e)e=r.end; }); return {start:s,end:e}; }
+
+  // ── UI ──
+  function stageRow(s,i){
+    return "<tr class='"+(s.include?"":"off")+"' data-i='"+i+"'>"
+      +"<td class='gt-td-inc'><input class='ck' type='checkbox' data-inc "+(s.include?"checked":"")+"></td>"
+      +"<td><input type='text' data-name value='"+esc(s.name)+"'></td>"
+      +"<td><input type='text' data-owner value='"+esc(s.owner||"")+"'></td>"
+      +"<td class='gt-td-days'><input type='number' min='1' data-days value='"+(s.days||1)+"'></td>"
+      +"<td class='gt-td-par'><input class='ck' type='checkbox' data-par "+(s.parallel?"checked":"")+"></td>"
+      +"<td class='gt-td-x'><button class='gt-del' data-del title='Remove stage'>&times;</button></td>"
+    +"</tr>";
+  }
+  function render(){
+    var w=$("gt_wrap"); if(!w) return;
+    w.innerHTML=
+      "<div class='gt-intro'>Build a project timeline: choose the stages your project has and their durations in working days. Every field is editable — rename stages, change owners, adjust days, mark stages that run in parallel, and add or remove stages. Then generate the Gantt chart as an Excel file.</div>"
+      +"<div class='gt-card'><h3>Project details</h3><div class='gt-fields'>"
+        +"<div class='gt-f'><label>Project name <span class='req'>*</span></label><input id='gt_project' type='text' placeholder='e.g. PVR INOX — Auditify' value='"+esc(META.project)+"'></div>"
+        +"<div class='gt-f'><label>Client</label><input id='gt_client' type='text' placeholder='e.g. PVR INOX' value='"+esc(META.client)+"'></div>"
+        +"<div class='gt-f'><label>Project start date <span class='req'>*</span></label><input id='gt_start' type='date' value='"+esc(META.start)+"'></div>"
+        +"<div class='gt-f'><label>Working days</label><input type='text' value='Monday to Friday (weekends skipped)' disabled></div>"
+      +"</div></div>"
+      +"<div class='gt-card'><h3>Project stages</h3>"
+        +"<table class='gt-tbl'><thead><tr><th class='gt-th-inc'>On</th><th>Stage / line item</th><th>Owner</th><th class='gt-th-days'>Days</th><th class='gt-th-par'>Parallel</th><th class='gt-th-x'></th></tr></thead>"
+        +"<tbody id='gt_rows'>"+STAGES.map(stageRow).join("")+"</tbody></table>"
+        +"<button class='gt-add' id='gt_add'>+ Add stage</button>"
+        +"<div class='gt-hint'>“Parallel” runs a stage alongside the previous one (same start date) instead of waiting for it to finish.</div>"
+      +"</div>"
+      +"<div class='gt-card'><h3>Timeline preview</h3><div id='gt_preview'></div></div>"
+      +"<div class='gt-foot'><div class='gt-summary' id='gt_sum'></div>"
+        +"<button class='gt-gen' id='gt_gen'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2'/><path d='M3 9h18M9 9v12'/></svg> Generate Gantt (Excel)</button></div>"
+      +"<div class='gt-msg' id='gt_msg'></div>";
+    bind(); renderPreview(); summary();
+  }
+  function bind(){
+    ["gt_project","gt_client","gt_start"].forEach(function(id){ var el=$(id); if(el) el.addEventListener("input",function(){ META.project=$("gt_project").value; META.client=$("gt_client").value; META.start=$("gt_start").value; persist(); renderPreview(); summary(); }); });
+    var body=$("gt_rows");
+    if(body){
+      body.addEventListener("input",function(e){ var tr=e.target.closest("tr"); if(!tr) return; var s=STAGES[+tr.getAttribute("data-i")]; if(!s) return;
+        if(e.target.hasAttribute("data-name")) s.name=e.target.value;
+        else if(e.target.hasAttribute("data-owner")) s.owner=e.target.value;
+        else if(e.target.hasAttribute("data-days")) s.days=Math.max(1,parseInt(e.target.value,10)||1);
+        persist(); renderPreview(); summary();
+      });
+      body.addEventListener("change",function(e){ var tr=e.target.closest("tr"); if(!tr) return; var s=STAGES[+tr.getAttribute("data-i")]; if(!s) return;
+        if(e.target.hasAttribute("data-inc")){ s.include=e.target.checked; tr.classList.toggle("off",!s.include); }
+        else if(e.target.hasAttribute("data-par")){ s.parallel=e.target.checked; }
+        persist(); renderPreview(); summary();
+      });
+      body.addEventListener("click",function(e){ var b=e.target.closest("[data-del]"); if(!b) return; var tr=b.closest("tr"); STAGES.splice(+tr.getAttribute("data-i"),1); persist(); render(); });
+    }
+    if($("gt_add")) $("gt_add").addEventListener("click",function(){ STAGES.push({name:"New stage",owner:"",days:3,parallel:false,include:true}); persist(); render(); });
+    if($("gt_gen")) $("gt_gen").addEventListener("click",generate);
+  }
+  function summary(){ var el=$("gt_sum"); if(!el) return; var sch=schedule();
+    if(!sch||!sch.length){ el.innerHTML="Add a start date and select at least one stage."; return; }
+    var sp=projSpan(sch); el.innerHTML="<b>"+sch.length+"</b> stages · <b>"+fmt(sp.start)+"</b> → <b>"+fmt(sp.end)+", "+sp.end.getFullYear()+"</b>"; }
+  function renderPreview(){ var host=$("gt_preview"); if(!host) return; var sch=schedule();
+    if(!sch||!sch.length){ host.innerHTML="<div class='gt-hint'>Set a start date and include some stages to preview the timeline.</div>"; return; }
+    var sp=projSpan(sch), days=bizDays(sp.start,sp.end);
+    var mh="",i=0; while(i<days.length){ var j=i; while(j+1<days.length && days[j+1].getMonth()===days[i].getMonth()) j++; mh+="<th class='mh' colspan='"+(j-i+1)+"'>"+MON[days[i].getMonth()]+" "+days[i].getFullYear()+"</th>"; i=j+1; }
+    var dn=days.map(function(d){return "<th>"+d.getDate()+"</th>";}).join("");
+    var body=sch.map(function(r){ var s0=stripTime(r.start),e0=stripTime(r.end);
+      var cells=days.map(function(d){ var on=d>=s0&&d<=e0; return "<td class='"+(on?"bar":"")+"'></td>"; }).join("");
+      return "<tr class='ph'><td class='nm' title='"+esc(r.s.name)+"'>"+esc(r.s.name)+"</td>"+cells+"</tr>"; }).join("");
+    host.innerHTML="<div class='gt-prev'><table class='gt-ptable'><thead><tr><th class='nm'></th>"+mh+"</tr><tr><th class='nm'>Stage</th>"+dn+"</tr></thead><tbody>"+body+"</tbody></table></div>";
+  }
+
+  // ── Excel export (mirrors the reference kick-off Gantt: peach stage bands, month headers, business-day bars) ──
+  function buildExcel(sch){
+    var wb=new ExcelJS.Workbook(); wb.creator="Irame";
+    var ws=wb.addWorksheet("Project Plan",{views:[{state:"frozen",xSplit:6,ySplit:4}]});
+    var sp=projSpan(sch), days=bizDays(sp.start,sp.end);
+    ws.getColumn(1).width=6; ws.getColumn(2).width=44; ws.getColumn(3).width=22; ws.getColumn(4).width=12; ws.getColumn(5).width=12; ws.getColumn(6).width=7;
+    for(var c=0;c<days.length;c++){ ws.getColumn(7+c).width=3.4; }
+    ws.mergeCells(1,1,1,6); var t=ws.getCell(1,1); t.value=(META.project||"Project")+" — Gantt Plan"; t.font={bold:true,size:14,color:{argb:"FF16395C"}};
+    ws.mergeCells(2,1,2,6); var t2=ws.getCell(2,1); t2.value=(META.client?("Client: "+META.client+"     "):"")+"Generated "+fmt(new Date())+", "+new Date().getFullYear(); t2.font={size:9,color:{argb:"FF6B7280"}};
+    var heads=["ID","Stage / Line item","Owner","Start","End","Days"];
+    heads.forEach(function(h,i){ var cell=ws.getCell(4,i+1); cell.value=h; cell.font={bold:true,size:9,color:{argb:"FFFFFFFF"}}; cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF2E6DB4"}}; cell.alignment={vertical:"middle"}; });
+    var mstart=0;
+    for(var i=0;i<days.length;i++){ var col=7+i;
+      var dn=ws.getCell(4,col); dn.value=days[i].getDate(); dn.font={bold:true,size:8}; dn.alignment={horizontal:"center"}; dn.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF4F2F7"}};
+      if(i===days.length-1 || days[i+1].getMonth()!==days[i].getMonth()){
+        ws.mergeCells(3,7+mstart,3,col); var mc=ws.getCell(3,7+mstart); mc.value=MONF[days[i].getMonth()]+" "+days[i].getFullYear(); mc.font={bold:true,size:9,color:{argb:"FF16395C"}}; mc.alignment={horizontal:"center"}; mc.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFECE8F2"}}; mstart=i+1;
+      }
+    }
+    sch.forEach(function(r,ri){ var row=5+ri;
+      ws.getCell(row,1).value=ri+1; ws.getCell(row,2).value=r.s.name; ws.getCell(row,3).value=r.s.owner||"";
+      ws.getCell(row,4).value=fmt(r.start); ws.getCell(row,5).value=fmt(r.end); ws.getCell(row,6).value=r.s.days;
+      for(var c=1;c<=6;c++){ var cc=ws.getCell(row,c); cc.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFFDE9D9"}}; cc.font={bold:c<=2,size:9}; cc.alignment={vertical:"middle",wrapText:c===2}; }
+      ws.getCell(row,1).alignment={horizontal:"center",vertical:"middle"}; ws.getCell(row,6).alignment={horizontal:"center",vertical:"middle"};
+      var s0=stripTime(r.start),e0=stripTime(r.end);
+      for(var k=0;k<days.length;k++){ if(days[k]>=s0&&days[k]<=e0){ ws.getCell(row,7+k).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF2E6DB4"}}; } }
+    });
+    var lastRow=4+sch.length, lastCol=6+days.length, thin={style:"thin",color:{argb:"FFE5E7EB"}};
+    for(var rr=4;rr<=lastRow;rr++){ for(var cc=1;cc<=lastCol;cc++){ ws.getCell(rr,cc).border={top:thin,left:thin,bottom:thin,right:thin}; } }
+    ws.getRow(4).height=16;
+    return wb.xlsx.writeBuffer().then(function(buf){
+      var blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+      var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=(META.project||"project").replace(/[^\w\-]+/g,"_")+"_gantt.xlsx";
+      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500);
+    });
+  }
+  function generate(){
+    var msg=$("gt_msg");
+    META.project=($("gt_project").value||"").trim(); META.client=($("gt_client").value||"").trim(); META.start=$("gt_start").value;
+    if(!META.project){ msg.className="gt-msg err"; msg.textContent="Please enter a project name."; return; }
+    if(!META.start){ msg.className="gt-msg err"; msg.textContent="Please choose a project start date."; return; }
+    var sch=schedule(); if(!sch||!sch.length){ msg.className="gt-msg err"; msg.textContent="Please include at least one stage."; return; }
+    persist();
+    if(typeof ExcelJS==="undefined"){ msg.className="gt-msg err"; msg.textContent="Excel library didn’t load — check your connection and retry."; return; }
+    msg.className="gt-msg"; msg.textContent="Generating…";
+    buildExcel(sch).then(function(){ msg.className="gt-msg ok"; msg.textContent="✓ Downloaded the Gantt Excel for “"+META.project+"”."; })
+      .catch(function(e){ msg.className="gt-msg err"; msg.textContent="Could not generate the file: "+((e&&e.message)||e); });
+  }
+
+  window.__ganttEnter=function(){ if(!STAGES) load(); if(!META.start) META.start=iso(firstBiz(new Date())); render(); };
+  if($("card_gantt")){
+    $("card_gantt").addEventListener("click",function(){ if(window.__showView) window.__showView("app-gantt"); });
+    $("card_gantt").addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(window.__showView) window.__showView("app-gantt"); } });
+  }
+  if($("gt_home")) $("gt_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
+  if($("gt_reset")) $("gt_reset").addEventListener("click",function(){ if(confirm("Reset all stages to the standard template? Your custom stage edits will be cleared.")){ STAGES=fresh(); persist(); render(); } });
 })();
 </script>
 </body>
