@@ -465,6 +465,10 @@ body.cf-edit .cf-qtools{display:flex}
 body.cf-edit .cf-q{border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
 .cf-qtools button,.cf-sectools button{border:none;background:var(--line-2);width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--ink-2)}
 .cf-qtools button:hover,.cf-sectools button:hover{background:var(--line)}
+.cf-qdrag{cursor:grab}
+.cf-qdrag:active{cursor:grabbing}
+body.cf-edit .cf-q.cf-dragging{opacity:.4}
+body.cf-edit .cf-q.cf-over{border-color:var(--brand);box-shadow:inset 0 2px 0 var(--brand)}
 .cf-sectools{display:inline-flex;gap:4px}
 .cf-addq{display:none;margin:2px 0 10px;border:1.5px dashed var(--line);background:none;color:var(--ink-3);font-family:inherit;font-weight:650;font-size:12.5px;padding:8px 12px;border-radius:9px;cursor:pointer}
 body.cf-edit .cf-addq{display:inline-block}
@@ -2191,14 +2195,14 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     if(q.type==="multi") return "<div class='cf-checks' id='"+id+"'>"+(q.options||[]).map(function(o){return "<label class='cf-check'><input type='checkbox' value='"+esc(o)+"'>"+esc(o)+"</label>";}).join("")+"</div>";
     return "<input type='text' id='"+id+"'>";
   }
-  function qtools(si,qi){ return "<div class='cf-qtools'><button data-eq='"+si+","+qi+"' title='Edit'>✎</button><button data-dq='"+si+","+qi+"' title='Delete'>✕</button></div>"; }
+  function qtools(si,qi){ return "<div class='cf-qtools'><button class='cf-qdrag' data-qdrag draggable='true' title='Drag to reorder'>⠿</button><button data-eq='"+si+","+qi+"' title='Edit'>✎</button><button data-dq='"+si+","+qi+"' title='Delete'>✕</button></div>"; }
 
   // The two base sections always live in the left column (Card 3); everything else is right (Card 6).
   function secCol(sec){ if(sec.id==="client"||sec.id==="scope") return "left"; return sec.col || "right"; }
 
   function sectionHtml(sec,si){
     var h="<div class='cf-sec'><div class='cf-sec-h'><span class='sn'>"+esc(sec.title)+"</span>"+(EDIT?"<span class='cf-sectools'><button data-mv='"+si+"' title='Move to the other card'>⇄</button><button data-es='"+si+"' title='Rename section'>✎</button><button data-ds='"+si+"' title='Delete section'>✕</button></span>":"")+"</div>";
-    sec.questions.forEach(function(q,qi){ h+="<div class='cf-q'><label>"+esc(q.label)+(q.required?"<span class='req'>*</span>":"")+"</label>"+field(q)+qtools(si,qi)+"</div>"; });
+    sec.questions.forEach(function(q,qi){ h+="<div class='cf-q' data-si='"+si+"' data-qi='"+qi+"'><label>"+esc(q.label)+(q.required?"<span class='req'>*</span>":"")+"</label>"+field(q)+qtools(si,qi)+"</div>"; });
     return h+"<button class='cf-addq' data-aq='"+si+"'>+ Add question</button></div>";
   }
   function renderCol(col, wrapId, actionsHtml){
@@ -2231,6 +2235,22 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     Array.prototype.forEach.call(w.querySelectorAll("[data-ds]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-ds"); if(confirm("Delete this whole section?")){ FORM.sections.splice(si,1); saveDef(); renderAll(); } }); });
     Array.prototype.forEach.call(w.querySelectorAll("[data-mv]"),function(b){ b.addEventListener("click",function(){ var si=+b.getAttribute("data-mv"); FORM.sections[si].col=(secCol(FORM.sections[si])==="left"?"right":"left"); saveDef(); renderAll(); }); });
     Array.prototype.forEach.call(w.querySelectorAll("[data-addcol]"),function(b){ b.addEventListener("click",function(){ var nm=prompt("New section title:"); if(nm){ FORM.sections.push({id:"s"+(++FORM.seq),title:nm,col:b.getAttribute("data-addcol"),questions:[]}); saveDef(); renderAll(); } }); });
+
+    // drag to reorder fields — attach container listeners ONCE (survives re-renders)
+    if(!w.__dndBound){ w.__dndBound=true; var st={si:-1,qi:-1};
+      function clearOver(){ Array.prototype.forEach.call(w.querySelectorAll(".cf-q.cf-over"),function(x){x.classList.remove("cf-over");}); }
+      w.addEventListener("dragstart",function(e){ var h=e.target.closest("[data-qdrag]"); if(!h) return; var q=h.closest(".cf-q"); if(!q) return; st.si=+q.getAttribute("data-si"); st.qi=+q.getAttribute("data-qi"); q.classList.add("cf-dragging"); if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; try{ e.dataTransfer.setData("text/plain","q"); }catch(_){} } });
+      w.addEventListener("dragend",function(){ Array.prototype.forEach.call(w.querySelectorAll(".cf-q.cf-dragging"),function(x){x.classList.remove("cf-dragging");}); clearOver(); st.si=-1; st.qi=-1; });
+      w.addEventListener("dragover",function(e){ if(st.si<0) return; var q=e.target.closest(".cf-q"); if(!q) return; e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect="move"; clearOver(); q.classList.add("cf-over"); });
+      w.addEventListener("drop",function(e){ if(st.si<0) return; var q=e.target.closest(".cf-q"); clearOver(); if(!q) return; e.preventDefault(); var tsi=+q.getAttribute("data-si"), tqi=+q.getAttribute("data-qi"); var fsi=st.si, fqi=st.qi; st.si=-1; st.qi=-1; moveQuestion(fsi,fqi,tsi,tqi); });
+    }
+  }
+  function moveQuestion(fromSi,fromQi,toSi,toQi){
+    if(fromSi===toSi && fromQi===toQi) return;
+    var q=FORM.sections[fromSi].questions.splice(fromQi,1)[0]; if(!q) return;
+    if(fromSi===toSi && fromQi<toQi) toQi--;   // adjust for the removed item
+    FORM.sections[toSi].questions.splice(toQi,0,q);
+    saveDef(); renderAll();
   }
 
   // add (qi=-1) or edit a question via modal
