@@ -286,6 +286,22 @@ body:not(.app-bom) > .layout{display:none !important}
 .tk-kpi .s{font-size:11px;color:var(--ink-3);margin-top:2px}
 @media(max-width:1080px){.tk-kpis{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){.tk-kpis{grid-template-columns:repeat(2,1fr)}}
+/* clickable KPI segments */
+.tk-kpi[data-seg]{cursor:pointer;transition:box-shadow .15s ease,transform .15s ease,border-color .15s ease}
+.tk-kpi[data-seg]:hover{box-shadow:0 8px 20px rgba(16,24,40,.10);transform:translateY(-2px)}
+.tk-kpi.sel{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand) inset, 0 8px 20px rgba(16,24,40,.10)}
+.tk-kpi.sel .k{color:var(--brand)}
+/* filter bar */
+.tk-filter{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.tk-seg-count{font-size:14px;color:var(--ink-2)}
+.tk-seg-count b{color:var(--ink);font-weight:800}
+.tk-filter-ctrls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tk-search{position:relative;display:inline-flex;align-items:center}
+.tk-search svg{position:absolute;left:11px;width:15px;height:15px;color:var(--ink-3);pointer-events:none}
+.tk-search input{padding:9px 12px 9px 33px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;min-width:240px;background:#fff}
+.tk-search input:focus{border-color:var(--brand)}
+.tk-filter select{padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;background:#fff;color:var(--ink-2);cursor:pointer}
+.tk-filter select:focus{border-color:var(--brand)}
 
 .tk-grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
 @media(max-width:900px){.tk-grid2{grid-template-columns:1fr}}
@@ -508,6 +524,12 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
 .gt-th-par,.gt-td-par{width:74px;text-align:center}
 .gt-th-days,.gt-td-days{width:72px;text-align:center}
 .gt-th-x,.gt-td-x{width:30px;text-align:center}
+.gt-th-drag,.gt-td-drag{width:26px;text-align:center}
+.gt-drag{cursor:grab;color:var(--ink-3);font-size:15px;line-height:1;user-select:none;display:inline-block;padding:2px 3px;border-radius:5px}
+.gt-drag:hover{color:var(--brand);background:var(--brand-50)}
+.gt-drag:active{cursor:grabbing}
+.gt-tbl tr.gt-dragging{opacity:.4}
+.gt-tbl tr.gt-over{box-shadow:inset 0 2px 0 var(--brand)}
 .gt-del{border:none;background:none;color:var(--ink-3);font-size:17px;cursor:pointer;line-height:1;padding:2px 4px;border-radius:6px}
 .gt-del:hover{background:var(--warn-bg);color:var(--warn)}
 .gt-add{margin-top:14px;display:inline-flex;align-items:center;gap:7px;border:1.5px dashed var(--line);background:var(--bg);color:var(--ink-2);font-family:inherit;font-size:13px;font-weight:700;border-radius:10px;padding:9px 16px;cursor:pointer}
@@ -1934,106 +1956,100 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function closeDetail(){ var m=$("tk_modal"); if(m) m.classList.remove("on"); }
 
   var DATA=null, SOURCE="snapshot", UPDATED="";
+  var SEG="active", Q="", OWN="", BUCK={};   // dashboard segment + filter state
+
+  // segment definitions (order = KPI tile order)
+  var SEGS=[
+    {id:"all",     label:"All projects", cls:"hi"},
+    {id:"active",  label:"In progress",  cls:""},
+    {id:"delayed", label:"Delayed",      cls:"warn"},
+    {id:"soon",    label:"Due ≤ 7 days", cls:"due"},
+    {id:"onhold",  label:"On hold",      cls:""},
+    {id:"delivered",label:"Delivered",   cls:"ok"}
+  ];
+  function segItems(id){ return BUCK[id]||[]; }
+  function ownersOf(list){ var seen={},out=[]; list.forEach(function(r){ var o=ownerOf(r); if(o&&!seen[o]){ seen[o]=1; out.push(o); } }); return out.sort(); }
+
+  // a clean client card (no progress dashes)
+  function card(r){ var c=r.__c, cat=c.cat;
+    var badge=cat==="late"?"<span class='cp-badge late'>Delayed "+c.lateDays+"d</span>"
+      :cat==="soon"?"<span class='cp-badge soon'>Due "+c.inDays+"d</span>"
+      :cat==="closed"?"<span class='cp-badge done'>Delivered</span>"
+      :cat==="onhold"?"<span class='cp-badge hold'>On hold</span>"
+      :cat==="notime"?"<span class='cp-badge notime'>In pipeline</span>"
+      :"<span class='cp-badge ontrack'>On track</span>";
+    var own=ownerOf(r);
+    var when=cat==="late"?"<span class='cp-when od'>Overdue "+fmt(c.due)+"</span>"
+      :cat==="closed"?(r.overall?"<span class='cp-when'>"+fmt(parse(r.overall))+"</span>":"")
+      :c.due?"<span class='cp-when'>Due "+fmt(c.due)+"</span>"
+      :(r.overall?"<span class='cp-when'>Target "+fmt(parse(r.overall))+"</span>":"");
+    var cls=cat==="closed"?"ontrack":cat==="onhold"?"notime":cat;
+    return "<div class='cp "+cls+"' data-ri='"+DATA.indexOf(r)+"'>"
+      +"<div class='cp-head'><span class='cp-dot'></span><span class='cp-name'>"+esc(r.client)+"</span>"+badge+"</div>"
+      +"<div class='cp-sub'>"+(r.product?"<b>"+esc(r.product)+"</b>":"<b>—</b>")+(own?"<span>👤 "+esc(own)+"</span>":"")+"</div>"
+      +"<div class='cp-foot'><span class='cp-stage'>"+esc(r.stage||"—")+"</span>"+when+"</div></div>";
+  }
+
+  // repaint only the filtered cards (segment ∩ search ∩ owner)
+  function paintCards(){
+    var host=$("tk_cards"); if(!host) return;
+    var list=segItems(SEG).slice();
+    if(SEG==="delayed") list.sort(function(a,b){return b.__c.lateDays-a.__c.lateDays;});
+    else if(SEG==="soon") list.sort(function(a,b){return a.__c.inDays-b.__c.inDays;});
+    else list.sort(function(a,b){return String(a.client).localeCompare(String(b.client));});
+    var q=Q.trim().toLowerCase();
+    var vis=list.filter(function(r){
+      if(OWN && ownerOf(r)!==OWN) return false;
+      if(q){ var hay=(r.client+" "+(r.product||"")+" "+(ownerOf(r)||"")+" "+(r.stage||"")).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+      return true;
+    });
+    var cur=null; for(var i=0;i<SEGS.length;i++){ if(SEGS[i].id===SEG) cur=SEGS[i]; }
+    var cnt=$("tk_seg_count"); if(cnt) cnt.innerHTML="<b>"+(cur?cur.label:"")+"</b> · "+vis.length+" client"+(vis.length===1?"":"s")+(Q||OWN?" (filtered)":"");
+    host.innerHTML=vis.length?"<div class='tk-cp'>"+vis.map(card).join("")+"</div>":"<div class='tk-empty'>No matching clients. Try a different filter or segment.</div>";
+  }
+  function markSeg(){ var tiles=$("tk_dash")?$("tk_dash").querySelectorAll(".tk-kpi[data-seg]"):[]; Array.prototype.forEach.call(tiles,function(t){ t.classList.toggle("sel", t.getAttribute("data-seg")===SEG); }); }
 
   function render(){
     var recs=DATA;
-    var closed=[],active=[],onhold=[],late=[],soon=[],slip=[],notime=[],ontrack=[];
+    var closed=[],active=[],onhold=[],late=[],soon=[],notime=[],ontrack=[];
     recs.forEach(function(r){ var c=classify(r); r.__c=c;
       if(c.cat==="closed"){closed.push(r);return;}
       if(c.cat==="onhold"){onhold.push(r);return;}
       active.push(r);
-      if(c.cat==="late")late.push(r); else if(c.cat==="soon")soon.push(r); else if(c.cat==="notime")notime.push(r); else {ontrack.push(r); if(c.slip)slip.push(r);}
+      if(c.cat==="late")late.push(r); else if(c.cat==="soon")soon.push(r); else if(c.cat==="notime")notime.push(r); else ontrack.push(r);
     });
-    late.sort(function(a,b){return b.__c.lateDays-a.__c.lateDays;});
-    soon.sort(function(a,b){return a.__c.inDays-b.__c.inDays;});
-    var onTrackCount=ontrack.length+soon.length;
+    BUCK={all:recs.slice(),active:active,delayed:late,soon:soon,onhold:onhold,delivered:closed};
 
-    function kpi(cls,k,v,s){ return "<div class='tk-kpi "+cls+"'><div class='k'>"+k+"</div><div class='v'>"+v+"</div><div class='s'>"+s+"</div></div>"; }
+    function kpi(seg,v,s){ return "<div class='tk-kpi "+seg.cls+"' data-seg='"+seg.id+"'><div class='k'>"+seg.label+"</div><div class='v'>"+v+"</div><div class='s'>"+s+"</div></div>"; }
     var kpis="<div class='tk-kpis'>"
-      +kpi("hi","Total projects",recs.length,active.length+" active · "+closed.length+" delivered")
-      +kpi("ok","Delivered",closed.length,"stage = Closed")
-      +kpi("","In progress",active.length,onhold.length+" also on hold")
-      +kpi("","On hold",onhold.length,"not started")
-      +kpi("warn","Delayed",late.length,late.length?"need attention now":"none overdue 🎉")
-      +kpi("due","Due ≤ 7 days",soon.length,onTrackCount+" on track total")
+      +kpi(SEGS[0],recs.length,"click to view all")
+      +kpi(SEGS[1],active.length,ontrack.length+" on track")
+      +kpi(SEGS[2],late.length,late.length?"need attention":"none overdue 🎉")
+      +kpi(SEGS[3],soon.length,"due this week")
+      +kpi(SEGS[4],onhold.length,"not started")
+      +kpi(SEGS[5],closed.length,"delivered")
       +"</div>";
 
-    // attention list
-    function item(r){ var c=r.__c; var cls=c.cat==="late"?"late":c.cat==="soon"?"soon":"slip";
-      var badge=c.cat==="late"?"<span class='tk-badge late'>Delayed "+c.lateDays+"d</span>":c.cat==="soon"?"<span class='tk-badge soon'>Due "+c.inDays+"d</span>":"<span class='tk-badge slip'>Slipping "+c.slip+"d</span>";
-      var own=ownerOf(r);
-      return "<div class='tk-item "+cls+"' data-page='"+esc(r.id||"")+"' data-ri='"+recs.indexOf(r)+"'>"
-        +"<div class='tk-i-top'><span class='nm'>"+esc(r.client)+"</span>"+badge
-        +(r.stage?"<span class='tk-chip'>"+esc(r.stage)+"</span>":"")+(own?"<span class='tk-chip'>👤 "+esc(own)+"</span>":"")+(r.product?"<span class='tk-chip'>"+esc(r.product)+"</span>":"")+"</div>"
-        +"<div class='tk-i-reason'>"+reason(r,c)+"</div>"
-        +"<div class='tk-i-cmt' data-cmt style='display:none'></div></div>";
-    }
-    var attList=late.concat(soon).concat(slip.filter(function(r){return soon.indexOf(r)<0;}));
-    var att="<div class='tk-panel'><h3>⚠️ Needs attention <span class='cnt'>· "+attList.length+"</span></h3>"
-      +(attList.length?"<div class='tk-att'>"+attList.map(item).join("")+"</div>":"<div class='tk-empty'>Nothing overdue or due within 7 days. All active projects are on track. 🎉</div>")
-      +"</div>";
-
-    // pipeline by stage (open only)
-    var openByStage=STAGES.filter(function(s){return s!=="Closed";}).map(function(s){ return {name:s,n:recs.filter(function(r){return r.stage===s;}).length}; });
-    var maxOpen=Math.max(1,Math.max.apply(null,openByStage.map(function(x){return x.n;})));
-    var pipe="<div class='tk-panel'><h3>Pipeline by stage <span class='cnt'>· "+(active.length+onhold.length)+" open</span></h3><div class='tk-bars'>"
-      +openByStage.map(function(x){ return "<div class='tk-barrow'><span class='bn'>"+esc(x.name)+"</span><span class='bt'><span class='bf' style='width:"+(x.n/maxOpen*100)+"%'></span></span><span class='bv'>"+x.n+"</span></div>"; }).join("")+"</div></div>";
-
-    // workload by owner (active)
-    var own={}; active.forEach(function(r){ var o=ownerOf(r)||"Unassigned"; own[o]=(own[o]||0)+1; });
-    var ownArr=Object.keys(own).map(function(k){return {name:k,n:own[k]};}).sort(function(a,b){return b.n-a.n;});
-    var maxOwn=Math.max(1,Math.max.apply(null,ownArr.map(function(x){return x.n;})));
-    var work="<div class='tk-panel'><h3>Active workload by owner</h3><div class='tk-bars'>"
-      +(ownArr.length?ownArr.map(function(x){ return "<div class='tk-barrow'><span class='bn'>"+esc(x.name)+"</span><span class='bt'><span class='bf' style='width:"+(x.n/maxOwn*100)+"%'></span></span><span class='bv'>"+x.n+"</span></div>"; }).join(""):"<div class='tk-empty'>—</div>")+"</div></div>";
-
-    // recently delivered
-    var delivered=closed.slice().sort(function(a,b){ var da=parse(a.overall),db=parse(b.overall); return (db?db:0)-(da?da:0); });
-    var deliv="<div class='tk-panel'><h3>Delivered <span class='cnt'>· "+closed.length+"</span></h3><div class='tk-mini'>"
-      +delivered.map(function(r){ return "<div class='row' data-ri='"+recs.indexOf(r)+"'><span class='d'></span><span class='n'>"+esc(r.client)+"</span><span class='m'>"+esc(r.product||"")+(r.overall?" · "+fmt(parse(r.overall)):"")+"</span></div>"; }).join("")+"</div></div>";
-
-    // ── CEO hero: every active client's pipeline progress + status at a glance ──
-    function cpCard(r){ var c=r.__c, cat=c.cat, idx=pipeIdx(r.stage), filled=idx<0?0:idx+1;
-      var segs=""; for(var i=0;i<PIPE.length;i++){ segs+="<span class='cp-seg"+(i<filled?" on":"")+"'></span>"; }
-      var badge=cat==="late"?"<span class='cp-badge late'>Delayed "+c.lateDays+"d</span>"
-        :cat==="soon"?"<span class='cp-badge soon'>Due "+c.inDays+"d</span>"
-        :cat==="notime"?"<span class='cp-badge notime'>In pipeline</span>"
-        :"<span class='cp-badge ontrack'>On track</span>";
-      var own=ownerOf(r);
-      var when=cat==="late"?"<span class='cp-when od'>Overdue "+fmt(c.due)+"</span>"
-        :c.due?"<span class='cp-when'>Due "+fmt(c.due)+"</span>"
-        :(r.overall?"<span class='cp-when'>Target "+fmt(parse(r.overall))+"</span>":"");
-      var pct=idx<0?0:Math.round(filled/PIPE.length*100);
-      var nm="<span class='cp-name'>"+esc(r.client)+"</span>";
-      return "<div class='cp "+cat+"' data-ri='"+recs.indexOf(r)+"'>"
-        +"<div class='cp-head'><span class='cp-dot'></span>"+nm+badge+"</div>"
-        +"<div class='cp-sub'>"+(r.product?"<b>"+esc(r.product)+"</b>":"<b>—</b>")+(own?"<span>👤 "+esc(own)+"</span>":"")+"</div>"
-        +"<div class='cp-track'>"+segs+"</div>"
-        +"<div class='cp-foot'><span class='cp-stage'>"+esc(r.stage||"—")+" · "+pct+"%</span>"+when+"</div></div>";
-    }
-    function grp(title,arr){ if(!arr.length) return ""; return "<div class='cp-grp'>"+title+" <span style='color:var(--ink-3)'>· "+arr.length+"</span><span class='ln'></span></div><div class='tk-cp'>"+arr.map(cpCard).join("")+"</div>"; }
-    var heroBody=grp("⚠ Delayed",late)+grp("⏳ Due this week",soon)+grp("✓ On track",ontrack)+grp("• Early / in pipeline",notime);
-    var legend="<div class='tk-legend'><span><i style='background:var(--warn)'></i>Delayed</span><span><i style='background:#e0a200'></i>Due ≤7d</span><span><i style='background:var(--ok)'></i>On track</span><span><i style='background:var(--brand-500)'></i>Early</span></div>";
-    var hero="<div class='tk-panel tk-hero'><h3>Client progress <span class='cnt'>· "+active.length+" active</span>"+legend+"</h3>"+(active.length?heroBody:"<div class='tk-empty'>No active projects.</div>")+"</div>";
-
-    var holdPanel="<div class='tk-panel'><h3>On hold / not started <span class='cnt'>· "+onhold.length+"</span></h3>"+(onhold.length?"<div class='tk-hold'>"+onhold.map(function(r){return "<span class='h' data-ri='"+recs.indexOf(r)+"'>"+esc(r.client)+(r.product?" · "+esc(r.product):"")+"</span>";}).join("")+"</div>":"<div class='tk-empty'>—</div>")+"</div>";
+    var owners=ownersOf(recs);
+    var ownOpts="<option value=''>All owners</option>"+owners.map(function(o){return "<option value='"+esc(o)+"'>"+esc(o)+"</option>";}).join("");
+    var filterBar="<div class='tk-filter'>"
+      +"<div class='tk-seg-count' id='tk_seg_count'></div>"
+      +"<div class='tk-filter-ctrls'>"
+        +"<span class='tk-search'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4-4'/></svg><input id='tk_q' type='text' placeholder='Search client, product, owner…' value='"+esc(Q)+"'></span>"
+        +"<select id='tk_own'>"+ownOpts+"</select>"
+      +"</div></div>";
 
     var asOf=parse(SNAP_AS_OF); var asOfTxt=asOf?fmt(asOf)+", "+asOf.getFullYear():SNAP_AS_OF;
-    $("tk_dash").innerHTML=kpis+hero+"<div class='tk-grid2'><div>"+att+deliv+"</div><div>"+pipe+work+holdPanel+"</div></div>"
+    $("tk_dash").innerHTML=kpis+filterBar+"<div id='tk_cards'></div>"
       +"<div class='tk-updated'>Source: Notion Deployment Tracker · "+(SOURCE==="notion"?"live"+(UPDATED?" · updated "+new Date(UPDATED).toLocaleString():""):"auto-synced daily · as of "+asOfTxt)+"</div>";
 
-    // source pill
+    // restore owner selection if still valid
+    if(OWN && owners.indexOf(OWN)<0) OWN="";
+    var os=$("tk_own"); if(os) os.value=OWN;
+
     var sp=$("tk_src"); if(sp){ sp.className="tk-src "+(SOURCE==="notion"?"live":"snap"); sp.textContent=SOURCE==="notion"?"● Live from Notion":"● Synced from Notion · as of "+asOfTxt; }
 
-    // enrich late items with their latest Notion comment (why it's delaying)
-    if(SOURCE==="notion"){
-      late.slice(0,10).forEach(function(r){ if(!r.id) return;
-        fetch("/api/notion-comments?page="+encodeURIComponent(r.id)).then(function(x){return x.json();}).then(function(j){
-          var cs=(j&&j.comments)||[]; if(!cs.length) return; var last=cs[cs.length-1];
-          var el=$("tk_dash").querySelector(".tk-item[data-page='"+r.id+"'] [data-cmt]");
-          if(el&&last.text){ el.style.display="block"; el.textContent="💬 "+last.text+(last.ts?" — "+new Date(last.ts).toLocaleDateString():""); }
-        }).catch(function(){});
-      });
-    }
+    markSeg(); paintCards();
   }
 
   function load(){
@@ -2055,13 +2071,17 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   if($("tk_home")) $("tk_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
   if($("tk_refresh")) $("tk_refresh").addEventListener("click",load);
 
-  // open the per-client detail popup when any client card/row is clicked
+  // KPI segment select + per-client detail popup
   if($("tk_dash")) $("tk_dash").addEventListener("click",function(e){
+    var seg=e.target.closest("[data-seg]"); if(seg){ SEG=seg.getAttribute("data-seg"); markSeg(); paintCards(); return; }
     var el=e.target.closest("[data-ri]"); if(!el) return;
     if(e.target.closest("a")) return; // let real links work
     var ri=parseInt(el.getAttribute("data-ri"),10);
     if(DATA&&DATA[ri]) openDetail(DATA[ri]);
   });
+  // filter controls (search + owner)
+  if($("tk_dash")) $("tk_dash").addEventListener("input",function(e){ if(e.target.id==="tk_q"){ Q=e.target.value; paintCards(); } });
+  if($("tk_dash")) $("tk_dash").addEventListener("change",function(e){ if(e.target.id==="tk_own"){ OWN=e.target.value; paintCards(); } });
   var mdl=$("tk_modal");
   if(mdl) mdl.addEventListener("click",function(e){ if(e.target===mdl||e.target.closest("[data-close]")) closeDetail(); });
   document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeDetail(); });
@@ -2392,6 +2412,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   // ── UI ──
   function stageRow(s,i){
     return "<tr class='"+(s.include?"":"off")+"' data-i='"+i+"'>"
+      +"<td class='gt-td-drag'><span class='gt-drag' data-drag draggable='true' title='Drag to reorder'>⠿</span></td>"
       +"<td class='gt-td-inc'><input class='ck' type='checkbox' data-inc "+(s.include?"checked":"")+"></td>"
       +"<td><input type='text' data-name value='"+esc(s.name)+"'></td>"
       +"<td><input type='text' data-owner value='"+esc(s.owner||"")+"'></td>"
@@ -2411,7 +2432,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
         +"<div class='gt-f'><label>Working days</label><input type='text' value='Monday to Friday (weekends skipped)' disabled></div>"
       +"</div></div>"
       +"<div class='gt-card'><h3>Project stages</h3>"
-        +"<table class='gt-tbl'><thead><tr><th class='gt-th-inc'>On</th><th>Stage / line item</th><th>Owner</th><th class='gt-th-days'>Days</th><th class='gt-th-par'>Parallel</th><th class='gt-th-x'></th></tr></thead>"
+        +"<table class='gt-tbl'><thead><tr><th class='gt-th-drag'></th><th class='gt-th-inc'>On</th><th>Stage / line item</th><th>Owner</th><th class='gt-th-days'>Days</th><th class='gt-th-par'>Parallel</th><th class='gt-th-x'></th></tr></thead>"
         +"<tbody id='gt_rows'>"+STAGES.map(stageRow).join("")+"</tbody></table>"
         +"<button class='gt-add' id='gt_add'>+ Add stage</button>"
         +"<div class='gt-hint'>“Parallel” runs a stage alongside the previous one (same start date) instead of waiting for it to finish.</div>"
@@ -2438,6 +2459,13 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
         persist(); renderPreview(); summary();
       });
       body.addEventListener("click",function(e){ var b=e.target.closest("[data-del]"); if(!b) return; var tr=b.closest("tr"); STAGES.splice(+tr.getAttribute("data-i"),1); persist(); render(); });
+      // drag to reorder stages
+      var dragI=-1;
+      function clearOver(){ Array.prototype.forEach.call(body.querySelectorAll("tr.gt-over"),function(x){x.classList.remove("gt-over");}); }
+      body.addEventListener("dragstart",function(e){ var h=e.target.closest("[data-drag]"); if(!h){ if(e.preventDefault) e.preventDefault(); return; } var tr=h.closest("tr"); dragI=+tr.getAttribute("data-i"); tr.classList.add("gt-dragging"); if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; try{ e.dataTransfer.setData("text/plain",String(dragI)); }catch(_){} } });
+      body.addEventListener("dragend",function(){ Array.prototype.forEach.call(body.querySelectorAll("tr.gt-dragging"),function(x){x.classList.remove("gt-dragging");}); clearOver(); dragI=-1; });
+      body.addEventListener("dragover",function(e){ e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect="move"; var tr=e.target.closest("tr"); if(!tr) return; clearOver(); tr.classList.add("gt-over"); });
+      body.addEventListener("drop",function(e){ e.preventDefault(); var tr=e.target.closest("tr"); clearOver(); if(!tr||dragI<0) return; var ti=+tr.getAttribute("data-i"); if(ti===dragI) return; var it=STAGES.splice(dragI,1)[0]; STAGES.splice(ti,0,it); dragI=-1; persist(); render(); });
     }
     if($("gt_add")) $("gt_add").addEventListener("click",function(){ STAGES.push({name:"New stage",owner:"",days:3,parallel:false,include:true}); persist(); render(); });
     if($("gt_gen")) $("gt_gen").addEventListener("click",generate);
@@ -2456,35 +2484,56 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     host.innerHTML="<div class='gt-prev'><table class='gt-ptable'><thead><tr><th class='nm'></th>"+mh+"</tr><tr><th class='nm'>Stage</th>"+dn+"</tr></thead><tbody>"+body+"</tbody></table></div>";
   }
 
-  // ── Excel export (mirrors the reference kick-off Gantt: peach stage bands, month headers, business-day bars) ──
+  // ── Excel export: clean, modern Gantt (Calibri, banded stage rows, month headers, weekend shading, bars) ──
+  var FONT="Calibri";
   function buildExcel(sch){
-    var wb=new ExcelJS.Workbook(); wb.creator="Irame";
-    var ws=wb.addWorksheet("Project Plan",{views:[{state:"frozen",xSplit:6,ySplit:4}]});
-    var sp=projSpan(sch), days=bizDays(sp.start,sp.end);
-    ws.getColumn(1).width=6; ws.getColumn(2).width=44; ws.getColumn(3).width=22; ws.getColumn(4).width=12; ws.getColumn(5).width=12; ws.getColumn(6).width=7;
-    for(var c=0;c<days.length;c++){ ws.getColumn(7+c).width=3.4; }
-    ws.mergeCells(1,1,1,6); var t=ws.getCell(1,1); t.value=(META.project||"Project")+" — Gantt Plan"; t.font={bold:true,size:14,color:{argb:"FF16395C"}};
-    ws.mergeCells(2,1,2,6); var t2=ws.getCell(2,1); t2.value=(META.client?("Client: "+META.client+"     "):"")+"Generated "+fmt(new Date())+", "+new Date().getFullYear(); t2.font={size:9,color:{argb:"FF6B7280"}};
-    var heads=["ID","Stage / Line item","Owner","Start","End","Days"];
-    heads.forEach(function(h,i){ var cell=ws.getCell(4,i+1); cell.value=h; cell.font={bold:true,size:9,color:{argb:"FFFFFFFF"}}; cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF2E6DB4"}}; cell.alignment={vertical:"middle"}; });
+    var wb=new ExcelJS.Workbook(); wb.creator="Irame"; wb.created=new Date();
+    var ws=wb.addWorksheet("Project Plan",{views:[{state:"frozen",xSplit:6,ySplit:4,showGridLines:false}],properties:{defaultRowHeight:15}});
+    var sp=projSpan(sch), days=bizDays(sp.start,sp.end), nDay=days.length, lastCol=6+nDay;
+    // colours
+    var C={brand:"FF2E6DB4",brandDk:"FF16395C",head:"FF255E9E",band:"FFF5F8FC",bandAlt:"FFFFFFFF",peach:"FFF9E4D4",bar:"FF3B7DD8",barEnd:"FF2E6DB4",grid:"FFE6EBF1",mon:"FFDCE7F4",dayhdr:"FFEEF3F9",ink:"FF1F2A37",sub:"FF6B7280",wknd:"FFF6F7F9"};
+    // widths
+    ws.getColumn(1).width=5; ws.getColumn(2).width=48; ws.getColumn(3).width=22; ws.getColumn(4).width=11; ws.getColumn(5).width=11; ws.getColumn(6).width=6.5;
+    for(var c=0;c<nDay;c++){ ws.getColumn(7+c).width=3.0; }
+    // title band (rows 1–2)
+    ws.mergeCells(1,1,1,lastCol); var t=ws.getCell(1,1); t.value=(META.project||"Project")+"  —  Project Plan"; t.font={name:FONT,bold:true,size:16,color:{argb:"FFFFFFFF"}}; t.alignment={vertical:"middle",indent:1}; t.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.brandDk}}; ws.getRow(1).height=30;
+    ws.mergeCells(2,1,2,lastCol); var st=ws.getCell(2,1);
+    st.value=(META.client?("Client: "+META.client+"      "):"")+"Generated "+fmt(new Date())+", "+new Date().getFullYear()+"      "+sch.length+" stages      "+fmt(sp.start)+" – "+fmt(sp.end)+", "+sp.end.getFullYear();
+    st.font={name:FONT,size:9.5,color:{argb:"FFDCE7F4"}}; st.alignment={vertical:"middle",indent:1}; st.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.brand}}; ws.getRow(2).height=18;
+    // header row (row 4) left labels
+    var heads=["#","Stage / Line item","Owner","Start","End","Days"];
+    heads.forEach(function(h,i){ var cell=ws.getCell(4,i+1); cell.value=h; cell.font={name:FONT,bold:true,size:9.5,color:{argb:"FFFFFFFF"}}; cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.head}}; cell.alignment={vertical:"middle",horizontal:(i===0||i>=3)?"center":"left",indent:(i>=1&&i<=2)?1:0}; });
+    // month header (row 3) + day numbers (row 4) + weekday letters implied
+    ws.getCell(3,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:C.brandDk}}; ws.mergeCells(3,1,3,6); var lh=ws.getCell(3,1); lh.value="Timeline"; lh.font={name:FONT,bold:true,size:9.5,color:{argb:"FFFFFFFF"}}; lh.alignment={vertical:"middle",horizontal:"center"};
     var mstart=0;
-    for(var i=0;i<days.length;i++){ var col=7+i;
-      var dn=ws.getCell(4,col); dn.value=days[i].getDate(); dn.font={bold:true,size:8}; dn.alignment={horizontal:"center"}; dn.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF4F2F7"}};
-      if(i===days.length-1 || days[i+1].getMonth()!==days[i].getMonth()){
-        ws.mergeCells(3,7+mstart,3,col); var mc=ws.getCell(3,7+mstart); mc.value=MONF[days[i].getMonth()]+" "+days[i].getFullYear(); mc.font={bold:true,size:9,color:{argb:"FF16395C"}}; mc.alignment={horizontal:"center"}; mc.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFECE8F2"}}; mstart=i+1;
+    for(var i=0;i<nDay;i++){ var col=7+i; var d=days[i];
+      var dn=ws.getCell(4,col); dn.value=d.getDate(); dn.font={name:FONT,bold:true,size:8,color:{argb:C.sub}}; dn.alignment={horizontal:"center",vertical:"middle"}; dn.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.dayhdr}};
+      if(i===nDay-1 || days[i+1].getMonth()!==d.getMonth()){
+        ws.mergeCells(3,7+mstart,3,col); var mc=ws.getCell(3,7+mstart); mc.value=MONF[d.getMonth()]+" "+d.getFullYear(); mc.font={name:FONT,bold:true,size:9,color:{argb:C.brandDk}}; mc.alignment={horizontal:"center",vertical:"middle"}; mc.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.mon}}; mstart=i+1;
       }
     }
-    sch.forEach(function(r,ri){ var row=5+ri;
-      ws.getCell(row,1).value=ri+1; ws.getCell(row,2).value=r.s.name; ws.getCell(row,3).value=r.s.owner||"";
-      ws.getCell(row,4).value=fmt(r.start); ws.getCell(row,5).value=fmt(r.end); ws.getCell(row,6).value=r.s.days;
-      for(var c=1;c<=6;c++){ var cc=ws.getCell(row,c); cc.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFFDE9D9"}}; cc.font={bold:c<=2,size:9}; cc.alignment={vertical:"middle",wrapText:c===2}; }
-      ws.getCell(row,1).alignment={horizontal:"center",vertical:"middle"}; ws.getCell(row,6).alignment={horizontal:"center",vertical:"middle"};
+    ws.getRow(3).height=17; ws.getRow(4).height=17;
+    // data rows
+    sch.forEach(function(r,ri){ var row=5+ri, band=(ri%2===0)?C.band:C.bandAlt;
+      var vals=[ri+1, r.s.name, r.s.owner||"", fmt(r.start), fmt(r.end), r.s.days];
+      for(var c=1;c<=6;c++){ var cc=ws.getCell(row,c); cc.value=vals[c-1];
+        cc.fill={type:"pattern",pattern:"solid",fgColor:{argb:band}};
+        cc.font={name:FONT,size:9.5,bold:c===2,color:{argb:C.ink}};
+        cc.alignment={vertical:"middle",horizontal:(c===1||c>=4)?"center":"left",wrapText:c===2,indent:(c===2||c===3)?1:0};
+      }
       var s0=stripTime(r.start),e0=stripTime(r.end);
-      for(var k=0;k<days.length;k++){ if(days[k]>=s0&&days[k]<=e0){ ws.getCell(row,7+k).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF2E6DB4"}}; } }
+      for(var k=0;k<nDay;k++){ var cell=ws.getCell(row,7+k), isW=(days[k].getDay()===0||days[k].getDay()===6);
+        if(days[k]>=s0&&days[k]<=e0){ cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.bar}}; }
+        else if(isW){ cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.wknd}}; }
+      }
+      ws.getRow(row).height=19;
     });
-    var lastRow=4+sch.length, lastCol=6+days.length, thin={style:"thin",color:{argb:"FFE5E7EB"}};
-    for(var rr=4;rr<=lastRow;rr++){ for(var cc=1;cc<=lastCol;cc++){ ws.getCell(rr,cc).border={top:thin,left:thin,bottom:thin,right:thin}; } }
-    ws.getRow(4).height=16;
+    // subtle borders across the whole table
+    var lastRow=4+sch.length, thin={style:"thin",color:{argb:C.grid}};
+    for(var rr=3;rr<=lastRow;rr++){ for(var cc=1;cc<=lastCol;cc++){ var e=ws.getCell(rr,cc); var b=e.border||{}; e.border={top:thin,left:thin,bottom:thin,right:thin}; } }
+    // thicker separator under header
+    for(var cc2=1;cc2<=lastCol;cc2++){ var hc=ws.getCell(4,cc2); hc.border={top:{style:"thin",color:{argb:C.grid}},left:{style:"thin",color:{argb:C.grid}},right:{style:"thin",color:{argb:C.grid}},bottom:{style:"medium",color:{argb:C.brand}}}; }
+    ws.autoFilter=undefined;
     return wb.xlsx.writeBuffer().then(function(buf){
       var blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
       var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=(META.project||"project").replace(/[^\w\-]+/g,"_")+"_gantt.xlsx";
