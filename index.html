@@ -2157,9 +2157,16 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   function migrate(){
     var changed=false;
-    (FORM.sections||[]).forEach(function(s){ (s.questions||[]).forEach(function(q){
-      if((q.id==="region" || /region|country/i.test(q.label||"")) && q.type!=="region"){ q.type="region"; changed=true; }
-    }); });
+    (FORM.sections||[]).forEach(function(s){
+      // heal: the two base sections belong in the left column (Card 3)
+      if((s.id==="client"||s.id==="scope") && s.col!=="left"){ s.col="left"; changed=true; }
+      // heal a clobbered section title (a button label had leaked in)
+      if(s.id==="client" && (!s.title || /save to notion/i.test(s.title))){ s.title="Client & Contact"; changed=true; }
+      if(s.id==="scope" && (!s.title || /request boq|save to notion/i.test(s.title))){ s.title="Product & Scope"; changed=true; }
+      (s.questions||[]).forEach(function(q){
+        if((q.id==="region" || /region|country/i.test(q.label||"")) && q.type!=="region"){ q.type="region"; changed=true; }
+      });
+    });
     if(changed) saveDef();
   }
   function localDef(){ try{ var s=localStorage.getItem("cf_def"); var d=s?JSON.parse(s):null; return (d&&d.sections&&d.sections.length)?d:null; }catch(e){ return null; } }
@@ -2186,7 +2193,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   function qtools(si,qi){ return "<div class='cf-qtools'><button data-eq='"+si+","+qi+"' title='Edit'>✎</button><button data-dq='"+si+","+qi+"' title='Delete'>✕</button></div>"; }
 
-  function secCol(sec){ return sec.col || (["client","scope"].indexOf(sec.id)>=0 ? "left" : "right"); }
+  // The two base sections always live in the left column (Card 3); everything else is right (Card 6).
+  function secCol(sec){ if(sec.id==="client"||sec.id==="scope") return "left"; return sec.col || "right"; }
 
   function sectionHtml(sec,si){
     var h="<div class='cf-sec'><div class='cf-sec-h'><span class='sn'>"+esc(sec.title)+"</span>"+(EDIT?"<span class='cf-sectools'><button data-mv='"+si+"' title='Move to the other card'>⇄</button><button data-es='"+si+"' title='Rename section'>✎</button><button data-ds='"+si+"' title='Delete section'>✕</button></span>":"")+"</div>";
