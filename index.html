@@ -303,6 +303,24 @@ body:not(.app-bom) > .layout{display:none !important}
 .tk-search input:focus{border-color:var(--brand)}
 .tk-filter select{padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;background:#fff;color:var(--ink-2);cursor:pointer}
 .tk-filter select:focus{border-color:var(--brand)}
+/* view toggle (Board / Cards) */
+.tk-viewtoggle{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.tk-viewtoggle button{border:none;background:#fff;color:var(--ink-2);font-family:inherit;font-size:13px;font-weight:700;padding:8px 13px;cursor:pointer}
+.tk-viewtoggle button+button{border-left:1.5px solid var(--line)}
+.tk-viewtoggle button.on{background:var(--brand);color:#fff}
+/* stage board (Notion-style columns) */
+.tk-board{display:flex;gap:14px;overflow-x:auto;padding-bottom:14px;align-items:flex-start}
+.tk-col{flex:0 0 244px;background:var(--bg);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column}
+.tk-col-h{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line)}
+.tk-col-h .nm{font-size:11.5px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.3px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-col-h .ct{font-size:11px;font-weight:800;color:var(--ink-3);background:var(--line-2);border-radius:999px;padding:1px 9px}
+.tk-col-b{padding:10px;display:flex;flex-direction:column;gap:9px;min-height:8px}
+.tk-bcard{background:#fff;border:1px solid var(--line-2);border-left:3px solid var(--brand-500);border-radius:9px;padding:9px 11px;cursor:pointer;transition:box-shadow .15s ease,transform .15s ease}
+.tk-bcard:hover{box-shadow:0 5px 14px rgba(16,24,40,.10);transform:translateY(-1px)}
+.tk-bcard.ontrack{border-left-color:var(--ok)}.tk-bcard.hold{border-left-color:var(--ink-3)}.tk-bcard.notime{border-left-color:var(--brand-500)}
+.bc-name{font-size:13.5px;font-weight:800;color:var(--ink)}
+.bc-sub{font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.bc-own{font-size:11px;color:var(--ink-3);margin-top:4px}
 
 .tk-grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
 @media(max-width:900px){.tk-grid2{grid-template-columns:1fr}}
@@ -1963,7 +1981,9 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function closeDetail(){ var m=$("tk_modal"); if(m) m.classList.remove("on"); }
 
   var DATA=null, SOURCE="snapshot", UPDATED="";
-  var SEG="active", Q="", OWN="", BUCK={};   // dashboard segment + filter state
+  var SEG="all", VIEW="board", Q="", OWN="", BUCK={};   // dashboard segment + view + filter state
+  // left→right pipeline order for the stage board (unknown stages slot in just before Closed)
+  var STAGE_ORDER=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","Client Testing","Revised deployment pending","Test & Bug FIx PProd","Vendor Testing","Infra VAPT - Vendor","Closed"];
 
   // segment definitions (order = KPI tile order)
   var SEGS=[
@@ -1991,7 +2011,27 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       +"<div class='cp-foot'><span class='cp-stage'>"+esc(r.stage||"—")+"</span>"+when+"</div></div>";
   }
 
-  // repaint only the filtered cards (segment ∩ search ∩ owner)
+  // compact card for the stage board (the column already tells you the stage)
+  function boardCard(r){ var c=r.__c, cat=c.cat, own=ownerOf(r);
+    var cls=cat==="closed"?"ontrack":cat==="onhold"?"hold":"notime";
+    return "<div class='tk-bcard "+cls+"' data-ri='"+DATA.indexOf(r)+"'>"
+      +"<div class='bc-name'>"+esc(r.client)+"</div>"
+      +(r.product?"<div class='bc-sub'>"+esc(r.product)+"</div>":"")
+      +(own?"<div class='bc-own'>👤 "+esc(own)+"</div>":"")+"</div>";
+  }
+  function boardHtml(list){
+    if(!list.length) return "<div class='tk-empty'>No matching clients. Try a different filter.</div>";
+    var groups={}; list.forEach(function(r){ var st=r.stage||"—"; (groups[st]=groups[st]||[]).push(r); });
+    function rank(s){ var i=STAGE_ORDER.indexOf(s); return i<0?STAGE_ORDER.length-1.5:i; }
+    var stages=Object.keys(groups).sort(function(a,b){ return rank(a)-rank(b); });
+    return "<div class='tk-board'>"+stages.map(function(st){ var items=groups[st];
+      items.sort(function(a,b){return String(a.client).localeCompare(String(b.client));});
+      return "<div class='tk-col'><div class='tk-col-h'><span class='nm'>"+esc(st)+"</span><span class='ct'>"+items.length+"</span></div>"
+        +"<div class='tk-col-b'>"+items.map(boardCard).join("")+"</div></div>";
+    }).join("")+"</div>";
+  }
+
+  // repaint the filtered records (segment ∩ search ∩ owner) as a board or a card list
   function paintCards(){
     var host=$("tk_cards"); if(!host) return;
     var list=segItems(SEG).slice();
@@ -2004,8 +2044,10 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     });
     var cur=null; for(var i=0;i<SEGS.length;i++){ if(SEGS[i].id===SEG) cur=SEGS[i]; }
     var cnt=$("tk_seg_count"); if(cnt) cnt.innerHTML="<b>"+(cur?cur.label:"")+"</b> · "+vis.length+" client"+(vis.length===1?"":"s")+(Q||OWN?" (filtered)":"");
-    host.innerHTML=vis.length?"<div class='tk-cp'>"+vis.map(card).join("")+"</div>":"<div class='tk-empty'>No matching clients. Try a different filter or segment.</div>";
+    if(VIEW==="board"){ host.innerHTML=boardHtml(vis); }
+    else { host.innerHTML=vis.length?"<div class='tk-cp'>"+vis.map(card).join("")+"</div>":"<div class='tk-empty'>No matching clients. Try a different filter or segment.</div>"; }
   }
+  function markView(){ Array.prototype.forEach.call($("tk_dash")?$("tk_dash").querySelectorAll("[data-view]"):[],function(b){ b.classList.toggle("on", b.getAttribute("data-view")===VIEW); }); }
   function markSeg(){ var tiles=$("tk_dash")?$("tk_dash").querySelectorAll(".tk-kpi[data-seg]"):[]; Array.prototype.forEach.call(tiles,function(t){ t.classList.toggle("sel", t.getAttribute("data-seg")===SEG); }); }
 
   function render(){
@@ -2029,6 +2071,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     var filterBar="<div class='tk-filter'>"
       +"<div class='tk-seg-count' id='tk_seg_count'></div>"
       +"<div class='tk-filter-ctrls'>"
+        +"<span class='tk-viewtoggle'><button data-view='board'>▦ Board</button><button data-view='list'>▤ Cards</button></span>"
         +"<span class='tk-search'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4-4'/></svg><input id='tk_q' type='text' placeholder='Search client, product, owner…' value='"+esc(Q)+"'></span>"
         +"<select id='tk_own'>"+ownOpts+"</select>"
       +"</div></div>";
@@ -2043,7 +2086,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
     var sp=$("tk_src"); if(sp){ sp.className="tk-src "+(SOURCE==="notion"?"live":"snap"); sp.textContent=SOURCE==="notion"?"● Live from Notion":"● Synced from Notion · as of "+asOfTxt; }
 
-    markSeg(); paintCards();
+    markSeg(); markView(); paintCards();
   }
 
   function load(){
@@ -2065,8 +2108,9 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   if($("tk_home")) $("tk_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
   if($("tk_refresh")) $("tk_refresh").addEventListener("click",load);
 
-  // KPI segment select + per-client detail popup
+  // view toggle + KPI segment select + per-client detail popup
   if($("tk_dash")) $("tk_dash").addEventListener("click",function(e){
+    var vw=e.target.closest("[data-view]"); if(vw){ VIEW=vw.getAttribute("data-view"); markView(); paintCards(); return; }
     var seg=e.target.closest("[data-seg]"); if(seg){ SEG=seg.getAttribute("data-seg"); markSeg(); paintCards(); return; }
     var el=e.target.closest("[data-ri]"); if(!el) return;
     if(e.target.closest("a")) return; // let real links work
