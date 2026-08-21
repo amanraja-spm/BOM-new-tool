@@ -284,8 +284,9 @@ body:not(.app-bom) > .layout{display:none !important}
 .tk-kpi .v{font-size:30px;font-weight:800;color:var(--ink);line-height:1.1;margin-top:6px}
 .tk-kpi.warn .v{color:var(--warn)}.tk-kpi.ok .v{color:var(--ok)}.tk-kpi.due .v{color:#b47900}
 .tk-kpi .s{font-size:11px;color:var(--ink-3);margin-top:2px}
-@media(max-width:1080px){.tk-kpis{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:560px){.tk-kpis{grid-template-columns:repeat(2,1fr)}}
+.tk-kpis.kpis-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1080px){.tk-kpis{grid-template-columns:repeat(3,1fr)}.tk-kpis.kpis-4{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:560px){.tk-kpis,.tk-kpis.kpis-4{grid-template-columns:repeat(2,1fr)}}
 /* clickable KPI segments */
 .tk-kpi[data-seg]{cursor:pointer;transition:box-shadow .15s ease,transform .15s ease,border-color .15s ease}
 .tk-kpi[data-seg]:hover{box-shadow:0 8px 20px rgba(16,24,40,.10);transform:translateY(-2px)}
@@ -355,7 +356,8 @@ body:not(.app-bom) > .layout{display:none !important}
 @media(max-width:680px){.tk-cp{grid-template-columns:1fr}}
 .cp{border:1px solid var(--line-2);border-radius:12px;padding:13px 14px 12px;background:#fff;position:relative;overflow:hidden}
 .cp::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
-.cp.late::before{background:var(--warn)}.cp.soon::before{background:#e0a200}.cp.ontrack::before{background:var(--ok)}.cp.notime::before{background:var(--brand-500)}
+.cp.late::before{background:var(--warn)}.cp.soon::before{background:#e0a200}.cp.ontrack::before{background:var(--ok)}.cp.notime::before{background:var(--brand-500)}.cp.hold::before{background:var(--ink-3)}
+.cp.hold .cp-dot{background:var(--ink-3)}
 .cp-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
 .cp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .cp.late .cp-dot{background:var(--warn)}.cp.soon .cp-dot{background:#e0a200}.cp.ontrack .cp-dot{background:var(--ok)}.cp.notime .cp-dot{background:var(--brand-500)}
@@ -1864,7 +1866,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var $=function(id){return document.getElementById(id);};
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
   var NOTION_URL="https://app.notion.com/p/3ad76329d1e1801283f1f2580ba1c088?v=34f76329d1e183ed8a1c08bdc476e0ae";
-  var SNAP_AS_OF="2026-08-18"; // date this snapshot was pulled from Notion; refreshed by the daily task
+  var SNAP_AS_OF="2026-08-21"; // date this snapshot was pulled from Notion; refreshed by the daily task
 
   // Pipeline order (open stages, then Closed)
   var STAGES=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
@@ -1872,7 +1874,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var PIPE=["Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
   function pipeIdx(stage){ var i=PIPE.indexOf(stage); return i; } // -1 = On Hold / not started
 
-  // Baked-in snapshot — live pull from Notion Deployment Tracker (18 Aug 2026).
+  // Baked-in snapshot — live pull from Notion Deployment Tracker (21 Aug 2026).
   // Auto-replaced by live data once NOTION_TOKEN + NOTION_DB_ID are set on the server.
   var SNAPSHOT=[
     // On hold / not started
@@ -1881,16 +1883,17 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     ["Landmarkgroup","","","Aman","To be Picked","Requirement Gathering","","","","",""],["ICICI","Azure Cloud","Deployment","Aman","To be Picked","Requirement Gathering","","","","",""],["PVR","","","Aman","To be Picked","Requirement Gathering","","","","",""],["Air India","Auditify","","Aman","To be Picked","Requirement Gathering","","","","",""],["PWC - AIXL","Expense Validation","Upload","Aman","To be Picked","Requirement Gathering","","","","",""],
     // Active pipeline
     ["HCL","Auditify","Integration (Upload)","Aman","To be Picked","Infra Prep (Client)","2026-08-28","","","",""],
+    ["Titan","","","Deepak","","Deployment (irame)","","","Tushar Goel","2026-08-19",""],
     ["GT","Auditify","Upload","Deepak","In Progress","Deployment (irame)","2026-07-24","2026-08-27","Vaibhav","2026-08-13",""],
-    ["AMLI","App irame","Datalake","Deepak","In Progress","Test & Bug FIx PProd","2026-06-15","2026-08-20","Vaibhav","2026-08-20",""],
-    ["CK Birla","Auditify","Upload","Aman","Done","Test & Bug FIx PProd","2026-07-23","","","",""],
-    ["Trident","Auditify / Synaps Setup","Integration (datalake); SQL QnA; Automated workflows; Schema training","Akshat","In Progress","Data Source Integration","2026-07-31","2026-08-10","Akshat","2026-08-10",""],
+    ["AMLI","App irame","Datalake","Deepak","In Progress","Revised deployment pending","2026-06-15","2026-08-20","Vaibhav","2026-08-20",""],
+    ["CK Birla","Auditify","Upload","Aman","Done","Revised deployment pending","2026-07-23","","","",""],
+    ["Trident","Auditify / Synaps Setup","Integration (datalake); SQL QnA; Automated workflows; Schema training","Akshat","In Progress","Revised deployment pending","2026-07-31","2026-08-10","Akshat","2026-08-10",""],
     ["JSW - New","Auditify","Integration","Deepak","In Progress","Data Source Integration","2026-07-24","2026-08-18","Tushar Goel","2026-08-13",""],
     ["Akasa - Navitaire","","","Tushar Goel","","Data Source Integration","","","Tushar Goel","",""],
     ["PWC - Akasa","CCM","Integration / Upload","Deepak","In Progress","Workflow Creation","2026-07-15","2026-08-05","Ankit","2026-08-08",""],
-    ["TACO","Auditify","Upload -> CCM","Deepak","In Progress","Workflow Creation","2026-07-20","2026-08-07","Yash Gupta","",""],
+    ["TACO","Auditify","Upload -> CCM","Deepak","In Progress","Revised deployment pending","2026-07-20","2026-08-07","Yash Gupta","",""],
     ["PwC Data Migration","","","Abhinav","","Workflow Creation","","","yash","",""],
-    ["PWC (internal)","Auditify","Upload","Aman","In Progress","Vendor Testing","2026-07-23","","","2026-08-11",""],
+    ["PWC (internal)","Auditify","Upload","Aman","In Progress","Client Testing","2026-07-23","","","2026-08-11",""],
     // Delivered / closed
     ["GT","Irame","Deployment","Tushar Goel","Done","Closed","2026-07-01","","","",""],["JSW - Earlier - uat","Auditify","Integration","Tushar Goel","Done","Closed","2026-06-26","","","",""],["GT","App irame","Upload","Tushar Goel","Done","Closed","2026-05-01","","","",""],["TACO","App irame","Upload","Tushar Goel","Done","Closed","2026-06-17","","","",""],["Indigo new","Auditify","Upload","Saurabh P","Done","Closed","2026-06-28","","","",""],["Indigo earlier","Auditify","Upload","Saurabh P","Done","Closed","2026-06-15","","","",""],["PwC","AI Concierge","Deployment (PDF)","Tushar Goel","Done","Closed","2026-06-13","","","",""],["Trident","App irame","Integration (datalake)","Akshat","Done","Closed","2026-07-10","","","",""],["AMLI","Auditify","Datalake","Deepak","Done","Closed","2026-07-22","","","",""],["Danube Properties","Auditify","Upload","Deepak","Done","Closed","2026-07-22","","","",""]
   ].map(function(a){ return {client:a[0],product:a[1],method:a[2],poc:a[3],status:a[4],stage:a[5],overall:a[6],actual:a[7],stageOwner:a[8],stageTimeline:a[9],docLink:a[10],url:NOTION_URL}; });
@@ -1966,28 +1969,22 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var SEGS=[
     {id:"all",     label:"All projects", cls:"hi"},
     {id:"active",  label:"In progress",  cls:""},
-    {id:"delayed", label:"Delayed",      cls:"warn"},
-    {id:"soon",    label:"Due ≤ 7 days", cls:"due"},
     {id:"onhold",  label:"On hold",      cls:""},
     {id:"delivered",label:"Delivered",   cls:"ok"}
   ];
   function segItems(id){ return BUCK[id]||[]; }
   function ownersOf(list){ var seen={},out=[]; list.forEach(function(r){ var o=ownerOf(r); if(o&&!seen[o]){ seen[o]=1; out.push(o); } }); return out.sort(); }
 
-  // a clean client card (no progress dashes)
+  // a clean client card (status by stage/state — no delayed/due language)
   function card(r){ var c=r.__c, cat=c.cat;
-    var badge=cat==="late"?"<span class='cp-badge late'>Delayed "+c.lateDays+"d</span>"
-      :cat==="soon"?"<span class='cp-badge soon'>Due "+c.inDays+"d</span>"
-      :cat==="closed"?"<span class='cp-badge done'>Delivered</span>"
+    var badge=cat==="closed"?"<span class='cp-badge done'>Delivered</span>"
       :cat==="onhold"?"<span class='cp-badge hold'>On hold</span>"
-      :cat==="notime"?"<span class='cp-badge notime'>In pipeline</span>"
-      :"<span class='cp-badge ontrack'>On track</span>";
+      :"<span class='cp-badge notime'>In progress</span>";
     var own=ownerOf(r);
-    var when=cat==="late"?"<span class='cp-when od'>Overdue "+fmt(c.due)+"</span>"
-      :cat==="closed"?(r.overall?"<span class='cp-when'>"+fmt(parse(r.overall))+"</span>":"")
-      :c.due?"<span class='cp-when'>Due "+fmt(c.due)+"</span>"
-      :(r.overall?"<span class='cp-when'>Target "+fmt(parse(r.overall))+"</span>":"");
-    var cls=cat==="closed"?"ontrack":cat==="onhold"?"notime":cat;
+    var dt=r.stageTimeline?parse(r.stageTimeline):(r.actual?parse(r.actual):(r.overall?parse(r.overall):null));
+    var when=cat==="closed"?(r.overall?"<span class='cp-when'>"+fmt(parse(r.overall))+"</span>":"")
+      :(dt&&cat!=="onhold"?"<span class='cp-when'>"+fmt(dt)+"</span>":"");
+    var cls=cat==="closed"?"ontrack":cat==="onhold"?"hold":"notime";
     return "<div class='cp "+cls+"' data-ri='"+DATA.indexOf(r)+"'>"
       +"<div class='cp-head'><span class='cp-dot'></span><span class='cp-name'>"+esc(r.client)+"</span>"+badge+"</div>"
       +"<div class='cp-sub'>"+(r.product?"<b>"+esc(r.product)+"</b>":"<b>—</b>")+(own?"<span>👤 "+esc(own)+"</span>":"")+"</div>"
@@ -1998,9 +1995,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function paintCards(){
     var host=$("tk_cards"); if(!host) return;
     var list=segItems(SEG).slice();
-    if(SEG==="delayed") list.sort(function(a,b){return b.__c.lateDays-a.__c.lateDays;});
-    else if(SEG==="soon") list.sort(function(a,b){return a.__c.inDays-b.__c.inDays;});
-    else list.sort(function(a,b){return String(a.client).localeCompare(String(b.client));});
+    list.sort(function(a,b){return String(a.client).localeCompare(String(b.client));});
     var q=Q.trim().toLowerCase();
     var vis=list.filter(function(r){
       if(OWN && ownerOf(r)!==OWN) return false;
@@ -2022,17 +2017,12 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       active.push(r);
       if(c.cat==="late")late.push(r); else if(c.cat==="soon")soon.push(r); else if(c.cat==="notime")notime.push(r); else ontrack.push(r);
     });
-    BUCK={all:recs.slice(),active:active,delayed:late,soon:soon,onhold:onhold,delivered:closed};
+    BUCK={all:recs.slice(),active:active,onhold:onhold,delivered:closed};
 
     function kpi(seg,v,s){ return "<div class='tk-kpi "+seg.cls+"' data-seg='"+seg.id+"'><div class='k'>"+seg.label+"</div><div class='v'>"+v+"</div><div class='s'>"+s+"</div></div>"; }
-    var kpis="<div class='tk-kpis'>"
-      +kpi(SEGS[0],recs.length,"click to view all")
-      +kpi(SEGS[1],active.length,ontrack.length+" on track")
-      +kpi(SEGS[2],late.length,late.length?"need attention":"none overdue 🎉")
-      +kpi(SEGS[3],soon.length,"due this week")
-      +kpi(SEGS[4],onhold.length,"not started")
-      +kpi(SEGS[5],closed.length,"delivered")
-      +"</div>";
+    var subs={all:"click to view all",active:"in progress now",onhold:"not started",delivered:"stage = Closed"};
+    var counts={all:recs.length,active:active.length,onhold:onhold.length,delivered:closed.length};
+    var kpis="<div class='tk-kpis kpis-4'>"+SEGS.map(function(s){return kpi(s,counts[s.id],subs[s.id]||"");}).join("")+"</div>";
 
     var owners=ownersOf(recs);
     var ownOpts="<option value=''>All owners</option>"+owners.map(function(o){return "<option value='"+esc(o)+"'>"+esc(o)+"</option>";}).join("");
