@@ -858,48 +858,89 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
 
     <!-- ── AI / Machine Learning (Auditify AI monthly rate card) ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 14h.01M15 14h.01"/></svg></span>AI / Machine Learning</div>
-    <div class="hint">Auditify LLM Cost Calculator — token-level model spend per operation (ingest · query · build · run), blended across Excel / PDF / image, at the chosen model stack &amp; scenario. Quoted as a monthly run-rate.</div>
-    <div class="fg"><label class="lbl">AI region <span class="sub">regional price index</span></label>
-      <select id="sel_ai_region">
-        <option value="southindia" selected>South India</option>
-        <option value="centralindia">Central India</option>
-        <option value="eastus">East US</option>
-        <option value="eastus2">East US 2</option>
-        <option value="westus">West US</option>
-        <option value="southeastasia">Southeast Asia (Singapore)</option>
-        <option value="uaenorth">UAE North</option>
-        <option value="uksouth">UK South</option>
-        <option value="westeurope">West Europe</option>
-        <option value="northeurope">North Europe</option>
-        <option value="australiaeast">Australia East</option>
-        <option value="japaneast">Japan East</option>
-      </select>
-    </div>
+    <div class="hint">AI model spend. <b>Excel</b> uses the token-level LLM calculator; <b>PDF</b> uses Azure-metered OCR (Mistral) + LLM tokens (GPT-5.6). Choose which document types the estimate includes.</div>
     <div class="row2">
-      <div class="fg"><label class="lbl">Model stack</label>
-        <select id="sel_ai_stack">
-          <option value="openai" selected>OpenAI (current)</option>
-          <option value="budget">OpenAI budget</option>
-          <option value="google">Google</option>
+      <div class="fg"><label class="lbl">AI region <span class="sub">price index</span></label>
+        <select id="sel_ai_region">
+          <option value="southindia" selected>South India</option>
+          <option value="centralindia">Central India</option>
+          <option value="eastus">East US</option>
+          <option value="eastus2">East US 2</option>
+          <option value="westus">West US</option>
+          <option value="southeastasia">Southeast Asia (Singapore)</option>
+          <option value="uaenorth">UAE North</option>
+          <option value="uksouth">UK South</option>
+          <option value="westeurope">West Europe</option>
+          <option value="northeurope">North Europe</option>
+          <option value="australiaeast">Australia East</option>
+          <option value="japaneast">Japan East</option>
         </select></div>
-      <div class="fg"><label class="lbl">Scenario</label>
-        <select id="sel_ai_scen">
-          <option value="low">Light</option>
-          <option value="typ" selected>Typical</option>
-          <option value="high">Heavy</option>
+      <div class="fg"><label class="lbl">Document type</label>
+        <select id="sel_ai_doctype">
+          <option value="both" selected>Excel + PDF</option>
+          <option value="excel">Excel only</option>
+          <option value="pdf">PDF only</option>
         </select></div>
     </div>
-    <div class="row2">
-      <div class="fg"><label class="lbl">PDF pages</label><input type="number" id="inp_ai_pages" value="20" min="1" step="1"></div>
-      <div class="fg"><label class="lbl">Excel sheets</label><input type="number" id="inp_ai_sheets" value="3" min="1" step="1"></div>
-    </div>
-    <div class="row2">
-      <div class="fg"><label class="lbl">Uploads / mo</label><input type="number" id="inp_ai_uploads" value="50" min="0" step="10"></div>
-      <div class="fg"><label class="lbl">Queries / mo</label><input type="number" id="inp_ai_queries" value="300" min="0" step="10"></div>
-    </div>
-    <div class="row2">
-      <div class="fg"><label class="lbl">Workflows built / mo</label><input type="number" id="inp_ai_builds" value="10" min="0" step="1"></div>
+
+    <div id="ai_excel_block">
+      <div class="hint" style="margin-top:2px">Excel — token-level LLM calculator (per operation × monthly volume).</div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">Model stack</label>
+          <select id="sel_ai_stack">
+            <option value="openai" selected>OpenAI (current)</option>
+            <option value="budget">OpenAI budget</option>
+            <option value="google">Google</option>
+          </select></div>
+        <div class="fg"><label class="lbl">Scenario</label>
+          <select id="sel_ai_scen">
+            <option value="low">Light</option>
+            <option value="typ" selected>Typical</option>
+            <option value="high">Heavy</option>
+          </select></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">Excel sheets</label><input type="number" id="inp_ai_sheets" value="3" min="1" step="1"></div>
+        <div class="fg"><label class="lbl">Uploads / mo</label><input type="number" id="inp_ai_uploads" value="50" min="0" step="10"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">Queries / mo</label><input type="number" id="inp_ai_queries" value="300" min="0" step="10"></div>
+        <div class="fg"><label class="lbl">Workflows built / mo</label><input type="number" id="inp_ai_builds" value="10" min="0" step="1"></div>
+      </div>
       <div class="fg"><label class="lbl">Workflow runs / mo</label><input type="number" id="inp_ai_runs" value="100" min="0" step="10"></div>
+    </div>
+
+    <div id="ai_pdf_block">
+      <div class="hint" style="margin-top:2px">PDF — Azure OCR per page (Mistral) + LLM tokens (GPT-5.6), from the av-engine model.</div>
+      <div class="fg"><label class="lbl">OCR engine</label>
+        <select id="sel_ai_ocr">
+          <option value="Mistral Document AI (OCR 4 + annotations)" selected>Mistral Document AI (OCR 4 + annotations) — $5.00/1k pages</option>
+          <option value="Mistral OCR 4 (text + tables only)">Mistral OCR 4 (text + tables) — $4.00/1k</option>
+          <option value="Mistral Document AI 2512 (previous gen)">Mistral Document AI 2512 — $3.00/1k</option>
+          <option value="Mistral Document AI 2505 (previous gen)">Mistral Document AI 2505 — $3.00/1k</option>
+          <option value="Mistral OCR 2512 (previous gen)">Mistral OCR 2512 — $2.00/1k</option>
+          <option value="Mistral OCR (original)">Mistral OCR (original) — $1.00/1k</option>
+        </select></div>
+      <div class="fg"><label class="lbl">LLM model</label>
+        <select id="sel_ai_llm">
+          <option value="GPT-5.6 Luna — Global Standard" selected>GPT-5.6 Luna — Global Standard ($1 / $0.10 / $6)</option>
+          <option value="GPT-5.6 Luna — after OpenAI 30-Jul cut (not yet on Azure)">GPT-5.6 Luna — after 30-Jul cut ($0.20 / $0.02 / $1.20)</option>
+          <option value="GPT-5.6 Luna — Priority Processing">GPT-5.6 Luna — Priority Processing ($2 / $0.20 / $12)</option>
+          <option value="GPT-5.6 Terra — Global Standard">GPT-5.6 Terra — Global Standard ($2.50 / $0.25 / $15)</option>
+          <option value="GPT-5.6 Sol — Global Standard">GPT-5.6 Sol — Global Standard ($5 / $0.50 / $30)</option>
+        </select></div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">PDFs / day</label><input type="number" id="inp_pdf_perday" value="100" min="0" step="10"></div>
+        <div class="fg"><label class="lbl">Pages / PDF</label><input type="number" id="inp_pdf_pages" value="30" min="1" step="1"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">Days / month</label><input type="number" id="inp_pdf_days" value="30" min="1" max="31" step="1"></div>
+        <div class="fg"><label class="lbl">Input <span class="sub">M tok/mo</span></label><input type="number" id="inp_pdf_in" value="60" min="0" step="5"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">Cached <span class="sub">M tok/mo</span></label><input type="number" id="inp_pdf_cached" value="40" min="0" step="5"></div>
+        <div class="fg"><label class="lbl">Output <span class="sub">M tok/mo</span></label><input type="number" id="inp_pdf_out" value="10" min="0" step="5"></div>
+      </div>
     </div>
 
     <!-- ── Commercial Terms ── -->
@@ -1159,12 +1200,37 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
   function llmOp(op, scen, stack, pages, sheets){
     return (llmCell("excel",op,scen,stack,pages,sheets)+llmCell("pdf",op,scen,stack,pages,sheets)+llmCell("image",op,scen,stack,pages,sheets))/3;
   }
-  // full monthly model spend for a given scenario (uploads·ingest + queries·query + builds·create + runs·run)
-  function llmMonth(scen, st){
-    return st.uploads*llmOp("ingest",scen,st.stack,st.pages,st.sheets)
-         + st.queries*llmOp("query", scen,st.stack,st.pages,st.sheets)
-         + st.builds *llmOp("create",scen,st.stack,st.pages,st.sheets)
-         + st.runs   *llmOp("run",   scen,st.stack,st.pages,st.sheets);
+  // Excel-only monthly model spend for a given scenario (uploads·ingest + queries·query + builds·create + runs·run)
+  function llmExcelMonth(scen, st){
+    return st.uploads*llmCell("excel","ingest",scen,st.stack,20,st.sheets)
+         + st.queries*llmCell("excel","query", scen,st.stack,20,st.sheets)
+         + st.builds *llmCell("excel","create",scen,st.stack,20,st.sheets)
+         + st.runs   *llmCell("excel","run",   scen,st.stack,20,st.sheets);
+  }
+
+  // ── PDF cost model (ported from av-engine BOQ builder) — Azure-metered OCR per page + LLM tokens ──
+  //   OCR: Mistral (Global deployment, $ / 1,000 pages). LLM: GPT-5.6 ($ / 1M tokens: input / cached / output).
+  var PDF_OCR = {
+    "Mistral Document AI (OCR 4 + annotations)":5.00,
+    "Mistral OCR 4 (text + tables only)":4.00,
+    "Mistral Document AI 2512 (previous gen)":3.00,
+    "Mistral Document AI 2505 (previous gen)":3.00,
+    "Mistral OCR 2512 (previous gen)":2.00,
+    "Mistral OCR (original)":1.00
+  };
+  var PDF_LLM = {
+    "GPT-5.6 Luna — Global Standard":{i:1.00,c:0.10,o:6.00},
+    "GPT-5.6 Luna — after OpenAI 30-Jul cut (not yet on Azure)":{i:0.20,c:0.02,o:1.20},
+    "GPT-5.6 Luna — Priority Processing":{i:2.00,c:0.20,o:12.00},
+    "GPT-5.6 Terra — Global Standard":{i:2.50,c:0.25,o:15.00},
+    "GPT-5.6 Sol — Global Standard":{i:5.00,c:0.50,o:30.00}
+  };
+  function pdfOcrCost(pdfsPerDay, pagesPerPdf, daysPerMonth, engine){
+    return (pdfsPerDay*pagesPerPdf*daysPerMonth)/1000 * (PDF_OCR[engine]!=null?PDF_OCR[engine]:5.00);
+  }
+  function pdfLlmCost(inM, cachedM, outM, model){
+    var p = PDF_LLM[model] || PDF_LLM["GPT-5.6 Luna — Global Standard"];
+    return inM*p.i + cachedM*p.c + outM*p.o;
   }
 
   // ── helpers ──
@@ -1290,32 +1356,56 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var SUP = { basic:0, standard:8600, prodirect:86000 };
     var supportFinal = (SUP[boq.support]||0)*factor;
 
-    // AI — Auditify LLM Cost Calculator. Blended monthly model spend (USD) × live FX → INR (no cloud factor).
+    // AI — Excel via LLM Cost Calculator; PDF via av-engine OCR + LLM. Doc-type selects which apply.
+    var aiDoc = gval("sel_ai_doctype","both");            // "excel" | "pdf" | "both"
+    var incExcel = (aiDoc!=="pdf"), incPdf = (aiDoc!=="excel");
+    // show/hide the two input blocks to match the doc-type
+    if($("ai_excel_block")) $("ai_excel_block").style.display = incExcel ? "" : "none";
+    if($("ai_pdf_block"))   $("ai_pdf_block").style.display   = incPdf   ? "" : "none";
+
     var aiSt = {
       stack: gval("sel_ai_stack","openai"),
       scen:  gval("sel_ai_scen","typ"),
-      pages: Math.max(1,Math.round(gnum("inp_ai_pages",20))),
       sheets:Math.max(1,Math.round(gnum("inp_ai_sheets",3))),
       uploads:Math.max(0,gnum("inp_ai_uploads",50)),
       queries:Math.max(0,gnum("inp_ai_queries",300)),
       builds: Math.max(0,gnum("inp_ai_builds",10)),
       runs:   Math.max(0,gnum("inp_ai_runs",100))
     };
+    // PDF (av-engine) inputs
+    var pdfEngine = gval("sel_ai_ocr","Mistral Document AI (OCR 4 + annotations)");
+    var pdfModel  = gval("sel_ai_llm","GPT-5.6 Luna — Global Standard");
+    var pdfSt = {
+      perDay:Math.max(0,gnum("inp_pdf_perday",100)), pages:Math.max(1,Math.round(gnum("inp_pdf_pages",30))),
+      days:Math.max(1,Math.round(gnum("inp_pdf_days",30))),
+      inM:Math.max(0,gnum("inp_pdf_in",60)), cachedM:Math.max(0,gnum("inp_pdf_cached",40)), outM:Math.max(0,gnum("inp_pdf_out",10))
+    };
     var aiRegionSel = gval("sel_ai_region","southindia");
     var aiRMult = aiRegionMult(aiRegionSel);          // regional price index (South India = 1.00 base)
-    var aiUsdMonthly = llmMonth(aiSt.scen, aiSt) * aiRMult;   // region-adjusted monthly model spend (USD)
+
+    var excelUsd = incExcel ? llmExcelMonth(aiSt.scen, aiSt) : 0;
+    var pdfOcrUsd = incPdf ? pdfOcrCost(pdfSt.perDay,pdfSt.pages,pdfSt.days,pdfEngine) : 0;
+    var pdfLlmUsd = incPdf ? pdfLlmCost(pdfSt.inM,pdfSt.cachedM,pdfSt.outM,pdfModel) : 0;
+    var pdfUsd = pdfOcrUsd + pdfLlmUsd;
+    var aiUsdMonthly = (excelUsd + pdfUsd) * aiRMult; // region-adjusted monthly model spend (USD)
     var aiTotalFinal = aiUsdMonthly * FX;             // INR monthly
-    var aiUpfrontFinal = 0;                           // this model quotes a monthly run-rate (no separate build line)
+    var aiUpfrontFinal = 0;                           // monthly run-rate model (no separate build line)
+    var floorUsd  = (incExcel ? llmExcelMonth("low", aiSt) : 0) + pdfUsd;
+    var budgetUsd = (incExcel ? llmExcelMonth("high",aiSt) : 0) + pdfUsd;
     var STACK_LABEL = {openai:"OpenAI (current)", budget:"OpenAI budget", google:"Google"};
     var SCEN_LABEL = {low:"Light", typ:"Typical", high:"Heavy"};
+    var DOC_LABEL = {excel:"Excel only", pdf:"PDF only", both:"Excel + PDF"};
     boq.ai = {
+      doc:aiDoc, docName:DOC_LABEL[aiDoc]||aiDoc, incExcel:incExcel, incPdf:incPdf,
       stack:aiSt.stack, stackName:STACK_LABEL[aiSt.stack]||aiSt.stack,
       scen:aiSt.scen, scenName:SCEN_LABEL[aiSt.scen]||aiSt.scen,
-      pages:aiSt.pages, sheets:aiSt.sheets,
-      uploads:aiSt.uploads, queries:aiSt.queries, builds:aiSt.builds, runs:aiSt.runs,
+      sheets:aiSt.sheets, uploads:aiSt.uploads, queries:aiSt.queries, builds:aiSt.builds, runs:aiSt.runs,
+      pdfEngine:pdfEngine, pdfModel:pdfModel, pdfPerDay:pdfSt.perDay, pdfPages:pdfSt.pages, pdfDays:pdfSt.days,
+      pdfInM:pdfSt.inM, pdfCachedM:pdfSt.cachedM, pdfOutM:pdfSt.outM, pdfPagesMonth:pdfSt.perDay*pdfSt.pages*pdfSt.days,
+      excelUsd:excelUsd*aiRMult, pdfUsd:pdfUsd*aiRMult, pdfOcrUsd:pdfOcrUsd*aiRMult, pdfLlmUsd:pdfLlmUsd*aiRMult,
       region:aiRegionSel, regionName:aiRegionName(aiRegionSel), regionMult:aiRMult,
       usdMonthly:aiUsdMonthly,
-      floor:llmMonth("low",aiSt)*aiRMult, budget:llmMonth("high",aiSt)*aiRMult };
+      floor:floorUsd*aiRMult, budget:budgetUsd*aiRMult };
 
     // fixed monthly cost of everything EXCEPT the scaling worker pool (userpool 1)
     var otherTotal = storageFinal + pool2Final + systemFinal + networkFinal + dbFinal
@@ -1379,10 +1469,12 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       "Secrets / keys vault: ~<b>"+fmtN(boq.kv)+"K</b> operations / month.", kvFinal, kvFinal);
 
     if(aiTotalFinal>0 || aiUpfrontFinal>0){
+      var excelTxt = incExcel ? ("<b>Excel</b> (LLM calc, "+boq.ai.stackName+" · "+boq.ai.scenName+"): "+fmtN(aiSt.uploads)+" uploads · "+fmtN(aiSt.queries)+" queries · "+fmtN(aiSt.builds)+" builds · "+fmtN(aiSt.runs)+" runs, ~"+fmtN(aiSt.sheets)+" sheets ≈ $"+fmtN(Math.round(boq.ai.excelUsd))+"/mo") : "";
+      var pdfTxt = incPdf ? ("<b>PDF</b> (Azure OCR + LLM): "+fmtN(boq.ai.pdfPagesMonth)+" pages/mo via "+pdfEngine.split(" (")[0]+" ≈ $"+fmtN(Math.round(boq.ai.pdfOcrUsd))+" OCR + "+pdfModel.split(" — ")[0]+" tokens ("+fmtN(pdfSt.inM)+"M/"+fmtN(pdfSt.cachedM)+"M/"+fmtN(pdfSt.outM)+"M) ≈ $"+fmtN(Math.round(boq.ai.pdfLlmUsd))+" = $"+fmtN(Math.round(boq.ai.pdfUsd))+"/mo") : "";
       addRow("AI + Machine Learning","ai","Auditify AI","ai",
-        "LLM Cost Calculator — <b>"+boq.ai.stackName+"</b> stack, <b>"+boq.ai.scenName+"</b> scenario, region <b>"+boq.ai.regionName+"</b>"+(aiRMult!==1?" (×"+aiRMult.toFixed(2)+" index)":"")+". "
-        +"Monthly volumes: <b>"+fmtN(aiSt.uploads)+"</b> uploads · <b>"+fmtN(aiSt.queries)+"</b> queries · <b>"+fmtN(aiSt.builds)+"</b> workflows built · <b>"+fmtN(aiSt.runs)+"</b> runs; PDFs ~"+fmtN(aiSt.pages)+" pages, Excel ~"+fmtN(aiSt.sheets)+" sheets. "
-        +"Blended model spend ≈ $"+fmtN(Math.round(aiUsdMonthly))+"/mo. Light–Heavy: $"+fmtN(Math.round(boq.ai.floor))+"–$"+fmtN(Math.round(boq.ai.budget))+"/mo.",
+        "<b>"+boq.ai.docName+"</b>, region <b>"+boq.ai.regionName+"</b>"+(aiRMult!==1?" (×"+aiRMult.toFixed(2)+" index)":"")+". "
+        +excelTxt+((incExcel&&incPdf)?".  ":"")+pdfTxt+". "
+        +"Total model spend ≈ $"+fmtN(Math.round(aiUsdMonthly))+"/mo"+(incExcel?" (Light–Heavy $"+fmtN(Math.round(boq.ai.floor))+"–$"+fmtN(Math.round(boq.ai.budget))+")":"")+".",
         aiTotalFinal, aiTotalFinal);
       rows[rows.length-1].upfront = aiUpfrontFinal;
       rows[rows.length-1].region = boq.ai.regionName;
@@ -1536,7 +1628,9 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var docLbls={excel:"Excel",hexcel:"Heavy weight Excel",pdf:"PDF",pdfimg:"PDF with images"};
     var docTxt=(r.sel||[]).map(function(k){return docLbls[k]||k;}).join(", ")||"—";
     var aiTxt = b.ai
-      ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo · "+b.ai.stackName+" · "+b.ai.scenName+" · "+b.ai.regionName+" · "+fmtN(b.ai.uploads)+" uploads / "+fmtN(b.ai.queries)+" queries / "+fmtN(b.ai.builds)+" builds / "+fmtN(b.ai.runs)+" runs")
+      ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo · "+b.ai.docName+" · "+b.ai.regionName
+         +(b.ai.incExcel?" · Excel: "+b.ai.stackName+"/"+b.ai.scenName+" "+fmtN(b.ai.uploads)+"u/"+fmtN(b.ai.queries)+"q/"+fmtN(b.ai.builds)+"b/"+fmtN(b.ai.runs)+"r":"")
+         +(b.ai.incPdf?" · PDF: "+fmtN(b.ai.pdfPagesMonth)+" pg/mo, "+fmtN(b.ai.pdfInM)+"/"+fmtN(b.ai.pdfCachedM)+"/"+fmtN(b.ai.pdfOutM)+"M tok":""))
       : "—";
     return [
       ["Concurrent users", fmtN(b.users)],
@@ -1896,8 +1990,10 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       sel_workload:"aks", inp_data_vol:1024,
       sel_dbengine:"postgres", inp_dbvcores:2, inp_dbsize:200, sel_dbha:"no",
       inp_endpoints:0, inp_egress:200, sel_gateway:"none",
-      sel_ai_stack:"openai", sel_ai_scen:"typ", inp_ai_pages:20, inp_ai_sheets:3,
+      sel_ai_doctype:"both", sel_ai_stack:"openai", sel_ai_scen:"typ", inp_ai_sheets:3,
       inp_ai_uploads:50, inp_ai_queries:300, inp_ai_builds:10, inp_ai_runs:100,
+      sel_ai_ocr:"Mistral Document AI (OCR 4 + annotations)", sel_ai_llm:"GPT-5.6 Luna — Global Standard",
+      inp_pdf_perday:100, inp_pdf_pages:30, inp_pdf_days:30, inp_pdf_in:60, inp_pdf_cached:40, inp_pdf_out:10,
       sel_ai_region:"southindia",
       sel_cloud:"azure", sel_pricing:"payg" };
     for(var k in d){ if($(k)) $(k).value=d[k]; }
@@ -1925,11 +2021,14 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     // AI / ML (LLM Cost Calculator) — honour the volumes Card 3/6 supplies; assume
     //   representative defaults for the rest (all captured in the BOQ Excel "Assumed inputs").
     function force(id,v){ var e=$(id); if(e) e.value=v; }
-    force("inp_ai_pages",20); force("inp_ai_sheets",3);
+    force("inp_ai_sheets",3);
     force("inp_ai_uploads", has(m.uploads)?m.uploads:50);
     force("inp_ai_queries", has(m.queries)?m.queries:300);
     force("inp_ai_builds",  has(m.builds)?m.builds:10);
     force("inp_ai_runs",    has(m.runs)?m.runs:100);
+    // PDF (av-engine) — representative defaults; the intake doesn't size PDFs yet
+    force("inp_pdf_perday",100); force("inp_pdf_pages",30); force("inp_pdf_days",30);
+    force("inp_pdf_in",60); force("inp_pdf_cached",40); force("inp_pdf_out",10);
     var dtProvided = m.docTypes && m.docTypes.length;
     if(dtProvided){
       sc("cb_excel",  m.docTypes.indexOf("Excel")>=0);
@@ -1953,10 +2052,13 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       ["DB data (GB)","inp_dbsize",false],["DB High Availability","sel_dbha",has(m.dbHA)],
       ["Private endpoints","inp_endpoints",false],["Egress (GB/mo)","inp_egress",false],
       ["Gateway / WAF / LB","sel_gateway",false],
-      ["AI model stack","sel_ai_stack",false],["AI scenario","sel_ai_scen",false],
-      ["AI PDF pages","inp_ai_pages",false],["AI Excel sheets","inp_ai_sheets",false],
+      ["AI document type","sel_ai_doctype",false],["AI model stack","sel_ai_stack",false],["AI scenario","sel_ai_scen",false],
+      ["AI Excel sheets","inp_ai_sheets",false],
       ["AI uploads / mo","inp_ai_uploads",has(m.uploads)],["AI queries / mo","inp_ai_queries",has(m.queries)],
       ["AI workflows built / mo","inp_ai_builds",has(m.builds)],["AI workflow runs / mo","inp_ai_runs",has(m.runs)],
+      ["PDF OCR engine","sel_ai_ocr",false],["PDF LLM model","sel_ai_llm",false],
+      ["PDFs / day","inp_pdf_perday",false],["Pages / PDF","inp_pdf_pages",false],["Days / month","inp_pdf_days",false],
+      ["PDF input Mtok/mo","inp_pdf_in",false],["PDF cached Mtok/mo","inp_pdf_cached",false],["PDF output Mtok/mo","inp_pdf_out",false],
       ["AI region","sel_ai_region",false],
       ["Pricing preference","sel_pricing",has(m.pricing)]
     ];
