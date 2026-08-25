@@ -1997,9 +1997,11 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     //   (all captured in the BOQ Excel "Assumed inputs").
     function force(id,v){ var e=$(id); if(e) e.value=v; }
     if(m.aiDoctype) sv("sel_ai_doctype", m.aiDoctype);
-    if(m.aiRegion)  sv("sel_ai_region",  m.aiRegion);
     if(m.aiStack)   sv("sel_ai_stack",   m.aiStack);
     if(m.aiScen)    sv("sel_ai_scen",    m.aiScen);
+    // AI region follows the single "Preferred region" answer when it's one of the AI-priced regions
+    var AI_RGN={southindia:1,centralindia:1,eastus:1,eastus2:1,westus:1,southeastasia:1,uaenorth:1,uksouth:1,westeurope:1,northeurope:1,australiaeast:1,japaneast:1};
+    if(m.region && AI_RGN[m.region]) sv("sel_ai_region", m.region);
     force("inp_ai_sheets",  has(m.aiSheets)?m.aiSheets:3);
     force("inp_ai_uploads", has(m.uploads)?m.uploads:50);
     force("inp_ai_queries", has(m.queries)?m.queries:300);
@@ -2007,13 +2009,9 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     force("inp_ai_runs",    has(m.runs)?m.runs:100);
     force("inp_pdf_perday", has(m.pdfPerDay)?m.pdfPerDay:100);
     force("inp_pdf_pages",  has(m.pdfPages)?m.pdfPages:30);
-    var dtProvided = m.docTypes && m.docTypes.length;
-    if(dtProvided){
-      sc("cb_excel",  m.docTypes.indexOf("Excel")>=0);
-      sc("cb_hexcel", m.docTypes.indexOf("Heavy weight Excel")>=0);
-      sc("cb_pdf",    m.docTypes.indexOf("PDF")>=0);
-      sc("cb_pdfimg", m.docTypes.indexOf("PDF with images")>=0);
-    }
+    // compute doc-type checkboxes follow the AI document-type choice
+    var adt=m.aiDoctype;
+    if(adt){ sc("cb_excel", adt==="excel"||adt==="both"); sc("cb_hexcel",false); sc("cb_pdf", adt==="pdf"||adt==="both"); sc("cb_pdfimg",false); }
     // record which BOQ inputs were assumed (not supplied by the intake form)
     function disp(id){ var e=$(id); if(!e) return "";
       if(id==="sl_typical") return fmtMB(posToMB(+e.value));
@@ -2025,7 +2023,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       ["Region","sel_region",has(m.region)],["Cloud provider","sel_cloud",has(m.cloud)],
       ["Concurrent users","inp_users",has(m.users)],["Peak parallel submissions","sl_peak",has(m.peak)],
       ["Typical file size","sl_typical",false],["Workload type","sel_workload",false],
-      ["Data volume (GB)","inp_data_vol",has(m.dataVol)],["Document types","__dt",!!dtProvided],
+      ["Data volume (GB)","inp_data_vol",has(m.dataVol)],
       ["Database engine","sel_dbengine",has(m.dbEngine)],["DB vCores","inp_dbvcores",false],
       ["DB data (GB)","inp_dbsize",false],["DB High Availability","sel_dbha",has(m.dbHA)],
       ["Private endpoints","inp_endpoints",false],["Egress (GB/mo)","inp_egress",false],
@@ -2035,7 +2033,6 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       ["AI uploads / mo","inp_ai_uploads",has(m.uploads)],["AI queries / mo","inp_ai_queries",has(m.queries)],
       ["AI workflows built / mo","inp_ai_builds",has(m.builds)],["AI workflow runs / mo","inp_ai_runs",has(m.runs)],
       ["PDFs / day","inp_pdf_perday",has(m.pdfPerDay)],["Pages / PDF","inp_pdf_pages",has(m.pdfPages)],
-      ["AI region","sel_ai_region",has(m.aiRegion)],
       ["Pricing preference","sel_pricing",has(m.pricing)]
     ];
     BOQ_ASSUMED = FIELDS.filter(function(f){ return !f[2]; })
@@ -2325,11 +2322,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     ]},
     {id:"scale",title:"Users & Scale",questions:[
       {id:"users",label:"Concurrent users",type:"number"},
-      {id:"users12",label:"Total users (12 months)",type:"number"},
-      {id:"peak",label:"Peak parallel submissions / jobs",type:"number"},
-      {id:"doctypes",label:"Document types processed",type:"multi",options:["Excel","Heavy weight Excel","PDF","PDF with images"]},
-      {id:"docsize",label:"Avg document size / pages",type:"text"},
-      {id:"volume",label:"Monthly document / upload volume",type:"number"}
+      {id:"peak",label:"Peak parallel submissions / jobs",type:"number"}
     ]},
     {id:"data",title:"Data & Compliance",questions:[
       {id:"datavol",label:"Data volume (GB)",type:"number"},
@@ -2345,7 +2338,6 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     ]},
     {id:"ai",title:"AI / Machine Learning",questions:[
       {id:"ai_doctype",label:"Document type",type:"select",options:["Excel + PDF","Excel only","PDF only"]},
-      {id:"ai_region",label:"AI region",type:"select",options:["South India","Central India","East US","East US 2","West US","Southeast Asia (Singapore)","UAE North","UK South","West Europe","North Europe","Australia East","Japan East"]},
       {id:"ai_stack",label:"Model stack (Excel)",type:"select",options:["OpenAI (current)","OpenAI budget","Google"]},
       {id:"ai_scen",label:"Scenario (Excel)",type:"select",options:["Light","Typical","Heavy"]},
       {id:"ai_sheets",label:"Excel sheets",type:"number"},
@@ -2375,9 +2367,14 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   function aiDefaultQs(){ var s=DEFAULT_FORM.sections.filter(function(x){return x.id==="ai";})[0]; return s?JSON.parse(JSON.stringify(s.questions)):[]; }
   function aiRegionDefault(){ var q=aiDefaultQs().filter(function(x){return x.id==="ai_region";})[0]; return q||{id:"ai_region",label:"AI region",type:"select",options:["South India"]}; }
+  var DROP_FIELDS={volume:1, doctypes:1, docsize:1, users12:1, ai_region:1}; // duplicate / dead intake fields
   function migrate(){
     var changed=false;
     (FORM.sections||[]).forEach(function(s){
+      // drop duplicate / dead fields (consolidated into the AI section or unused)
+      var before=(s.questions||[]).length;
+      s.questions=(s.questions||[]).filter(function(q){ return !DROP_FIELDS[q.id]; });
+      if(s.questions.length!==before) changed=true;
       // heal: the two base sections belong in the left column (Card 3)
       if((s.id==="client"||s.id==="scope") && s.col!=="left"){ s.col="left"; changed=true; }
       // heal a clobbered section title (a button label had leaked in)
@@ -2571,14 +2568,13 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     // AI select-label → Card 1 code
     var DOCT={"Excel + PDF":"both","Excel only":"excel","PDF only":"pdf"},
         STK={"OpenAI (current)":"openai","OpenAI budget":"budget","Google":"google"},
-        SCN={"Light":"low","Typical":"typ","Heavy":"high"},
-        RGN={"South India":"southindia","Central India":"centralindia","East US":"eastus","East US 2":"eastus2","West US":"westus","Southeast Asia (Singapore)":"southeastasia","UAE North":"uaenorth","UK South":"uksouth","West Europe":"westeurope","North Europe":"northeurope","Australia East":"australiaeast","Japan East":"japaneast"};
+        SCN={"Light":"low","Typical":"typ","Heavy":"high"};
     return {
       region:ans("region"), users:ans("users"), peak:ans("peak"), dataVol:ans("datavol"),
       cloud:CL[ans("cloud")]||"", dbEngine:DB[ans("db")]||"", dbHA:/^yes$/i.test(ans("ha"))?"yes":"",
-      pricing:PR[ans("pricing")]||"", uploads:ans("uploads")||ans("volume"), queries:ans("queries"),
-      builds:ans("workflows"), runs:ans("runs"), docTypes:ans("doctypes"),
-      aiDoctype:DOCT[ans("ai_doctype")]||"", aiRegion:RGN[ans("ai_region")]||"", aiStack:STK[ans("ai_stack")]||"", aiScen:SCN[ans("ai_scen")]||"",
+      pricing:PR[ans("pricing")]||"", uploads:ans("uploads"), queries:ans("queries"),
+      builds:ans("workflows"), runs:ans("runs"),
+      aiDoctype:DOCT[ans("ai_doctype")]||"", aiStack:STK[ans("ai_stack")]||"", aiScen:SCN[ans("ai_scen")]||"",
       aiSheets:ans("ai_sheets"), pdfPerDay:ans("pdf_perday"), pdfPages:ans("pdf_pages")
     };
   }
