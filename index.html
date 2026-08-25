@@ -911,35 +911,10 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
     </div>
 
     <div id="ai_pdf_block">
-      <div class="hint" style="margin-top:2px">PDF — Azure OCR per page (Mistral) + LLM tokens (GPT-5.6), from the av-engine model.</div>
-      <div class="fg"><label class="lbl">OCR engine</label>
-        <select id="sel_ai_ocr">
-          <option value="Mistral Document AI (OCR 4 + annotations)" selected>Mistral Document AI (OCR 4 + annotations) — $5.00/1k pages</option>
-          <option value="Mistral OCR 4 (text + tables only)">Mistral OCR 4 (text + tables) — $4.00/1k</option>
-          <option value="Mistral Document AI 2512 (previous gen)">Mistral Document AI 2512 — $3.00/1k</option>
-          <option value="Mistral Document AI 2505 (previous gen)">Mistral Document AI 2505 — $3.00/1k</option>
-          <option value="Mistral OCR 2512 (previous gen)">Mistral OCR 2512 — $2.00/1k</option>
-          <option value="Mistral OCR (original)">Mistral OCR (original) — $1.00/1k</option>
-        </select></div>
-      <div class="fg"><label class="lbl">LLM model</label>
-        <select id="sel_ai_llm">
-          <option value="GPT-5.6 Luna — Global Standard" selected>GPT-5.6 Luna — Global Standard ($1 / $0.10 / $6)</option>
-          <option value="GPT-5.6 Luna — after OpenAI 30-Jul cut (not yet on Azure)">GPT-5.6 Luna — after 30-Jul cut ($0.20 / $0.02 / $1.20)</option>
-          <option value="GPT-5.6 Luna — Priority Processing">GPT-5.6 Luna — Priority Processing ($2 / $0.20 / $12)</option>
-          <option value="GPT-5.6 Terra — Global Standard">GPT-5.6 Terra — Global Standard ($2.50 / $0.25 / $15)</option>
-          <option value="GPT-5.6 Sol — Global Standard">GPT-5.6 Sol — Global Standard ($5 / $0.50 / $30)</option>
-        </select></div>
+      <div class="hint" style="margin-top:2px">PDF — Mistral Document AI (OCR 4) OCR per page + GPT-5.6 Luna tokens (Azure Global Standard). Token volume scales with pages.</div>
       <div class="row2">
         <div class="fg"><label class="lbl">PDFs / day</label><input type="number" id="inp_pdf_perday" value="100" min="0" step="10"></div>
         <div class="fg"><label class="lbl">Pages / PDF</label><input type="number" id="inp_pdf_pages" value="30" min="1" step="1"></div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label class="lbl">Days / month</label><input type="number" id="inp_pdf_days" value="30" min="1" max="31" step="1"></div>
-        <div class="fg"><label class="lbl">Input <span class="sub">M tok/mo</span></label><input type="number" id="inp_pdf_in" value="60" min="0" step="5"></div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label class="lbl">Cached <span class="sub">M tok/mo</span></label><input type="number" id="inp_pdf_cached" value="40" min="0" step="5"></div>
-        <div class="fg"><label class="lbl">Output <span class="sub">M tok/mo</span></label><input type="number" id="inp_pdf_out" value="10" min="0" step="5"></div>
       </div>
     </div>
 
@@ -1372,14 +1347,15 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       builds: Math.max(0,gnum("inp_ai_builds",10)),
       runs:   Math.max(0,gnum("inp_ai_runs",100))
     };
-    // PDF (av-engine) inputs
-    var pdfEngine = gval("sel_ai_ocr","Mistral Document AI (OCR 4 + annotations)");
-    var pdfModel  = gval("sel_ai_llm","GPT-5.6 Luna — Global Standard");
-    var pdfSt = {
-      perDay:Math.max(0,gnum("inp_pdf_perday",100)), pages:Math.max(1,Math.round(gnum("inp_pdf_pages",30))),
-      days:Math.max(1,Math.round(gnum("inp_pdf_days",30))),
-      inM:Math.max(0,gnum("inp_pdf_in",60)), cachedM:Math.max(0,gnum("inp_pdf_cached",40)), outM:Math.max(0,gnum("inp_pdf_out",10))
-    };
+    // PDF (av-engine) — fixed engine + model; token volumes derived from page count
+    //   (av-engine reference ratio: 90,000 pages/mo ↔ 60M input / 40M cached / 10M output tokens).
+    var pdfEngine = "Mistral Document AI (OCR 4 + annotations)";
+    var pdfModel  = "GPT-5.6 Luna — Global Standard";
+    var pdfSt = { perDay:Math.max(0,gnum("inp_pdf_perday",100)), pages:Math.max(1,Math.round(gnum("inp_pdf_pages",30))), days:30 };
+    pdfSt.pagesMonth = pdfSt.perDay * pdfSt.pages * pdfSt.days;
+    pdfSt.inM     = pdfSt.pagesMonth * 60/90000;
+    pdfSt.cachedM = pdfSt.pagesMonth * 40/90000;
+    pdfSt.outM    = pdfSt.pagesMonth * 10/90000;
     var aiRegionSel = gval("sel_ai_region","southindia");
     var aiRMult = aiRegionMult(aiRegionSel);          // regional price index (South India = 1.00 base)
 
@@ -1992,8 +1968,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       inp_endpoints:0, inp_egress:200, sel_gateway:"none",
       sel_ai_doctype:"both", sel_ai_stack:"openai", sel_ai_scen:"typ", inp_ai_sheets:3,
       inp_ai_uploads:50, inp_ai_queries:300, inp_ai_builds:10, inp_ai_runs:100,
-      sel_ai_ocr:"Mistral Document AI (OCR 4 + annotations)", sel_ai_llm:"GPT-5.6 Luna — Global Standard",
-      inp_pdf_perday:100, inp_pdf_pages:30, inp_pdf_days:30, inp_pdf_in:60, inp_pdf_cached:40, inp_pdf_out:10,
+      inp_pdf_perday:100, inp_pdf_pages:30,
       sel_ai_region:"southindia",
       sel_cloud:"azure", sel_pricing:"payg" };
     for(var k in d){ if($(k)) $(k).value=d[k]; }
@@ -2027,8 +2002,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     force("inp_ai_builds",  has(m.builds)?m.builds:10);
     force("inp_ai_runs",    has(m.runs)?m.runs:100);
     // PDF (av-engine) — representative defaults; the intake doesn't size PDFs yet
-    force("inp_pdf_perday",100); force("inp_pdf_pages",30); force("inp_pdf_days",30);
-    force("inp_pdf_in",60); force("inp_pdf_cached",40); force("inp_pdf_out",10);
+    force("inp_pdf_perday",100); force("inp_pdf_pages",30);
     var dtProvided = m.docTypes && m.docTypes.length;
     if(dtProvided){
       sc("cb_excel",  m.docTypes.indexOf("Excel")>=0);
@@ -2056,9 +2030,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       ["AI Excel sheets","inp_ai_sheets",false],
       ["AI uploads / mo","inp_ai_uploads",has(m.uploads)],["AI queries / mo","inp_ai_queries",has(m.queries)],
       ["AI workflows built / mo","inp_ai_builds",has(m.builds)],["AI workflow runs / mo","inp_ai_runs",has(m.runs)],
-      ["PDF OCR engine","sel_ai_ocr",false],["PDF LLM model","sel_ai_llm",false],
-      ["PDFs / day","inp_pdf_perday",false],["Pages / PDF","inp_pdf_pages",false],["Days / month","inp_pdf_days",false],
-      ["PDF input Mtok/mo","inp_pdf_in",false],["PDF cached Mtok/mo","inp_pdf_cached",false],["PDF output Mtok/mo","inp_pdf_out",false],
+      ["PDFs / day","inp_pdf_perday",false],["Pages / PDF","inp_pdf_pages",false],
       ["AI region","sel_ai_region",false],
       ["Pricing preference","sel_pricing",has(m.pricing)]
     ];
