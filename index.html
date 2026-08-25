@@ -859,6 +859,22 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
     <!-- ── AI / Machine Learning (Auditify AI monthly rate card) ── -->
     <div class="sec"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 14h.01M15 14h.01"/></svg></span>AI / Machine Learning</div>
     <div class="hint">Model spend from the Auditify AI rate card — workflow portfolio × reruns × schema-drift (Expected tier). One-time build cost shows as the AI line's upfront cost.</div>
+    <div class="fg"><label class="lbl">AI region <span class="sub">regional price index</span></label>
+      <select id="sel_ai_region">
+        <option value="southindia" selected>South India</option>
+        <option value="centralindia">Central India</option>
+        <option value="eastus">East US</option>
+        <option value="eastus2">East US 2</option>
+        <option value="westus">West US</option>
+        <option value="southeastasia">Southeast Asia (Singapore)</option>
+        <option value="uaenorth">UAE North</option>
+        <option value="uksouth">UK South</option>
+        <option value="westeurope">West Europe</option>
+        <option value="northeurope">North Europe</option>
+        <option value="australiaeast">Australia East</option>
+        <option value="japaneast">Japan East</option>
+      </select>
+    </div>
     <div class="row2">
       <div class="fg"><label class="lbl">Excel workflows</label><input type="number" id="inp_ai_excel" value="12" min="0" step="1"></div>
       <div class="fg"><label class="lbl">PDF workflows</label><input type="number" id="inp_ai_pdf" value="4" min="0" step="1"></div>
@@ -1023,10 +1039,28 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
 
   // ── Provider meta ──
   var PROV = {
-    azure: { label:"Azure", region:"Central India",            aiRegion:"East US",   factor:1.00 },
-    aws:   { label:"AWS",   region:"ap-south-1 (Mumbai)",       aiRegion:"us-east-1", factor:1.04 },
-    gcp:   { label:"GCP",   region:"asia-south1 (Mumbai)",      aiRegion:"us-east1",  factor:0.97 }
+    azure: { label:"Azure", region:"Central India",            aiRegion:"South India",   factor:1.00 },
+    aws:   { label:"AWS",   region:"ap-south-1 (Mumbai)",       aiRegion:"ap-south-1",    factor:1.04 },
+    gcp:   { label:"GCP",   region:"asia-south1 (Mumbai)",      aiRegion:"asia-south1",   factor:0.97 }
   };
+
+  // ── AI / ML region price index (South India = 1.00 base). Regional adjustment applied to AI model spend. ──
+  var AI_REGIONS = [
+    {v:"southindia",    n:"South India",             m:1.00},
+    {v:"centralindia",  n:"Central India",           m:1.00},
+    {v:"eastus",        n:"East US",                 m:1.05},
+    {v:"eastus2",       n:"East US 2",               m:1.05},
+    {v:"westus",        n:"West US",                 m:1.06},
+    {v:"southeastasia", n:"Southeast Asia (Singapore)", m:1.06},
+    {v:"uaenorth",      n:"UAE North",               m:1.14},
+    {v:"uksouth",       n:"UK South",                m:1.12},
+    {v:"westeurope",    n:"West Europe",             m:1.12},
+    {v:"northeurope",   n:"North Europe",            m:1.10},
+    {v:"australiaeast", n:"Australia East",          m:1.12},
+    {v:"japaneast",     n:"Japan East",              m:1.10}
+  ];
+  function aiRegionMult(v){ for(var i=0;i<AI_REGIONS.length;i++){ if(AI_REGIONS[i].v===v) return AI_REGIONS[i].m; } return 1; }
+  function aiRegionName(v){ for(var i=0;i<AI_REGIONS.length;i++){ if(AI_REGIONS[i].v===v) return AI_REGIONS[i].n; } return v; }
 
 var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"South Africa West","eastasia":"East Asia","southeastasia":"Southeast Asia","australiacentral":"Australia Central","australiacentral2":"Australia Central 2","australiaeast":"Australia East","australiasoutheast":"Australia Southeast","austriaeast":"Austria East","usgovarizona":"US Gov Arizona","usgovtexas":"US Gov Texas","usgovvirginia":"US Gov Virginia","belgiumcentral":"Belgium Central","brazilsouth":"Brazil South","brazilsoutheast":"Brazil Southeast","canadacentral":"Canada Central","canadaeast":"Canada East","chilecentral":"Chile Central","denmarkeast":"Denmark East","northeurope":"North Europe","westeurope":"West Europe","francecentral":"France Central","francesouth":"France South","germanynorth":"Germany North","germanywestcentral":"Germany West Central","centralindia":"Central India","southcentralindia":"India South Central","southindia":"South India","westindia":"West India","indonesiacentral":"Indonesia Central","israelcentral":"Israel Central","italynorth":"Italy North","japaneast":"Japan East","japanwest":"Japan West","koreacentral":"Korea Central","koreasouth":"Korea South","malaysiawest":"Malaysia West","mexicocentral":"Mexico Central","newzealandnorth":"New Zealand North","norwayeast":"Norway East","norwaywest":"Norway West","polandcentral":"Poland Central","qatarcentral":"Qatar Central","spaincentral":"Spain Central","swedencentral":"Sweden Central","swedensouth":"Sweden South","switzerlandnorth":"Switzerland North","switzerlandwest":"Switzerland West","uaecentral":"UAE Central","uaenorth":"UAE North","uksouth":"UK South","ukwest":"UK West","centralus":"Central US","eastus":"East US","eastus2":"East US 2","northcentralus":"North Central US","southcentralus":"South Central US","westcentralus":"West Central US","westus":"West US","westus2":"West US 2","westus3":"West US 3"};
 
@@ -1215,16 +1249,19 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
       pages:Math.max(1,Math.round(gnum("inp_pdf_pages",20))), q:Math.max(0,gnum("inp_ai_queries",100)),
       pf:Math.max(0,gnum("inp_ai_pf",1))
     };
-    var aiMonthExp = rcMonth(1, aiSt);            // Expected tier monthly run-rate (USD)
-    var aiSetupExp = rcSetup(1, aiSt);            // Expected one-time build (USD)
-    var aiUsdMonthly = aiMonthExp.total;
+    var aiRegionSel = gval("sel_ai_region","southindia");
+    var aiRMult = aiRegionMult(aiRegionSel);      // regional price index (South India = 1.00 base)
+    var aiMonthExp = rcMonth(1, aiSt);            // Expected tier monthly run-rate (USD, base)
+    var aiSetupExp = rcSetup(1, aiSt) * aiRMult;  // Expected one-time build (USD, region-adjusted)
+    var aiUsdMonthly = aiMonthExp.total * aiRMult;// region-adjusted monthly run-rate (USD)
     var aiTotalFinal = aiUsdMonthly * FX;         // INR monthly
     var aiUpfrontFinal = aiSetupExp * FX;         // INR one-time build (shown as upfront)
     var aiWorkflows = aiSt.n.excel + aiSt.n.pdf + aiSt.n.sql;
     boq.ai = { excel:aiSt.n.excel, pdf:aiSt.n.pdf, sql:aiSt.n.sql, workflows:aiWorkflows,
       runs:aiSt.runs, driftPct:aiSt.driftPct, pages:aiSt.pages, q:aiSt.q, pf:aiSt.pf,
+      region:aiRegionSel, regionName:aiRegionName(aiRegionSel), regionMult:aiRMult,
       usdMonthly:aiUsdMonthly, usdSetup:aiSetupExp,
-      floor:rcMonth(0,aiSt).total, budget:rcMonth(2,aiSt).total,
+      floor:rcMonth(0,aiSt).total*aiRMult, budget:rcMonth(2,aiSt).total*aiRMult,
       rerun:aiMonthExp.rerun, repair:aiMonthExp.repair, query:aiMonthExp.query };
 
     // fixed monthly cost of everything EXCEPT the scaling worker pool (userpool 1)
@@ -1290,11 +1327,12 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
 
     if(aiTotalFinal>0 || aiUpfrontFinal>0){
       addRow("AI + Machine Learning","ai","Auditify AI","ai",
-        "Auditify AI rate card (Expected tier) — <b>"+fmtN(aiWorkflows)+"</b> workflows ("+fmtN(aiSt.n.excel)+" Excel · "+fmtN(aiSt.n.pdf)+" PDF · "+fmtN(aiSt.n.sql)+" SQL), "
+        "Auditify AI rate card (Expected tier), region <b>"+boq.ai.regionName+"</b>"+(aiRMult!==1?" (×"+aiRMult.toFixed(2)+" regional index)":" (base)")+" — <b>"+fmtN(aiWorkflows)+"</b> workflows ("+fmtN(aiSt.n.excel)+" Excel · "+fmtN(aiSt.n.pdf)+" PDF · "+fmtN(aiSt.n.sql)+" SQL), "
         +"<b>"+fmtN(aiSt.runs)+"</b> runs/workflow/mo, <b>"+fmtN(aiSt.driftPct)+"%</b> schema-drift; PDFs ~"+fmtN(aiSt.pages)+" pages; <b>"+fmtN(aiSt.q)+"</b> ad-hoc queries/mo"
         +(aiSt.pf!==1?" · price factor "+aiSt.pf:"")+". Monthly run-rate ≈ $"+fmtN(Math.round(aiUsdMonthly))+"; one-time build ≈ $"+fmtN(Math.round(aiSetupExp))+" (upfront). Floor–Budget: $"+fmtN(Math.round(boq.ai.floor))+"–$"+fmtN(Math.round(boq.ai.budget))+"/mo.",
         aiTotalFinal, aiTotalFinal);
       rows[rows.length-1].upfront = aiUpfrontFinal;
+      rows[rows.length-1].region = boq.ai.regionName;
     }
 
     if(supportFinal>0) addRow("Support","support","—","local",
@@ -1806,6 +1844,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       sel_dbengine:"postgres", inp_dbvcores:2, inp_dbsize:200, sel_dbha:"no",
       inp_endpoints:0, inp_egress:200, sel_gateway:"none",
       inp_ai_excel:12, inp_ai_pdf:4, inp_ai_sql:4, inp_ai_runs:8, inp_ai_drift:25, inp_pdf_pages:20, inp_ai_queries:100, inp_ai_pf:1.0,
+      sel_ai_region:"southindia",
       sel_cloud:"azure", sel_pricing:"payg" };
     for(var k in d){ if($(k)) $(k).value=d[k]; }
     $("cb_excel").checked=true; $("cb_hexcel").checked=false; $("cb_pdf").checked=false; $("cb_pdfimg").checked=false;
