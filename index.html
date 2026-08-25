@@ -2374,6 +2374,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     fetch("/api/form-def",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({def:FORM})}).catch(function(){});
   }
   function aiDefaultQs(){ var s=DEFAULT_FORM.sections.filter(function(x){return x.id==="ai";})[0]; return s?JSON.parse(JSON.stringify(s.questions)):[]; }
+  function aiRegionDefault(){ var q=aiDefaultQs().filter(function(x){return x.id==="ai_region";})[0]; return q||{id:"ai_region",label:"AI region",type:"select",options:["South India"]}; }
   function migrate(){
     var changed=false;
     (FORM.sections||[]).forEach(function(s){
@@ -2386,7 +2387,9 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       if(s.id==="ai" && !(s.questions||[]).some(function(q){return q.id==="ai_doctype";})){
         s.title="AI / Machine Learning"; s.questions=aiDefaultQs(); changed=true;
       }
-      (s.questions||[]).forEach(function(q){
+      (s.questions||[]).forEach(function(q,qi){
+        // the AI-region field is a plain select, NOT the infra-region picker
+        if(q.id==="ai_region"){ if(q.type!=="select"){ s.questions[qi]=aiRegionDefault(); changed=true; } return; }
         if((q.id==="region" || /region|country/i.test(q.label||"")) && q.type!=="region"){ q.type="region"; changed=true; }
       });
     });
