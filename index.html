@@ -1603,22 +1603,33 @@ var REGION_LABEL = {"southafricanorth":"South Africa North","southafricawest":"S
     var PR={payg:"Pay-as-you-go","1yr":"1-yr reserved","3yr":"3-yr reserved"};
     var docLbls={excel:"Excel",hexcel:"Heavy weight Excel",pdf:"PDF",pdfimg:"PDF with images"};
     var docTxt=(r.sel||[]).map(function(k){return docLbls[k]||k;}).join(", ")||"—";
-    var aiTxt = b.ai
-      ? ("$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo · "+b.ai.docName+" · "+b.ai.regionName
-         +(b.ai.incExcel?" · Excel: "+b.ai.stackName+"/"+b.ai.scenName+" "+fmtN(b.ai.uploads)+"u/"+fmtN(b.ai.queries)+"q/"+fmtN(b.ai.builds)+"b/"+fmtN(b.ai.runs)+"r":"")
-         +(b.ai.incPdf?" · PDF: "+fmtN(b.ai.pdfPagesMonth)+" pg/mo, "+fmtN(b.ai.pdfInM)+"/"+fmtN(b.ai.pdfCachedM)+"/"+fmtN(b.ai.pdfOutM)+"M tok":""))
-      : "—";
-    return [
+    var items=[
       ["Concurrent users", fmtN(b.users)],
       ["Region", (REGION_LABEL[b.region]||b.region)],
       ["Workload", (WL[b.workload]||b.workload)],
       ["Document types", docTxt],
       ["Storage", fmtN(r.effVolGB)+" GB"],
       ["Database", b.dbEngine==="none"?"None":((ENG[b.dbEngine])+" · "+b.dbVcores+" vCore · "+fmtN(b.dbSize)+" GB"+(b.dbHA?" · HA":""))],
-      ["Networking", b.endpoints+" endpoint(s) · "+fmtN(b.egress)+" GB egress · "+(GWL[b.gateway]||b.gateway)],
-      ["AI (Auditify rate card)", aiTxt],
-      ["Pricing", (PR[b.pricing])]
+      ["Networking", b.endpoints+" endpoint(s) · "+fmtN(b.egress)+" GB egress · "+(GWL[b.gateway]||b.gateway)]
     ];
+    // AI / ML — one explicit row per input driver so every BOQ value is visible
+    if(b.ai){
+      items.push(["AI — document type", b.ai.docName]);
+      items.push(["AI — region", b.ai.regionName+(b.ai.regionMult!==1?" (×"+b.ai.regionMult.toFixed(2)+")":"")]);
+      if(b.ai.incExcel){
+        items.push(["AI Excel — model stack", b.ai.stackName]);
+        items.push(["AI Excel — scenario", b.ai.scenName]);
+        items.push(["AI Excel — sheets / uploads / queries", fmtN(b.ai.sheets)+" sheets · "+fmtN(b.ai.uploads)+" uploads/mo · "+fmtN(b.ai.queries)+" queries/mo"]);
+        items.push(["AI Excel — workflows built / runs", fmtN(b.ai.builds)+" built/mo · "+fmtN(b.ai.runs)+" runs/mo"]);
+      }
+      if(b.ai.incPdf){
+        items.push(["AI PDF — volume", fmtN(b.ai.pdfPerDay)+" PDFs/day × "+fmtN(b.ai.pdfPages)+" pages × "+fmtN(b.ai.pdfDays)+" days = "+fmtN(b.ai.pdfPagesMonth)+" pages/mo"]);
+        items.push(["AI PDF — engine & model", "Mistral Document AI (OCR 4) · GPT-5.6 Luna"]);
+      }
+      items.push(["AI — monthly model spend", "$"+fmtN(Math.round(b.ai.usdMonthly))+"/mo (≈ ₹"+fmtN(Math.round(b.ai.usdMonthly*FX))+")"]);
+    } else { items.push(["AI / Machine Learning","—"]); }
+    items.push(["Pricing", (PR[b.pricing])]);
+    return items;
   }
   function buildBOQSummary(r){
     var items=boqItems(r), out="";
@@ -2038,7 +2049,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     BOQ_ASSUMED = FIELDS.filter(function(f){ return !f[2]; })
       .map(function(f){ return { label:f[0], value:(f[1]==="__dt"?docTypesVal():disp(f[1])) }; })
       .filter(function(kv){ return kv.value!=="" && kv.value!=null; });
-    try{ loadPrices(); }catch(e){ try{ refresh(); }catch(e2){} }
+    try{ refresh(); }catch(e){}      // update the report + LAST synchronously with the applied BOQ
+    try{ loadPrices(); }catch(e){}   // then refresh live prices (recomputes again when they arrive)
   };
   // expose Card 1's region <option> markup so Card 3 can reuse the exact dropdown
   window.__regionOptionsHTML = function(){ var s=$("sel_region"); return s?s.innerHTML:""; };
