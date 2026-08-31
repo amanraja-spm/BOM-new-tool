@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>av-engine — Azure BOQ builder</title>
+<style>
+:root{
+  --bg:#f6f1e6; --panel:#efe7d6; --parchment:#f1ead8; --text:#2b2620; --muted:#6b6152;
+  --border:#e0d5bd; --blue:#2f6fdb; --purple:#6a4ddb; --green:#1f9d63;
+  --amber:#b5791f; --red:#cf3b3b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);line-height:1.6;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:38px 24px 90px}
+h1{font-size:31px;margin:0 0 4px;letter-spacing:-.4px}
+.sub{color:var(--muted);margin:0 0 30px;font-size:16px}
+h2{font-size:21px;margin:46px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+h3{font-size:16px;margin:26px 0 8px}
+p{margin:10px 0}
+code{background:var(--parchment);border:1px solid var(--border);border-radius:4px;
+  padding:1px 5px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+a{color:var(--blue)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:16px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:880px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+th{background:var(--parchment);font-weight:600;font-size:12.5px;letter-spacing:.2px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.total td{font-weight:700;border-top:2px solid #c9bd9f;background:var(--parchment)}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  padding:2px 8px;border-radius:20px;border:1px solid var(--border);background:var(--parchment)}
+.tag.g{color:var(--green);border-color:#b7dcc7}
+.tag.r{color:var(--red);border-color:#e8c0c0}
+.tag.a{color:var(--amber);border-color:#e3d1a8}
+.tag.b{color:var(--blue);border-color:#c2d3f2}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:16px 0}
+.step{background:var(--parchment);border:1px solid var(--border);border-radius:8px;padding:9px 13px;
+  font-size:13px;text-align:center;min-width:96px}
+.step b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+.arrow{color:var(--muted);font-size:19px}
+.optcard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;
+  display:flex;flex-direction:column;gap:6px}
+.optcard.win{border-color:var(--green);box-shadow:0 0 0 2px rgba(31,157,99,.15)}
+.optcard .nm{font-weight:700;font-size:15px}
+.optcard .pr{font-size:25px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.optcard .pr span{font-size:13px;color:var(--muted);letter-spacing:0}
+.bar{height:9px;border-radius:5px;background:#e3d9c4;overflow:hidden;margin:6px 0 2px}
+.bar>i{display:block;height:100%;border-radius:5px}
+.arch{display:flex;flex-direction:column;gap:7px;font-size:12.5px}
+.layer{border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--parchment)}
+.layer b{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);display:block}
+
+/* ── builder ── */
+.builder{display:grid;grid-template-columns:330px 1fr;gap:22px;align-items:start;margin-top:18px}
+@media(max-width:980px){.builder{grid-template-columns:1fr}}
+.ctrls{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;
+  position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+@media(max-width:980px){.ctrls{position:static;max-height:none}}
+.cgroup{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.cgroup:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.cgroup>h4{margin:0 0 9px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.ctl{margin-bottom:10px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;gap:8px}
+.ctl label .v{font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue)}
+.ctl input[type=range]{width:100%;margin:3px 0 0;accent-color:var(--blue)}
+.ctl select,.ctl input[type=number]{width:100%;margin-top:3px;padding:5px 7px;font-size:13px;
+  border:1px solid var(--border);border-radius:6px;background:var(--parchment);color:var(--text);
+  font-family:inherit}
+.chk{display:flex;align-items:center;gap:7px;font-size:13px;margin-bottom:6px;cursor:pointer}
+.chk input{accent-color:var(--blue);margin:0}
+.seg{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-top:4px}
+.seg button{flex:1;border:none;background:var(--parchment);color:var(--muted);padding:6px 4px;
+  font-size:12px;cursor:pointer;font-family:inherit;font-weight:600}
+.seg button.on{background:var(--blue);color:#fff}
+.seg button+button{border-left:1px solid var(--border)}
+.btn{display:inline-block;background:var(--blue);color:#fff;border:none;border-radius:7px;
+  padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn.ghost{background:var(--parchment);color:var(--text);border:1px solid var(--border)}
+.btn:hover{filter:brightness(1.06)}
+.hero{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:6px}
+.hero .big{font-size:40px;font-weight:700;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;line-height:1}
+.hero .big small{font-size:15px;font-weight:400;color:var(--muted);letter-spacing:0}
+.budgetbar{height:26px;border-radius:7px;background:#e3d9c4;position:relative;overflow:hidden;margin:10px 0 4px}
+.budgetbar>i{display:block;height:100%;background:linear-gradient(90deg,#1f9d63,#2f6fdb)}
+.budgetbar.over>i{background:linear-gradient(90deg,#b5791f,#cf3b3b)}
+.budgetbar>span{position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;
+  font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.split{display:flex;gap:5px;height:24px;border-radius:6px;overflow:hidden;margin:8px 0}
+.split>i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-bottom:4px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:middle}
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+.callout{border-left:3px solid var(--amber);background:var(--parchment);padding:11px 15px;border-radius:0 7px 7px 0;margin:14px 0;font-size:14px}
+.callout.g{border-left-color:var(--green)}
+.callout.r{border-left-color:var(--red)}
+.dl{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>av-engine — Azure BOQ</h1>
+<p class="sub">Four deployment shapes, priced from live Azure meters. Every cost driver is a knob — move it, watch the BOQ change, download the sheet.</p>
+
+<div class="panel">
+  <div class="grid4">
+    <div><span class="tag b">Volume</span><p class="small" style="margin:6px 0 0">100 PDFs/day &times; 30 pages &times; 30 days = <b>90,000 OCR pages/month</b>, 30,000 invoices/month</p></div>
+    <div><span class="tag b">OCR</span><p class="small" style="margin:6px 0 0">Mistral <b>Document AI</b> (= OCR 4 + annotations), <b>$5.00</b> / 1,000 pages. Global deployment, no data-zone premium.</p></div>
+    <div><span class="tag b">Agents</span><p class="small" style="margin:6px 0 0">GPT-5.6 <b>Luna</b>, Global Standard: <b>$1.00</b> in / $0.10 cached / <b>$6.00</b> out per 1M</p></div>
+    <div><span class="tag g">Ceiling</span><p class="small" style="margin:6px 0 0"><b>&#8377;5,00,000/month</b> (&asymp; $5,252). Every option lands well under it.</p></div>
+  </div>
+</div>
+
+<h2>Where the money actually goes</h2>
+<p>The instinct is that servers are the cost. For this system they are not. OCR is billed per page and the page count is fixed by the business, not by how you deploy — so the same <b>$450</b> of Mistral OCR and <b>~$124</b> of Luna tokens appear in all four options. What changes between options is the wrapper around them.</p>
+
+<div class="flow">
+  <div class="step">100<b>PDFs/day</b></div><span class="arrow">&rarr;</span>
+  <div class="step">&times;30<b>pages each</b></div><span class="arrow">&rarr;</span>
+  <div class="step">3,000<b>pages/day</b></div><span class="arrow">&rarr;</span>
+  <div class="step">90,000<b>pages/month</b></div><span class="arrow">&rarr;</span>
+  <div class="step" style="border-color:var(--green)">$450<b>Mistral OCR</b></div>
+</div>
+<p class="small muted">The 1,000 invoices/day figure drives database rows and matching work, not OCR cost — OCR is charged by page, and ten invoices can share one page-set.</p>
+
+<div class="callout">
+  <b>The load is smaller than it sounds.</b> 3,000 pages a day, spread over a day, is about 2 pages a second at peak — and each page is an outbound HTTP call that the worker mostly waits on. The app is I/O-bound and autonomous; only exception cases need a person. Concurrency is not the constraint here, so paying for a big always-on cluster buys nothing.
+</div>
+
+<h2>The four options</h2>
+<div class="grid4" id="optcards"></div>
+<p class="small muted" style="margin-top:12px">Bars are scaled against the &#8377;5,00,000/month ceiling. Pay-as-you-go pricing; the 1-year saving plan figure is on each card in grey.</p>
+
+<div class="grid2" style="margin-top:20px">
+  <div class="panel">
+    <h3 style="margin-top:0">Option 1 &mdash; Lean VM <span class="tag a">cheapest</span></h3>
+    <div class="arch">
+      <div class="layer"><b>Ingress</b>nginx on the VM, Let's Encrypt, one Standard public IP</div>
+      <div class="layer"><b>Compute</b>1&times; D8as_v5 (8 vCPU / 32 GB) running the existing <code>docker/compose.yml</code> unchanged</div>
+      <div class="layer"><b>Data</b>PostgreSQL Flexible D2ds v5, 512 GB, <b>no standby</b></div>
+    </div>
+    <p class="small">Your compose file already describes this exact stack. Nothing new to learn, nothing new to operate. The catch is honest: one VM. A host reboot, a kernel patch or a bad deploy is visible downtime, and a database failure means a point-in-time restore measured in hours.</p>
+  </div>
+  <div class="panel" style="border-color:var(--green)">
+    <h3 style="margin-top:0">Option 2 &mdash; Container Apps <span class="tag g">recommended</span></h3>
+    <div class="arch">
+      <div class="layer"><b>Ingress</b>Built-in managed HTTPS + certificates &mdash; <b>no Application Gateway to pay for</b></div>
+      <div class="layer"><b>Compute</b>4 container apps, 5 vCPU / 10 GiB, replicas restart and reschedule on their own</div>
+      <div class="layer"><b>Data</b>PostgreSQL Flexible D2ds v5, 512 GB, <b>zone-redundant HA</b> with automatic failover</div>
+    </div>
+    <p class="small">This is the shape you described: the database is the thing worth protecting, the app layer is disposable. You get a hot standby and automatic failover on Postgres, self-healing containers above it, and no cluster to upgrade, patch or size. Roughly <b>$356/month more</b> than Option 1 and it buys away the single-point-of-failure.</p>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="panel">
+    <h3 style="margin-top:0">Option 3 &mdash; AKS production</h3>
+    <div class="arch">
+      <div class="layer"><b>Ingress</b>Application Gateway Standard v2 + AGIC ($216/mo)</div>
+      <div class="layer"><b>Compute</b>AKS Standard tier; 2&times; D4as_v5 system pool + 1&times; D8as_v5 workload pool (autoscale 1&ndash;3)</div>
+      <div class="layer"><b>Data</b>PostgreSQL D2ds v5 zone-redundant HA; 4 private endpoints; ACR Premium</div>
+    </div>
+    <p class="small">The shape the sample BOQ assumes. It is a real production platform and it is the right answer if av-engine is going to sit next to other services on a shared cluster. On its own, for this workload, you are paying about <b>$382/month more than Option 2</b> for capabilities the app cannot use yet &mdash; plus the standing cost of owning cluster upgrades and node image patching.</p>
+  </div>
+  <div class="panel">
+    <h3 style="margin-top:0">Option 4 &mdash; AKS + HA/DR <span class="tag r">ceiling</span></h3>
+    <div class="arch">
+      <div class="layer"><b>Ingress</b>Application Gateway <b>WAF v2</b>, OWASP managed rules ($389/mo)</div>
+      <div class="layer"><b>Compute</b>3 zones: 3&times; D4as_v5 system + 2&times; D8as_v5 workload</div>
+      <div class="layer"><b>Data</b>PostgreSQL D4ds v5 zone-redundant + geo-backup; GRS blob; geo-replicated ACR; warm standby in South India</div>
+    </div>
+    <p class="small">Losing a whole availability zone costs no capacity, and a region failure is a 30&ndash;60 minute recovery instead of a day. Worth quoting so the conversation has a top end &mdash; still only <b>63% of the &#8377;5 lakh budget</b>. Whether the business needs this is a question about the cost of an outage, not about Azure.</p>
+  </div>
+</div>
+
+<h2>Auditing the sample BOQ &mdash; what we keep, cut and add</h2>
+<p>You asked whether every element in the reference sheet is actually needed. Several are not, and two important ones are missing entirely.</p>
+<table>
+<thead><tr><th style="width:24%">Line in the sample BOQ</th><th style="width:12%">Verdict</th><th>Reasoning</th></tr></thead>
+<tbody>
+<tr><td>AKS node pools (D16ads v5 + D8ads v5)</td><td><span class="tag a">Resize</span></td><td>24 vCPU of always-on nodes for a workload that needs roughly 8. D16ads v5 alone is $392/month. Options 1&ndash;2 drop Kubernetes entirely; Option 3 uses 2&times;D4 + 1&times;D8.</td></tr>
+<tr><td>Virtual Machines &mdash; 1&times; D2a v4 with inter-region transfer</td><td><span class="tag r">Cut</span></td><td>This reads as a jump box. Azure Bastion on demand, or a private endpoint plus SSH, does the same job without a standing $45/month.</td></tr>
+<tr><td>Application Gateway Standard V2 &mdash; $210.24</td><td><span class="tag r">Cut in 1&amp;2</span></td><td>Container Apps includes managed HTTPS ingress and certificates at no charge, and a single VM terminates TLS in the nginx you already run. Only Kubernetes genuinely needs this line.</td></tr>
+<tr><td>Azure Private Link &mdash; 6 endpoints</td><td><span class="tag a">Reduce</span></td><td>Six endpoints bills $43.80/month. We have 2&ndash;4 things worth putting behind one (Postgres, Blob, and on AKS also Key Vault and ACR). Option 1 uses VNet service endpoints and firewall rules instead, which cost nothing.</td></tr>
+<tr><td>ACR Premium &mdash; $50</td><td><span class="tag a">Downgrade</span></td><td>Premium exists for private endpoints and geo-replication. Basic ($5) is enough for a single-VM deploy, Standard ($20) for Container Apps. Premium stays only where a private endpoint is actually attached.</td></tr>
+<tr><td>PostgreSQL &mdash; D2ds v5, 200 GiB, <i>without</i> HA</td><td><span class="tag b">Keep, harden</span></td><td>Right size, wrong posture. This is the one component where losing data is unrecoverable, so Options 2&ndash;4 add zone-redundant HA (it doubles compute, +$183/month) and 512 GiB of storage.</td></tr>
+<tr><td>Azure OpenAI &mdash; 60K input / 12K output tokens per month</td><td><span class="tag r">Wrong by 1000&times;</span></td><td>60,000 tokens a month is about twenty chat messages. Real usage &mdash; contract extraction passes, rate verification, case triage, assistant turns, the widget planner &mdash; is on the order of 110M tokens/month. Re-modelled on GPT-5.6 Luna at the Global Standard rate.</td></tr>
+<tr><td>Storage, Key Vault, Monitor, Support</td><td><span class="tag g">Keep</span></td><td>All four are correct in principle; only the quantities move with volume.</td></tr>
+<tr><td class="muted"><i>&mdash; not in the sample &mdash;</i></td><td><span class="tag g">Add</span></td><td><b>OCR is missing entirely.</b> Mistral Document AI at 90,000 pages/month is $450 &mdash; the single largest AI line, and it was not in the reference sheet at all. Also added: outbound bandwidth, managed disks as their own line, and the public IP.</td></tr>
+</tbody>
+</table>
+
+<h2 id="builder">Build your own</h2>
+<p>Every assumption below is a control. Change the volume, swap the OCR engine, turn HA off, resize the nodes &mdash; the BOQ recomputes as you move, and the download button writes a real <code>.xlsx</code> in the same two-sheet format as the reference.</p>
+
+<div class="builder">
+  <div class="ctrls" id="ctrls"></div>
+  <div>
+    <div class="panel" style="margin-top:0">
+      <div class="hero">
+        <div><div class="big" id="hUsd">$0<small> /month</small></div></div>
+        <div><div class="big" id="hInr" style="font-size:28px;color:var(--muted)">&#8377;0<small> /month</small></div></div>
+        <div style="margin-left:auto;text-align:right" class="small muted">
+          1-yr saving plan: <b id="hRi" style="color:var(--text)">$0</b><br>
+          Annual (PAYG): <b id="hYr" style="color:var(--text)">$0</b>
+        </div>
+      </div>
+      <div class="budgetbar" id="bbar"><i style="width:0%"></i><span id="btxt"></span></div>
+      <div class="legend" style="margin-top:10px" id="legend"></div>
+      <div class="split" id="split"></div>
+      <div class="dl">
+        <button class="btn" id="dlXlsx">&#8681; Download this BOQ (.xlsx)</button>
+        <button class="btn ghost" id="dlCsv">&#8681; CSV</button>
+        <button class="btn ghost" id="reset">Reset to defaults</button>
+      </div>
+    </div>
+    <table id="boqTable"></table>
+  </div>
+</div>
+
+<h2>Non-production environments</h2>
+<p>The BOQ sheets cover <b>production only</b>, as you asked. For the conversation, a shared UAT environment is cheap because it does not need HA, does not need the AI volume, and can be switched off outside working hours:</p>
+<table>
+<thead><tr><th>UAT shape</th><th class="num">$ / month</th><th class="num">&#8377; / month</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Single D4as_v5 VM + PostgreSQL D2ds v5 (no HA), 128 GB storage, Basic ACR shared with prod</td><td class="num">~$285</td><td class="num">~&#8377;27,100</td><td>Always on. Same compose file, smaller box.</td></tr>
+<tr><td>Same, auto-shutdown outside 09:00&ndash;21:00 on weekdays (~36% of hours)</td><td class="num">~$175</td><td class="num">~&#8377;16,700</td><td>PostgreSQL storage still bills while stopped; compute does not.</td></tr>
+<tr><td>AI usage in UAT</td><td class="num">~$40</td><td class="num">~&#8377;3,800</td><td>Roughly 5% of prod page volume plus test token spend. Point it at the same Foundry resource with a separate deployment.</td></tr>
+</tbody>
+</table>
+<p class="small muted">Adding UAT to the recommended Option 2 takes the total to roughly <b>$1,830/month (&#8377;1.74 lakh)</b> &mdash; still under a third of the ceiling.</p>
+
+<h2>Rate verification &mdash; every AI meter, checked against Azure</h2>
+<p>These were re-read from the <b>Azure Retail Prices API</b> (<code>prices.azure.com/api/retail/prices</code>) &mdash; the same rate card the Azure pricing calculator reads from. Azure's own HTML pricing pages render their figures client-side and return <code>$-</code> placeholders to any fetch, so the API is the stronger source, not a substitute for one. Meter names below are verbatim.</p>
+
+<h3>Mistral &mdash; Document AI is OCR 4 with annotations</h3>
+<p>Microsoft's own launch post is titled <a href="https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/mistral-document-ai-with-ocr-4-and-mistral-medium-3-5-arrive-in-microsoft-foundr/4529863"><b>&ldquo;Mistral Document AI (with OCR 4) and Mistral Medium 3.5 arrive in Microsoft Foundry&rdquo;</b></a>. That parenthesis is the whole answer: <b>Document AI is not a separate model from OCR 4 &mdash; it is OCR 4 plus annotations.</b> Coverage of the launch states it directly: <i>&ldquo;Mistral OCR 4 through the API is priced at $4 per 1,000 pages... Document AI is priced at $5 per 1,000 pages.&rdquo;</i></p>
+<p>So the $5.00 Azure meter named <code>OCR 4 annot glbl Pages</code> <b>is</b> Mistral Document AI. The meters literally named <code>Doc AI *</code> are the older 2505 and 2512 releases &mdash; the previous generation, the one OCR 4 supersedes.</p>
+<table>
+<thead><tr><th>Product</th><th>Retail API meter</th><th class="num">$ / 1K pages</th><th class="num">90k pages/mo</th><th>Status</th></tr></thead>
+<tbody>
+<tr style="background:var(--parchment)"><td><b>Mistral Document AI</b><br><span class="small muted">OCR 4 + annotations</span></td><td><code>OCR 4 annot glbl Pages</code></td><td class="num"><b>$5.00</b></td><td class="num"><b>$450</b></td><td><span class="tag g">Current</span> Used in the BOQ.</td></tr>
+<tr><td>Mistral OCR 4<br><span class="small muted">text + tables, no annotations</span></td><td><code>OCR 4 glbl Pages</code></td><td class="num">$4.00</td><td class="num">$360</td><td><span class="tag g">Current</span> Saves $90/mo if you don't need structured fields.</td></tr>
+<tr><td>Mistral Document AI 2512</td><td><code>Doc AI 2512 glbl Pages</code></td><td class="num">$3.00</td><td class="num">$270</td><td><span class="tag a">Previous gen</span></td></tr>
+<tr><td>Mistral Document AI 2505</td><td><code>Doc AI glbl 2505 Pages</code></td><td class="num">$3.00</td><td class="num">$270</td><td><span class="tag a">Previous gen</span></td></tr>
+<tr><td>Mistral OCR 2512</td><td><code>OCR 2512 glbl Pages</code></td><td class="num">$2.00</td><td class="num">$180</td><td><span class="tag a">Previous gen</span></td></tr>
+<tr><td>Mistral OCR (original)</td><td><code>OCR glbl Pages</code></td><td class="num">$1.00</td><td class="num">$90</td><td><span class="tag a">Previous gen</span> Live since Jun 2025.</td></tr>
+</tbody>
+</table>
+<div class="callout g">
+  <b>Your $5.00 was right, and correctly named.</b> I had read the Azure meter list literally and matched the string <code>Doc AI</code> to the words &ldquo;Document AI&rdquo;, which landed on the previous-generation $3.00 meters. The product called Mistral Document AI today is OCR 4 with annotations, and it bills at $5.00 per 1,000 pages under a meter whose name never says &ldquo;Doc AI&rdquo;. Meter strings are not product names &mdash; the launch post is what maps them.
+</div>
+<div class="callout">
+  <b>Two things this changes for the sheet.</b> First, the <b>+10% data-zone premium</b>: Microsoft applies it to US and EU data-zone deployments. Our models sit in South India on <b>Global</b> deployment, so the premium does not apply &mdash; the Azure data-zone meters confirm it (<code>OCR 4 annot DZ</code> is $5.50, exactly 10% over $5.00). Second, <b>batch</b>: the launch coverage cites a 50% Batch-API discount taking OCR 4 to $2/1,000 pages, but that is Mistral's own API. <b>No batch meter for Mistral OCR exists in the Azure rate card</b> &mdash; all 18 Mistral meters in South India are on-demand. So I have not modelled a batch saving. Worth asking Microsoft, because at our volume it would be worth ~$225/month.
+</div>
+
+<h3>GPT-5.6 Luna &mdash; I had the wrong tier</h3>
+<p>Azure publishes two parallel meter sets per model. Decoding them mattered, because they differ by exactly 2&times;:</p>
+<table>
+<thead><tr><th>Meter</th><th class="num">$ / 1M</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr style="background:var(--parchment)"><td><code>5.6 luna ShortCo Inp <b>Std Gl</b></code></td><td class="num"><b>$1.00</b></td><td><b>Global Standard input</b> &mdash; the on-demand rate. Now used.</td></tr>
+<tr style="background:var(--parchment)"><td><code>5.6 luna ShortCo Cd Inp <b>Std Gl</b></code></td><td class="num"><b>$0.10</b></td><td>Global Standard cached input.</td></tr>
+<tr style="background:var(--parchment)"><td><code>5.6 luna ShortCo Opt <b>Std Gl</b></code></td><td class="num"><b>$6.00</b></td><td><b>Global Standard output.</b></td></tr>
+<tr><td><code>5.6 luna ShortCo Inp <b>PP Gl</b></code></td><td class="num">$2.00</td><td>Priority Processing &mdash; <span class="tag r">what I wrongly used</span></td></tr>
+<tr><td><code>5.6 luna ShortCo Opt <b>PP Gl</b></code></td><td class="num">$12.00</td><td>Priority Processing output.</td></tr>
+</tbody>
+</table>
+<p class="small muted">All Luna meters carry <code>effectiveStartDate 2026-07-01</code>. <code>ShortCo</code>/<code>LongCo</code> = short / long context; <code>Inp</code>/<code>Cd Inp</code>/<code>Opt</code> = input / cached input / output.</p>
+
+<p>Three independent checks that <code>Std Gl</code> is the on-demand rate and <code>PP Gl</code> is the premium tier:</p>
+<table>
+<thead><tr><th style="width:8%">#</th><th>Check</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><b>1</b></td><td>Compare every <code>PP Gl</code> meter to its <code>Std Gl</code> pair across the whole Terra set</td><td>Every single pair is <b>exactly 2&times;</b> &mdash; input, cached input, output and cache-writes. A consistent 2&times; premium is a tier, not a different model.</td></tr>
+<tr><td><b>2</b></td><td>A real Azure bill quoted on <a href="https://learn.microsoft.com/en-us/answers/questions/5962521/pricing-of-openai-gpt-5-6-models-luna-terra">Microsoft Q&amp;A</a></td><td>Charged <b>$1.10 in / $6.60 out</b> for Luna. That is <code>Std Gl</code> plus ~10%, <b>not</b> the $2.00/$12.00 PP rate. Independent of the API.</td></tr>
+<tr><td><b>3</b></td><td>Microsoft's own naming, per the moderator on that thread</td><td>&ldquo;Azure OpenAI currently documents <b>Standard</b> deployments and <b>Priority Processing</b>&rdquo; &mdash; the two tiers the two meter sets correspond to.</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+  <b>On the 30 July price cut.</b> You are right that OpenAI cut Luna by 80% &mdash; <a href="https://www.cnbc.com/2026/07/30/open-ai-price-cut-gpt.html">confirmed</a>, to $0.20 in / $1.20 out, effective 30 July 2026. But that is <b>OpenAI's direct API</b>. On Azure it has not landed: every Luna meter still reads $1.00/$6.00 dated 1 July, and the Microsoft moderator on the thread above states plainly that <i>&ldquo;the OpenAI-announced Luna and Terra pricing changes are not currently reflected in the publicly available Azure OpenAI pricing.&rdquo;</i> So the BOQ uses <b>$1.00/$6.00 = $124/month</b>. The builder has a <b>&ldquo;after OpenAI 30-Jul cut&rdquo;</b> option that drops the same usage to <b>$25/month</b> &mdash; use it the day Azure follows.
+</div>
+
+<h3>What did not change</h3>
+<p>Every infrastructure rate was already read from the same retail API and re-checked in this pass &mdash; PostgreSQL Ddsv5 compute ($0.251/$0.502/$1.004 per vCore-hour), storage ($0.131/GB), and Container Apps ($0.000024/vCPU-second, $0.000003/GiB-second) all came back identical. Two rates are <b>derived rather than directly published</b>, and you should treat them as the soft spots in this sheet: <b>Private Endpoint</b> at $0.01/hour + $0.01/GB (not returned for Central India by the API &mdash; derived from your reference BOQ, where 6 endpoints + 200 GB = $45.80 reproduces exactly), and <b>ACR Premium</b> at $1.6666/day (the API returns Basic and Standard for Central India but not the Premium registry unit; $50/month matches your reference sheet).</p>
+
+<h2>What is worth saying out loud</h2>
+<div class="callout g">
+  <b>The budget is not the constraint.</b> The most expensive option here is &#8377;3.14 lakh &mdash; 63% of the ceiling &mdash; and the recommended one is &#8377;1.43 lakh, about 29%. The real question is not what fits in &#8377;5 lakh; it is how much operational surface you want to own for a system that mostly runs itself.
+</div>
+<div class="callout">
+  <b>Pages per PDF is the number to nail down.</b> It is the only assumption that moves the total meaningfully, because OCR is billed per page. Going from 30 to 100 pages per PDF adds $1,050/month on its own &mdash; more than the entire compute bill of Option 1. Everything else in this sheet is within noise of it. Move that slider first.
+</div>
+<div class="callout g">
+  <b>Both AI rates were re-verified against Azure, and one of mine was wrong.</b> I had priced Luna at the <i>Priority Processing</i> meter ($2.00/$12.00). The correct Global Standard rate is <b>$1.00 in / $0.10 cached / $6.00 out</b> &mdash; half of what I first quoted. The token line drops from ~$248 to <b>$124/month</b>. Evidence is in the table above.
+</div>
+
+<footer>
+  Generated 6 August 2026 &middot; Working note, not a quote.<br>
+  Mistral product-to-meter mapping from Microsoft's Foundry launch post (techcommunity, "Mistral Document AI (with OCR 4)"). Unit prices read from the Azure Retail Prices API (<code>prices.azure.com/api/retail/prices</code>, api-version 2023-01-01-preview), Central India and South India, USD, on 6 August 2026. Quantities are sized by us; unit rates are not estimates. INR at 1 USD = &#8377;95.20 (5 August 2026).<br>
+  Model and generated sheets: <code>notes/boq/</code>
+</footer>
+</div>
+
+<script>
+"use strict";
+/* ═══════════════ price catalog — live Azure retail meters, 6 Aug 2026 ═══════════════ */
+const H = 730, FX = 95.20, BUDGET_INR = 500000;
+const P = {
+  vm:{D2as_v5:.0556,D4as_v5:.1110,D8as_v5:.2220,D16as_v5:.4440},
+  vmRiYear:{D2as_v5:300,D4as_v5:600,D8as_v5:1201,D16as_v5:2402},
+  vmSpec:{D2as_v5:"2 vCPUs, 8 GB RAM",D4as_v5:"4 vCPUs, 16 GB RAM",D8as_v5:"8 vCPUs, 32 GB RAM",D16as_v5:"16 vCPUs, 64 GB RAM"},
+  disk:{P4:5.28,P6:10.21,P10:19.71,P15:38.01,P20:73.22,P30:135.17},
+  aksHour:.10,
+  pg:{D2ds_v5:.251,D4ds_v5:.502,D8ds_v5:1.004},
+  pgSpec:{D2ds_v5:"2 vCores",D4ds_v5:"4 vCores",D8ds_v5:"8 vCores"},
+  pgStorageGb:.131, pgBackupGrsGb:.190, pgRiDiscount:.35,
+  agwStdFixed:.280, agwStdCu:.008, agwWafFixed:.504, agwWafCu:.0144,
+  acaVcpuSec:.000024, acaMemSec:.000003, acaReqM:.40,
+  acaFreeVcpuSec:180000, acaFreeGibSec:360000, acaFreeReqM:2,
+  acr:{Basic:.1666,Standard:.6666,Premium:1.6666}, acrGeoDay:1.6666,
+  blobLrsGb:.020, blobGrsGb:.0425, blobWrite10k:.055, blobRead10k:.0044, blobOther10k:.006,
+  logAnalyticsGb:3.22, logBasicGb:.70, logRetainGb:.14,
+  kvOps10k:.03, peHour:.01, peDataGb:.01,
+  publicIpHour:.006, egressFreeGb:100, egressGb:.075, backupVm:30,
+  /* Mistral, Global deployment. Document AI IS OCR 4 + annotations (per Microsoft's Foundry
+     launch post), so its meter is `OCR 4 annot glbl`, not the older `Doc AI *` meters. */
+  ocr:{
+    "Mistral Document AI (OCR 4 + annotations)":5.00,  /* meter: OCR 4 annot glbl Pages */
+    "Mistral OCR 4 (text + tables only)":4.00,         /* meter: OCR 4 glbl Pages */
+    "Mistral Document AI 2512 (previous gen)":3.00,    /* meter: Doc AI 2512 glbl Pages */
+    "Mistral Document AI 2505 (previous gen)":3.00,    /* meter: Doc AI glbl 2505 Pages */
+    "Mistral OCR 2512 (previous gen)":2.00,            /* meter: OCR 2512 glbl Pages */
+    "Mistral OCR (original)":1.00                      /* meter: OCR glbl Pages */
+  },
+  /* GPT-5.6: "Std Gl" = Global Standard (on-demand); "PP Gl" = Priority Processing = exactly 2x Std */
+  llm:{
+    "GPT-5.6 Luna — Global Standard":{i:1.00,c:.10,o:6.00},
+    "GPT-5.6 Luna — after OpenAI 30-Jul cut (not yet on Azure)":{i:.20,c:.02,o:1.20},
+    "GPT-5.6 Luna — Priority Processing":{i:2.00,c:.20,o:12.00},
+    "GPT-5.6 Terra — Global Standard":{i:2.50,c:.25,o:15.00},
+    "GPT-5.6 Sol — Global Standard":{i:5.00,c:.50,o:30.00}
+  }
+};
+const IN = "Central India", SI = "South India";
+
+/* ═══════════════ state ═══════════════ */
+const DEFAULTS = {
+  shape:"container_apps",
+  pdfsPerDay:100, pagesPerPdf:30, invoicesPerPdf:10, daysPerMonth:30,
+  ocrEngine:"Mistral Document AI (OCR 4 + annotations)",
+  llmModel:"GPT-5.6 Luna — Global Standard",
+  llmInputM:60, llmCachedM:40, llmOutputM:10,
+  blobGb:1000, blobGrs:false, egressGb:200, logGbDay:.4, retainMonths:3,
+  vmSku:"D8as_v5", vmCount:1,
+  acaVcpu:5, acaGib:10,
+  sysSku:"D4as_v5", sysCount:2, wlSku:"D8as_v5", wlCount:1,
+  dbSku:"D2ds_v5", dbStorageGb:512, dbHa:true, dbGeoBackup:false,
+  ingress:"managed", peCount:2, acrTier:"Standard", acrGeo:false,
+  drEnabled:false, kvPremium:false, term:"payg", uatPct:0
+};
+let S = Object.assign({}, DEFAULTS);
+
+const pagesMonth = s => s.pdfsPerDay * s.pagesPerPdf * s.daysPerMonth;
+const invMonth   = s => s.pdfsPerDay * s.invoicesPerPdf * s.daysPerMonth;
+const money = n => "$" + n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const inr   = n => "₹" + Math.round(n).toLocaleString("en-IN");
+
+/* ═══════════════ row builders ═══════════════ */
+function R(cat,svc,region,spec,payg,ri){ return {cat,svc,region,spec,payg,upfront:0,ri:(ri===undefined?payg:ri)}; }
+
+function vmCost(sku,count){ return {payg:P.vm[sku]*H*count, ri:P.vmRiYear[sku]/12*count}; }
+
+function pgCost(s){
+  const servers = s.dbHa ? 2 : 1;
+  const compute = P.pg[s.dbSku]*H*servers;
+  const storage = s.dbStorageGb*P.pgStorageGb;
+  const geo = s.dbGeoBackup ? s.dbStorageGb*P.pgBackupGrsGb : 0;
+  return {payg:compute+storage+geo, ri:compute*(1-P.pgRiDiscount)+storage+geo};
+}
+
+function acaCost(s){
+  const v = Math.max(0, s.acaVcpu*H*3600 - P.acaFreeVcpuSec);
+  const g = Math.max(0, s.acaGib*H*3600 - P.acaFreeGibSec);
+  const r = Math.max(0, 5 - P.acaFreeReqM);
+  return v*P.acaVcpuSec + g*P.acaMemSec + r*P.acaReqM;
+}
+
+function blobCost(s){
+  const stored = s.blobGb * (s.blobGrs ? P.blobGrsGb : P.blobLrsGb);
+  const writes = (s.pdfsPerDay + s.pdfsPerDay*s.pagesPerPdf) * s.daysPerMonth;
+  const reads = writes*5;
+  return stored + writes/1e4*P.blobWrite10k + reads/1e4*P.blobRead10k + writes/1e4*P.blobOther10k;
+}
+
+function monitorCost(s, basicShare){
+  const total = s.logGbDay*30, basic = total*basicShare, an = total-basic;
+  return an*P.logAnalyticsGb + basic*P.logBasicGb + total*Math.max(0,s.retainMonths-1)*P.logRetainGb;
+}
+
+function egressCost(s){ return Math.max(0, s.egressGb - P.egressFreeGb) * P.egressGb; }
+function ocrCost(s){ return pagesMonth(s)/1000 * P.ocr[s.ocrEngine]; }
+function llmCost(s){
+  const p = P.llm[s.llmModel];
+  return s.llmInputM*p.i + s.llmCachedM*p.c + s.llmOutputM*p.o;
+}
+
+function buildRows(s){
+  const rows = [];
+  const nf = n => n.toLocaleString("en-US");
+
+  /* ── compute ── */
+  if(s.shape === "lean_vm"){
+    const c = vmCost(s.vmSku, s.vmCount);
+    rows.push(R("Compute","Virtual Machine — application host",IN,
+      `${s.vmCount}x ${s.vmSku.replace(/_/g,"")} (${P.vmSpec[s.vmSku]}) x 730 hrs (Linux, Pay-As-You-Go); runs the whole docker compose stack — API, worker, Hermes agent, frontend, nginx`,
+      c.payg,c.ri));
+    const disks = s.vmCount*(P.disk.P10 + P.disk.P20);
+    rows.push(R("Compute","Managed Disks",IN,
+      `${s.vmCount}x P10 (128 GiB) OS disk + ${s.vmCount}x P20 (512 GiB) data disk, Premium SSD LRS`,disks));
+  } else if(s.shape === "container_apps"){
+    rows.push(R("Compute","Azure Container Apps — Consumption",IN,
+      `${s.acaVcpu} vCPU / ${s.acaGib} GiB always-on across 4 apps (API, worker, Hermes agent, frontend); managed HTTPS ingress and certificates included; 5M requests/month; free monthly grant applied`,
+      acaCost(s)));
+  } else {
+    rows.push(R("Compute","Azure Kubernetes Service — control plane",IN,
+      `Standard tier (financially-backed uptime SLA), 1 cluster x 730 hrs${s.shape==="aks_dr"?", 3 availability zones":""}`,
+      P.aksHour*H));
+    const sys = vmCost(s.sysSku,s.sysCount), wl = vmCost(s.wlSku,s.wlCount);
+    rows.push(R("Compute","AKS — system node pool",IN,
+      `${s.sysCount}x ${s.sysSku.replace(/_/g,"")} (${P.vmSpec[s.sysSku]}) x 730 hrs (Linux); system pods, ingress controller`,
+      sys.payg,sys.ri));
+    rows.push(R("Compute","AKS — workload node pool",IN,
+      `${s.wlCount}x ${s.wlSku.replace(/_/g,"")} (${P.vmSpec[s.wlSku]}) x 730 hrs (Linux); autoscale; API, worker, Hermes agent, frontend`,
+      wl.payg,wl.ri));
+    const n = s.sysCount + s.wlCount;
+    rows.push(R("Compute","Managed Disks",IN,`${n}x P10 (128 GiB) node OS disks, Premium SSD LRS`, n*P.disk.P10));
+  }
+
+  /* ── database ── */
+  const pg = pgCost(s);
+  rows.push(R("Databases","Azure Database for PostgreSQL",IN,
+    `Flexible Server, General Purpose, 1x ${s.dbSku.replace(/_/g," ").replace("ds v5","ds v5")} (${P.pgSpec[s.dbSku]}) x 730 hrs; Premium SSD, ${nf(s.dbStorageGb)} GiB storage; ${s.dbHa?"WITH zone-redundant High Availability (hot standby, automatic failover)":"WITHOUT High Availability"}${s.dbGeoBackup?"; geo-redundant backup":"; backup within free allowance"}`,
+    pg.payg,pg.ri));
+
+  /* ── storage ── */
+  rows.push(R("Storage","Storage Accounts",IN,
+    `Block Blob, General Purpose V2, ${s.blobGrs?"GRS (geo-redundant)":"LRS"}, Hot tier, ${nf(s.blobGb)} GB; source PDFs + rendered page images; includes read/write/list/other operations`,
+    blobCost(s)));
+
+  /* ── networking ── */
+  if(s.ingress === "appgw_std"){
+    rows.push(R("Networking","Application Gateway",IN,
+      "Standard V2 tier, 730 fixed gateway hours; 2 capacity units; AGIC ingress for AKS",
+      H*(P.agwStdFixed + 2*P.agwStdCu)));
+  } else if(s.ingress === "appgw_waf"){
+    rows.push(R("Networking","Application Gateway",IN,
+      "WAF V2 tier, 730 fixed gateway hours; 2 capacity units; OWASP managed rule set",
+      H*(P.agwWafFixed + 2*P.agwWafCu)));
+  } else if(s.ingress === "public_ip"){
+    rows.push(R("Networking","Public IP Address",IN,
+      "1x Standard static public IPv4 x 730 hrs; TLS terminated by nginx on the VM",
+      P.publicIpHour*H));
+  }
+  if(s.peCount > 0){
+    rows.push(R("Networking","Azure Private Link",IN,
+      `${s.peCount} private endpoints x 730 hours; 200 GB data processed`,
+      s.peCount*P.peHour*H + 200*P.peDataGb));
+  }
+  rows.push(R("Networking","Bandwidth",IN,
+    `${nf(s.egressGb)} GB outbound internet data transfer (first 100 GB/month free)`, egressCost(s)));
+
+  /* ── containers ── */
+  rows.push(R("Containers","Azure Container Registry",IN,
+    `${s.acrTier} tier, 1 registry x 30 days; geo-replication ${s.acrGeo?"to a secondary region":"disabled"}`,
+    P.acr[s.acrTier]*30 + (s.acrGeo?P.acrGeoDay*30:0)));
+
+  /* ── ops + security ── */
+  const basicShare = (s.shape==="aks"||s.shape==="aks_dr") ? .75 : 0;
+  rows.push(R("DevOps","Azure Monitor",IN,
+    `${(s.shape==="aks"||s.shape==="aks_dr")?"Container Insights + ":""}Log Analytics ingestion & retention, ${s.logGbDay} GB/day${basicShare?" ("+Math.round(basicShare*100)+"% on the Basic Logs tier)":""}, ${s.retainMonths} months retention; Application Insights, dashboards, alert rules`,
+    monitorCost(s,basicShare)));
+  rows.push(R("Security","Key Vault",IN,
+    s.kvPremium ? "Premium vault (HSM-backed keys); 10,000 operations/month; private endpoint enabled"
+                : "Standard vault; 10,000 operations/month; Managed HSM not provisioned",
+    s.kvPremium ? 5.00 : P.kvOps10k*1));
+
+  /* ── DR ── */
+  if(s.drEnabled){
+    const dr = vmCost("D4as_v5",1);
+    rows.push(R("Disaster Recovery","Secondary region warm standby",SI,
+      "1x D4asv5 (4 vCPUs, 16 GB RAM) x 730 hrs + 1x P10 OS disk; holds images and a read replica target so the stack can be brought up in the secondary region",
+      dr.payg+P.disk.P10, dr.ri+P.disk.P10));
+    rows.push(R("Disaster Recovery","Azure Backup",IN,
+      "Protected instance + snapshot storage for VM and disks", P.backupVm));
+  }
+
+  /* ── AI ── */
+  rows.push(R("AI + Machine Learning","Azure AI Foundry — "+s.ocrEngine,SI,
+    `Global deployment; ${nf(pagesMonth(s))} pages/month (${s.pdfsPerDay} PDFs/day x ${s.pagesPerPdf} pages x ${s.daysPerMonth} days) @ $${P.ocr[s.ocrEngine].toFixed(2)} per 1,000 pages`,
+    ocrCost(s)));
+  rows.push(R("AI + Machine Learning","Azure OpenAI — "+s.llmModel.split(" — ")[0],SI,
+    `${s.llmModel.split(" — ")[1]}; ${s.llmInputM}M input + ${s.llmCachedM}M cached-input + ${s.llmOutputM}M output tokens/month — contract extraction passes, rate verification, case triage, assistant turns, dashboard widget planner`,
+    llmCost(s)));
+
+  /* ── UAT ── */
+  if(s.uatPct > 0){
+    const base = rows.reduce((a,r)=>a+r.payg,0), baseRi = rows.reduce((a,r)=>a+r.ri,0);
+    rows.push(R("Non-production",`UAT / staging environment`,IN,
+      `Shared non-production environment sized at ${s.uatPct}% of production — no High Availability, reduced AI volume, auto-shutdown outside working hours`,
+      base*s.uatPct/100, baseRi*s.uatPct/100));
+  }
+
+  rows.push(R("Support","Support","-","Standard support plan (no paid plan assumed)",0,0));
+  return rows;
+}
+
+/* ═══════════════ preset shapes ═══════════════ */
+const PRESETS = {
+  lean_vm:{shape:"lean_vm",vmSku:"D8as_v5",vmCount:1,dbSku:"D2ds_v5",dbStorageGb:512,dbHa:false,
+    dbGeoBackup:false,ingress:"public_ip",peCount:0,acrTier:"Basic",acrGeo:false,drEnabled:false,
+    logGbDay:.3,retainMonths:3,blobGrs:false,egressGb:200},
+  container_apps:{shape:"container_apps",acaVcpu:5,acaGib:10,dbSku:"D2ds_v5",dbStorageGb:512,dbHa:true,
+    dbGeoBackup:false,ingress:"managed",peCount:2,acrTier:"Standard",acrGeo:false,drEnabled:false,
+    logGbDay:.4,retainMonths:3,blobGrs:false,egressGb:200},
+  aks:{shape:"aks",sysSku:"D4as_v5",sysCount:2,wlSku:"D8as_v5",wlCount:1,dbSku:"D2ds_v5",
+    dbStorageGb:512,dbHa:true,dbGeoBackup:false,ingress:"appgw_std",peCount:4,acrTier:"Premium",
+    acrGeo:false,drEnabled:false,logGbDay:2,retainMonths:3,blobGrs:false,egressGb:200},
+  aks_dr:{shape:"aks_dr",sysSku:"D4as_v5",sysCount:3,wlSku:"D8as_v5",wlCount:2,dbSku:"D4ds_v5",
+    dbStorageGb:1024,dbHa:true,dbGeoBackup:true,ingress:"appgw_waf",peCount:6,acrTier:"Premium",
+    acrGeo:true,drEnabled:true,kvPremium:true,logGbDay:3,retainMonths:6,blobGrs:true,egressGb:400}
+};
+const SHAPE_META = {
+  lean_vm:{name:"Option 1 — Lean VM",short:"Lean VM",
+    tagline:"One VM, docker compose, no orchestrator. Cheapest that still runs the real stack.",
+    ha:"Single VM, single zone. Host reboot or patch = downtime. PostgreSQL has no standby; recovery is point-in-time restore, measured in hours."},
+  container_apps:{name:"Option 2 — Azure Container Apps",short:"Container Apps",
+    tagline:"Managed containers, no cluster to run. Database gets a standby, the app layer is disposable.",
+    ha:"App containers restart and reschedule on their own; a failed replica is replaced in seconds. PostgreSQL runs zone-redundant HA with automatic failover. No cluster to patch, upgrade or size."},
+  aks:{name:"Option 3 — AKS production",short:"AKS production",
+    tagline:"Kubernetes, the shape the sample BOQ assumes. Full control, full operating cost.",
+    ha:"Pods reschedule across the system pool; workload pool autoscales. PostgreSQL zone-redundant HA. Single region, single Application Gateway. You own cluster upgrades and node image patching."},
+  aks_dr:{name:"Option 4 — AKS + HA/DR",short:"AKS + HA/DR",
+    tagline:"Zone-redundant everything, WAF in front, a second region ready. The ceiling.",
+    ha:"Nodes spread across 3 availability zones; losing a zone loses no capacity. PostgreSQL zone-redundant with geo-redundant backup. WAF filters traffic before it reaches the app. A warm secondary region shortens recovery to roughly 30-60 minutes."}
+};
+
+/* ═══════════════ controls ═══════════════ */
+const CATCOLOR = {"Compute":"#2f6fdb","Databases":"#6a4ddb","Storage":"#1f9d63","Networking":"#b5791f",
+  "Containers":"#4a8fa8","DevOps":"#8a7f6a","Security":"#cf3b3b","AI + Machine Learning":"#c2571f",
+  "Disaster Recovery":"#7a5c9e","Non-production":"#9a8f78","Support":"#8a7f6a"};
+function catColor(c){ return CATCOLOR[c] || "#8a7f6a"; }
+
+function slider(key,label,min,max,step,fmt){
+  return `<div class="ctl"><label for="c_${key}">${label}<span class="v" id="v_${key}">${fmt(S[key])}</span></label>
+    <input type="range" id="c_${key}" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${S[key]}"></div>`;
+}
+function select(key,label,opts){
+  return `<div class="ctl"><label for="c_${key}">${label}</label><select id="c_${key}" data-k="${key}">`
+    + opts.map(o=>`<option value="${o}"${S[key]===o?" selected":""}>${o}</option>`).join("") + `</select></div>`;
+}
+function check(key,label){
+  return `<label class="chk"><input type="checkbox" data-k="${key}" ${S[key]?"checked":""}>${label}</label>`;
+}
+function segment(key,label,pairs){
+  return `<div class="ctl"><label>${label}</label><div class="seg" data-seg="${key}">`
+    + pairs.map(([v,t])=>`<button data-k="${key}" data-v="${v}" class="${S[key]===v?"on":""}">${t}</button>`).join("")
+    + `</div></div>`;
+}
+
+function renderControls(){
+  const vmSkus = Object.keys(P.vm), pgSkus = Object.keys(P.pg);
+  let computeCtl = "";
+  if(S.shape === "lean_vm"){
+    computeCtl = select("vmSku","VM size",vmSkus) + slider("vmCount","VM count",1,4,1,v=>v);
+  } else if(S.shape === "container_apps"){
+    computeCtl = slider("acaVcpu","Always-on vCPU",1,16,1,v=>v+" vCPU")
+               + slider("acaGib","Always-on memory",2,64,2,v=>v+" GiB");
+  } else {
+    computeCtl = select("sysSku","System node size",vmSkus) + slider("sysCount","System nodes",1,6,1,v=>v)
+               + select("wlSku","Workload node size",vmSkus) + slider("wlCount","Workload nodes",1,8,1,v=>v);
+  }
+
+  document.getElementById("ctrls").innerHTML = `
+  <div class="cgroup"><h4>Deployment shape</h4>
+    ${segment("shape","",[["lean_vm","VM"],["container_apps","Apps"],["aks","AKS"],["aks_dr","AKS+DR"]])}
+    <p class="small muted" style="margin:6px 0 0">${SHAPE_META[S.shape].tagline}</p>
+  </div>
+
+  <div class="cgroup"><h4>Document volume</h4>
+    ${slider("pdfsPerDay","PDFs per day",10,500,10,v=>v)}
+    ${slider("pagesPerPdf","Pages per PDF",1,120,1,v=>v)}
+    ${slider("invoicesPerPdf","Invoices per PDF",1,40,1,v=>v)}
+    ${slider("daysPerMonth","Processing days / month",20,31,1,v=>v)}
+    <p class="small muted" style="margin:4px 0 0">= <b>${pagesMonth(S).toLocaleString()}</b> OCR pages and <b>${invMonth(S).toLocaleString()}</b> invoices per month</p>
+  </div>
+
+  <div class="cgroup"><h4>AI services</h4>
+    ${select("ocrEngine","OCR engine",Object.keys(P.ocr))}
+    ${select("llmModel","Agent model + tier",Object.keys(P.llm))}
+    ${slider("llmInputM","Input tokens",0,400,5,v=>v+"M")}
+    ${slider("llmCachedM","Cached input tokens",0,400,5,v=>v+"M")}
+    ${slider("llmOutputM","Output tokens",0,100,1,v=>v+"M")}
+  </div>
+
+  <div class="cgroup"><h4>Compute</h4>${computeCtl}</div>
+
+  <div class="cgroup"><h4>Database</h4>
+    ${select("dbSku","PostgreSQL size",pgSkus)}
+    ${slider("dbStorageGb","Storage",128,4096,128,v=>v+" GB")}
+    ${check("dbHa","Zone-redundant HA (doubles compute)")}
+    ${check("dbGeoBackup","Geo-redundant backup")}
+  </div>
+
+  <div class="cgroup"><h4>Networking &amp; storage</h4>
+    ${segment("ingress","Ingress",[["managed","Managed"],["public_ip","nginx+IP"],["appgw_std","App GW"],["appgw_waf","WAF"]])}
+    ${slider("peCount","Private endpoints",0,8,1,v=>v)}
+    ${slider("blobGb","Blob storage",100,10000,100,v=>v.toLocaleString()+" GB")}
+    ${check("blobGrs","Geo-redundant blob (GRS)")}
+    ${slider("egressGb","Outbound bandwidth",0,2000,50,v=>v+" GB")}
+  </div>
+
+  <div class="cgroup"><h4>Ops</h4>
+    ${select("acrTier","Container Registry",Object.keys(P.acr))}
+    ${check("acrGeo","ACR geo-replication")}
+    ${slider("logGbDay","Log ingestion",0,10,.1,v=>v.toFixed(1)+" GB/day")}
+    ${slider("retainMonths","Log retention",1,24,1,v=>v+" mo")}
+    ${check("drEnabled","Secondary-region warm standby")}
+    ${check("kvPremium","Key Vault Premium (HSM-backed)")}
+  </div>
+
+  <div class="cgroup"><h4>Commercials</h4>
+    ${segment("term","Pricing term",[["payg","Pay-as-you-go"],["ri1y","1-yr saving plan"]])}
+    ${slider("uatPct","Add UAT environment",0,50,5,v=>v?v+"% of prod":"none")}
+  </div>`;
+  wireControls();
+}
+
+function wireControls(){
+  document.querySelectorAll("#ctrls input[type=range]").forEach(el=>{
+    el.addEventListener("input",e=>{
+      S[e.target.dataset.k] = parseFloat(e.target.value);
+      const lbl = document.getElementById("v_"+e.target.dataset.k);
+      if(lbl) lbl.textContent = fmtFor(e.target.dataset.k, S[e.target.dataset.k]);
+      recompute(false);
+    });
+  });
+  document.querySelectorAll("#ctrls select").forEach(el=>{
+    el.addEventListener("change",e=>{ S[e.target.dataset.k]=e.target.value; recompute(true); });
+  });
+  document.querySelectorAll("#ctrls input[type=checkbox]").forEach(el=>{
+    el.addEventListener("change",e=>{ S[e.target.dataset.k]=e.target.checked; recompute(true); });
+  });
+  document.querySelectorAll("#ctrls .seg button").forEach(el=>{
+    el.addEventListener("click",e=>{
+      const k = e.target.dataset.k, v = e.target.dataset.v;
+      if(k === "shape"){ S = Object.assign({}, S, PRESETS[v]); }
+      else { S[k] = v; }
+      renderControls(); recompute(true);
+    });
+  });
+}
+const FMT = {
+  acaVcpu:v=>v+" vCPU", acaGib:v=>v+" GiB", llmInputM:v=>v+"M", llmCachedM:v=>v+"M",
+  llmOutputM:v=>v+"M", dbStorageGb:v=>v+" GB", blobGb:v=>v.toLocaleString()+" GB",
+  egressGb:v=>v+" GB", logGbDay:v=>v.toFixed(1)+" GB/day", retainMonths:v=>v+" mo",
+  uatPct:v=>v?v+"% of prod":"none"
+};
+function fmtFor(k,v){ return (FMT[k]||(x=>x))(v); }
+
+/* ═══════════════ render ═══════════════ */
+let CURRENT = {rows:[],payg:0,ri:0};
+
+function recompute(rerenderCtl){
+  const rows = buildRows(S);
+  const payg = rows.reduce((a,r)=>a+r.payg,0);
+  const ri   = rows.reduce((a,r)=>a+r.ri,0);
+  CURRENT = {rows,payg,ri};
+  const shown = S.term === "ri1y" ? ri : payg;
+
+  document.getElementById("hUsd").innerHTML = money(shown)+"<small> /month</small>";
+  document.getElementById("hInr").innerHTML = inr(shown*FX)+"<small> /month</small>";
+  document.getElementById("hRi").textContent = money(ri)+" /mo";
+  document.getElementById("hYr").textContent = money(shown*12)+" /yr";
+
+  const pct = shown*FX / BUDGET_INR * 100;
+  const bb = document.getElementById("bbar");
+  bb.classList.toggle("over", pct > 100);
+  bb.querySelector("i").style.width = Math.min(100,pct)+"%";
+  document.getElementById("btxt").textContent =
+    pct.toFixed(0)+"% of the ₹"+(BUDGET_INR/100000)+" lakh ceiling"
+    + (pct>100 ? "  — OVER by "+inr(shown*FX-BUDGET_INR) : "  — "+inr(BUDGET_INR-shown*FX)+" headroom");
+
+  /* category split */
+  const byCat = {};
+  rows.forEach(r=>{ const v = S.term==="ri1y"?r.ri:r.payg; byCat[r.cat]=(byCat[r.cat]||0)+v; });
+  const cats = Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  document.getElementById("split").innerHTML =
+    cats.map(([c,v])=>`<i style="width:${v/shown*100}%;background:${catColor(c)}" title="${c}: ${money(v)}"></i>`).join("");
+  document.getElementById("legend").innerHTML =
+    cats.map(([c,v])=>`<span><b style="background:${catColor(c)}"></b>${c} &middot; ${money(v)} (${(v/shown*100).toFixed(0)}%)</span>`).join("");
+
+  /* table */
+  const t = document.getElementById("boqTable");
+  t.innerHTML = `<thead><tr><th style="width:26px">#</th><th style="width:100px">Category</th>
+    <th style="width:190px">Service type</th><th>Specification</th>
+    <th class="num" style="width:88px">PAYG</th><th class="num" style="width:88px">1-yr plan</th></tr></thead><tbody>`
+    + rows.map((r,i)=>`<tr><td class="muted">${i+1}</td><td><span style="color:${catColor(r.cat)};font-weight:600">${r.cat}</span></td>
+        <td>${r.svc}</td><td class="small muted">${r.spec}</td>
+        <td class="num">${money(r.payg)}</td><td class="num">${money(r.ri)}</td></tr>`).join("")
+    + `<tr class="total"><td colspan="4">Total &mdash; ${SHAPE_META[S.shape].name}</td>
+        <td class="num">${money(payg)}</td><td class="num">${money(ri)}</td></tr>
+       <tr class="total"><td colspan="4">Total (INR @ ${FX.toFixed(2)})</td>
+        <td class="num">${inr(payg*FX)}</td><td class="num">${inr(ri*FX)}</td></tr></tbody>`;
+}
+
+function renderOptionCards(){
+  const cards = Object.keys(PRESETS).map(k=>{
+    const st = Object.assign({}, DEFAULTS, PRESETS[k]);
+    const rows = buildRows(st);
+    const payg = rows.reduce((a,r)=>a+r.payg,0), ri = rows.reduce((a,r)=>a+r.ri,0);
+    return {k, payg, ri, meta:SHAPE_META[k]};
+  });
+  const max = BUDGET_INR/FX;
+  document.getElementById("optcards").innerHTML = cards.map(c=>`
+    <div class="optcard${c.k==="container_apps"?" win":""}">
+      <div class="nm">${c.meta.name.replace("— ","<br>")}</div>
+      <div class="pr">${inr(c.payg*FX)}<span> /mo</span></div>
+      <div class="bar"><i style="width:${c.payg/max*100}%;background:${c.k==="container_apps"?"var(--green)":"var(--blue)"}"></i></div>
+      <div class="small muted">${(c.payg/max*100).toFixed(0)}% of budget &middot; ${money(c.payg)}<br>
+        1-yr plan: ${money(c.ri)}</div>
+      <div style="margin-top:auto"><button class="btn ghost small" style="width:100%;padding:6px" data-load="${c.k}">Load in builder &darr;</button></div>
+    </div>`).join("");
+  document.querySelectorAll("[data-load]").forEach(b=>b.addEventListener("click",e=>{
+    S = Object.assign({}, DEFAULTS, PRESETS[e.target.dataset.load]);
+    renderControls(); recompute(true);
+    document.getElementById("builder").scrollIntoView({behavior:"smooth"});
+  }));
+}
+
+/* ═══════════════ xlsx writer (zip STORE, no dependencies) ═══════════════ */
+const CRC_TABLE = (()=>{ const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; }
+  return t; })();
+function crc32(bytes){ let c=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c>>>8);
+  return (c ^ 0xFFFFFFFF) >>> 0; }
+const ENC = new TextEncoder();
+
+function zipStore(files){
+  const chunks = [], central = [];
+  let offset = 0;
+  for(const f of files){
+    const nameB = ENC.encode(f.name), data = ENC.encode(f.data), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true);
+    lh.setUint16(8,0,true); lh.setUint16(10,0,true); lh.setUint16(12,0x2821,true);
+    lh.setUint32(14,crc,true); lh.setUint32(18,data.length,true); lh.setUint32(22,data.length,true);
+    lh.setUint16(26,nameB.length,true); lh.setUint16(28,0,true);
+    chunks.push(new Uint8Array(lh.buffer), nameB, data);
+    const cd = new DataView(new ArrayBuffer(46));
+    cd.setUint32(0,0x02014b50,true); cd.setUint16(4,20,true); cd.setUint16(6,20,true);
+    cd.setUint16(8,0x0800,true); cd.setUint16(10,0,true); cd.setUint16(12,0,true);
+    cd.setUint16(14,0x2821,true); cd.setUint32(16,crc,true);
+    cd.setUint32(20,data.length,true); cd.setUint32(24,data.length,true);
+    cd.setUint16(28,nameB.length,true); cd.setUint16(30,0,true); cd.setUint16(32,0,true);
+    cd.setUint16(34,0,true); cd.setUint16(36,0,true); cd.setUint32(38,0,true);
+    cd.setUint32(42,offset,true);
+    central.push(new Uint8Array(cd.buffer), nameB);
+    offset += 30 + nameB.length + data.length;
+  }
+  const cdSize = central.reduce((a,c)=>a+c.length,0);
+  const eocd = new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0,0x06054b50,true); eocd.setUint16(8,files.length,true);
+  eocd.setUint16(10,files.length,true); eocd.setUint32(12,cdSize,true);
+  eocd.setUint32(16,offset,true); eocd.setUint16(20,0,true);
+  const all = chunks.concat(central,[new Uint8Array(eocd.buffer)]);
+  const total = all.reduce((a,c)=>a+c.length,0), out = new Uint8Array(total);
+  let p = 0; for(const c of all){ out.set(c,p); p += c.length; }
+  return out;
+}
+
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;").replace(/—/g,"-").replace(/–/g,"-");
+
+function cellRef(c,r){ let s=""; c++; while(c>0){ const m=(c-1)%26; s=String.fromCharCode(65+m)+s; c=(c-m-1)/26; } return s+r; }
+function cellXml(c,r,val,style){
+  const ref = cellRef(c,r), st = style ? ` s="${style}"` : "";
+  if(typeof val === "number") return `<c r="${ref}"${st}><v>${val}</v></c>`;
+  if(val === null || val === undefined || val === "") return `<c r="${ref}"${st}/>`;
+  return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${esc(val)}</t></is></c>`;
+}
+function sheetXml(rows, cols){
+  const colsXml = `<cols>${cols.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")}</cols>`;
+  const body = rows.map((cells,ri)=>{
+    const r = ri+1;
+    const inner = cells.map((c,ci)=> c===null ? "" : cellXml(ci,r,c.v,c.s)).join("");
+    return inner ? `<row r="${r}">${inner}</row>` : "";
+  }).join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr/><dimension ref="A1"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="7" topLeftCell="A8" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>${colsXml}<sheetData>${body}</sheetData></worksheet>`;
+}
+const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0.00"/><numFmt numFmtId="165" formatCode="&quot;₹&quot;#,##0"/></numFmts>
+<fonts count="5"><font><sz val="10"/><name val="Calibri"/></font><font><b/><sz val="10"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF404040"/><name val="Calibri"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F3864"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="8">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyAlignment="1"><alignment vertical="top"/></xf>
+<xf numFmtId="164" fontId="1" fillId="0" borderId="1" xfId="0"/>
+<xf numFmtId="165" fontId="1" fillId="0" borderId="1" xfId="0"/>
+</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+
+function buildXlsx(){
+  const rows = CURRENT.rows, meta = SHAPE_META[S.shape];
+  const T=(v,s)=>({v,s});
+  const boq = [];
+  boq[0] = [T("Microsoft Azure Infrastructure",2)];
+  boq[1] = [T("Bill of Quantities (BOQ) – Cost Estimate — av-engine — "+meta.name,4)];
+  boq[2] = [];
+  boq[3] = [T("Estimate Date",1),T("August 6, 2026",0),null,T("Document Prepared",1),T("August 6, 2026",0)];
+  boq[4] = [T("Currency",1),T("USD ($)",0),null,T("Billing Program",1),T("Microsoft Customer Agreement (MCA)",0)];
+  boq[5] = [];
+  boq[6] = ["#","Service Category","Service Type","Region","Specification",
+            "Monthly Cost (Pay-As-You-Go)","Upfront Cost","Monthly Cost (1-Yr Saving Plan)"].map(h=>T(h,3));
+  rows.forEach((r,i)=>{
+    boq[7+i] = [T(i+1,4),T(r.cat,4),T(r.svc,4),T(r.region,4),T(r.spec,4),
+                T(Math.round(r.payg*100)/100,5),T(0,5),T(Math.round(r.ri*100)/100,5)];
+  });
+  const tr = 7+rows.length;
+  boq[tr] = [null,null,null,null,T("Total",1),
+             T(Math.round(CURRENT.payg*100)/100,6),T(0,6),T(Math.round(CURRENT.ri*100)/100,6)];
+  boq[tr+1] = [null,null,null,null,T("Total (INR @ "+FX.toFixed(2)+")",1),
+               T(Math.round(CURRENT.payg*FX),7),T(0,7),T(Math.round(CURRENT.ri*FX),7)];
+  boq[tr+3] = [T('See "Assumptions" sheet for sizing, pricing model, scope, and validity notes.',0)];
+
+  const pm = pagesMonth(S), im = invMonth(S);
+  const items = [
+    ["Deployment shape", meta.name+" — "+meta.tagline],
+    ["Availability posture", meta.ha],
+    ["Document volume", `${S.pdfsPerDay} PDFs ingested per day, ${S.pagesPerPdf} pages per PDF on average, ${S.invoicesPerPdf} invoices per PDF, ${S.daysPerMonth} processing days per month`],
+    ["Derived monthly volume", `${pm.toLocaleString("en-US")} OCR pages/month and ${im.toLocaleString("en-US")} invoices/month. OCR is billed per page, so pages per PDF is the largest single variable in this estimate.`],
+    ["OCR engine", `${S.ocrEngine} on Azure AI Foundry, $${P.ocr[S.ocrEngine].toFixed(2)} per 1,000 pages. The application already calls a Mistral OCR endpoint (app/services/extraction/ocr.py), page by page, with a concurrency cap.`],
+    ["LLM usage", `${S.llmModel} on Azure OpenAI. ${S.llmInputM}M input + ${S.llmCachedM}M cached-input + ${S.llmOutputM}M output tokens per month. Invoice extraction itself is deterministic (OCR then parsing) — the model is used for contract extraction passes, rate verification, case triage, assistant turns and the dashboard widget planner.`],
+    ["Concurrent users", "5 concurrent, ~25 named. The system is autonomous batch work; only exceptions reach a human, so throughput is bounded by the document run, not by interactive load."],
+    ["Object storage", `${S.blobGb.toLocaleString("en-US")} GB Hot tier ${S.blobGrs?"(geo-redundant)":"(locally redundant)"} — source PDFs plus rendered page images.`],
+    ["Primary deployment region", "Central India for infrastructure; South India for Azure AI Foundry models (Mistral Document AI and GPT-5.6 are offered there as Global deployments)."],
+    ["Pricing currency", `All costs are shown in United States Dollars (USD). INR conversion uses 1 USD = ₹${FX.toFixed(2)} (5 August 2026).`],
+    ["Pricing model", '"Monthly Cost (Pay-As-You-Go)" reflects on-demand rates. "Monthly Cost (1-Yr Saving Plan)" reflects 1-year reserved compute for virtual machines and reserved capacity for PostgreSQL; usage-based lines (AI, storage, bandwidth) are unchanged. No upfront payment is assumed (Upfront Cost = $0).'],
+    ["Price source", "Mistral product-to-meter mapping from Microsoft's Foundry launch post (techcommunity: Mistral Document AI with OCR 4). Unit prices read from the Azure Retail Prices API (prices.azure.com/api/retail/prices, api-version 2023-01-01-preview) on 6 August 2026 for Central India and South India. Quantities are sized by us; unit rates are not estimates."],
+    ["Billing program", "Microsoft Customer Agreement (MCA)"],
+    ["Scope", "Infrastructure only — compute, storage, networking, database, containers, monitoring, security and AI services. Excludes application development, non-Azure licensing and third-party costs."
+      + (S.uatPct>0 ? ` Includes a UAT/staging environment sized at ${S.uatPct}% of production.` : " Production environment only.")],
+    ["Budget check", `Monthly ceiling ₹${BUDGET_INR.toLocaleString("en-IN")} (≈ $${Math.round(BUDGET_INR/FX).toLocaleString("en-US")}). This estimate is sized to the requirement, not to the ceiling.`],
+    ["Validity", "Summary cost estimate, not a binding quote. Actual usage-based billing will vary with real page counts and token counts. Refer to azure.microsoft.com/pricing/calculator for live pricing."]
+  ];
+  const asm = [];
+  asm[0] = [T("Key Assumptions",2)];
+  asm[1] = [T("Microsoft Azure Infrastructure – BOQ Cost Estimate — av-engine — "+meta.name,4)];
+  asm[3] = [T("Assumption",3),T("Detail",3)];
+  items.forEach(([k,v],i)=>{ asm[4+i] = [T(k,4),T(v,4)]; });
+  asm[items.length+6] = [T("Disclaimer",1),
+    T("All prices shown are in United States Dollars (USD). This document is a summary cost estimate and is not a formal quote. For up-to-date pricing, please visit azure.microsoft.com/pricing/calculator. Estimate created 6 August 2026.",0)];
+
+  const files = [
+    {name:"[Content_Types].xml", data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
+    {name:"_rels/.rels", data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:"xl/workbook.xml", data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="BOQ" sheetId="1" r:id="rId1"/><sheet name="Assumptions" sheetId="2" r:id="rId2"/></sheets></workbook>`},
+    {name:"xl/_rels/workbook.xml.rels", data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:"xl/styles.xml", data:STYLES},
+    {name:"xl/worksheets/sheet1.xml", data:sheetXml(boq,[5,22,40,15,78,18,12,20])},
+    {name:"xl/worksheets/sheet2.xml", data:sheetXml(asm,[34,120])}
+  ];
+  return zipStore(files);
+}
+
+function download(bytes, name, mime){
+  const blob = new Blob([bytes], {type:mime});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+function slug(){ return SHAPE_META[S.shape].short.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+
+document.getElementById("dlXlsx").addEventListener("click",()=>{
+  download(buildXlsx(), `av-engine-BOQ-${slug()}.xlsx`,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+});
+document.getElementById("dlCsv").addEventListener("click",()=>{
+  const q = s => '"'+String(s).replace(/"/g,'""')+'"';
+  const lines = [["#","Service Category","Service Type","Region","Specification",
+    "Monthly Cost (Pay-As-You-Go)","Upfront Cost","Monthly Cost (1-Yr Saving Plan)"].map(q).join(",")];
+  CURRENT.rows.forEach((r,i)=>lines.push([i+1,r.cat,r.svc,r.region,r.spec,
+    r.payg.toFixed(2),"0.00",r.ri.toFixed(2)].map(q).join(",")));
+  lines.push(["","","","","Total",CURRENT.payg.toFixed(2),"0.00",CURRENT.ri.toFixed(2)].map(q).join(","));
+  download(ENC.encode("﻿"+lines.join("\r\n")), `av-engine-BOQ-${slug()}.csv`, "text/csv");
+});
+document.getElementById("reset").addEventListener("click",()=>{
+  S = Object.assign({}, DEFAULTS, PRESETS[DEFAULTS.shape]);
+  renderControls(); recompute(true);
+});
+
+S = Object.assign({}, DEFAULTS, PRESETS[DEFAULTS.shape]);
+renderOptionCards();
+renderControls();
+recompute(true);
+</script>
+</body>
+</html>

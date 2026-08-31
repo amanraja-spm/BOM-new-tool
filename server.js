@@ -518,6 +518,15 @@ const server = http.createServer(async (req, res) => {
     });
     return;
   }
+  // ── Card 7: Aviation Engine BOQ calculator (self-contained static page, embedded via iframe) ──
+  if (u.pathname === "/av-engine.html") {
+    fs.readFile(path.join(__dirname, "av-engine.html"), (err, buf) => {
+      if (err) { res.writeHead(404); res.end("av-engine.html not found"); return; }
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(buf);
+    });
+    return;
+  }
   res.writeHead(404, { "Content-Type": "text/plain" });
   res.end("Not found");
 });

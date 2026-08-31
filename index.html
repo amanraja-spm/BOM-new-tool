@@ -202,12 +202,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 #clientform{display:none}
 #boqform{display:none}
 #gantt{display:none}
+#avengine{display:none}
 #documents{display:none}
 body.home #welcome{display:flex}
 body.app-tracker #tracker{display:flex}
 body.app-client #clientform{display:flex}
 body.app-boq #boqform{display:flex}
 body.app-gantt #gantt{display:flex}
+body.app-avengine #avengine{display:flex}
 body.app-docs #documents{display:flex}
 body:not(.app-bom) > header{display:none !important}
 body:not(.app-bom) > .layout{display:none !important}
@@ -525,6 +527,10 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
 
 /* ── Gantt Chart (Card 4) ── */
 #gantt{flex-direction:column;height:100vh;background:var(--bg)}
+/* ── Aviation Engine BOQ (Card 7) — embedded calculator ── */
+#avengine{flex-direction:column;height:100vh;background:var(--bg)}
+#avengine .tk-body{padding:0}
+.av-frame{width:100%;height:100%;border:0;display:block;background:#f6f1e6}
 .gt-wrap{padding:26px 26px 60px;max-width:920px;margin:0 auto;width:100%}
 .gt-intro{font-size:13.5px;color:var(--ink-2);line-height:1.6;margin-bottom:20px}
 .gt-card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:18px}
@@ -656,6 +662,13 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
         <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 7h6M9 11h6M9 15h4"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg></span>
         <h3>Request a BOQ</h3>
         <span class="wl-cta">Open form <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </div>
+
+      <div class="wl-card active" id="card_avengine" role="button" tabindex="0">
+        <span class="wl-badge live">Live</span>
+        <span class="wl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg></span>
+        <h3>Aviation Engine BOQ</h3>
+        <span class="wl-cta">Open tool <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
 
     </div>
@@ -995,6 +1008,18 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
     <button class="tk-refresh" id="gt_reset" title="Reset stages to the standard template"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9 9 0 017 3.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-7-3.3L3 16"/><path d="M3 21v-5h5"/></svg> Reset template</button>
   </div>
   <div class="tk-body"><div class="gt-wrap" id="gt_wrap"></div></div>
+</section>
+
+<!-- ── Aviation Engine BOQ (Card 7) — engineer's calculator, embedded verbatim ── -->
+<section id="avengine">
+  <div class="tk-top">
+    <button class="tk-home" id="av_home" title="Back to all tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+    </button>
+    <div class="tk-title">✈️ <span>Aviation Engine BOQ</span></div>
+    <a class="tk-open" id="av_open" href="/av-engine.html" target="_blank" rel="noopener">Open in new tab <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+  </div>
+  <div class="tk-body"><iframe class="av-frame" id="av_frame" title="Aviation Engine BOQ calculator" data-src="/av-engine.html"></iframe></div>
 </section>
 
 <!-- ── Documents (Card 5) — Google Drive folder embed ── -->
@@ -1828,6 +1853,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     if(v==="app-client" && window.__clientEnter) window.__clientEnter();
     if(v==="app-boq" && window.__boqEnter) window.__boqEnter();
     if(v==="app-gantt" && window.__ganttEnter) window.__ganttEnter();
+    if(v==="app-avengine"){ var af=$("av_frame"); if(af && !af.src && af.getAttribute("data-src")) af.src=af.getAttribute("data-src"); }
   }
   window.__showView = showView;                 // used by the tracker module
   if(!document.body.classList.contains("home")) document.body.classList.add("home");
@@ -2825,6 +2851,20 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
   if($("gt_home")) $("gt_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
   if($("gt_reset")) $("gt_reset").addEventListener("click",function(){ if(confirm("Reset all stages to the standard template? Your custom stage edits will be cleared.")){ STAGES=fresh(); persist(); render(); } });
+})();
+</script>
+
+<!-- ══════════ Aviation Engine BOQ (Card 7) — open/close wiring ══════════ -->
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  function open(){ if(window.__showView) window.__showView("app-avengine"); }
+  var c=$("card_avengine");
+  if(c){
+    c.addEventListener("click",open);
+    c.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } });
+  }
+  if($("av_home")) $("av_home").addEventListener("click",function(){ if(window.__showView) window.__showView("home"); });
 })();
 </script>
 </body>
