@@ -1,0 +1,705 @@
+<title>Auditify — LLM Cost Calculator</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --card: #fcfcfb;
+    --ink: #0b0b0b;
+    --sub: #52514e;
+    --muted: #898781;
+    --line: #e1e0d9;
+    --hairline: rgba(11,11,11,0.10);
+    --accent: #2a78d6;
+    --accent-soft: rgba(42,120,214,0.10);
+    --s-excel: #2a78d6;
+    --s-pdf: #eb6834;
+    --s-image: #1baf7a;
+    --good: #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --card: #1a1a19;
+      --ink: #ffffff;
+      --sub: #c3c2b7;
+      --muted: #898781;
+      --line: #2c2c2a;
+      --hairline: rgba(255,255,255,0.10);
+      --accent: #3987e5;
+      --accent-soft: rgba(57,135,229,0.16);
+      --s-excel: #3987e5;
+      --s-pdf: #d95926;
+      --s-image: #199e70;
+      --good: #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --card: #1a1a19;
+    --ink: #ffffff;
+    --sub: #c3c2b7;
+    --muted: #898781;
+    --line: #2c2c2a;
+    --hairline: rgba(255,255,255,0.10);
+    --accent: #3987e5;
+    --accent-soft: rgba(57,135,229,0.16);
+    --s-excel: #3987e5;
+    --s-pdf: #d95926;
+    --s-image: #199e70;
+    --good: #0ca30c;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --card: #fcfcfb;
+    --ink: #0b0b0b;
+    --sub: #52514e;
+    --muted: #898781;
+    --line: #e1e0d9;
+    --hairline: rgba(11,11,11,0.10);
+    --accent: #2a78d6;
+    --accent-soft: rgba(42,120,214,0.10);
+    --s-excel: #2a78d6;
+    --s-pdf: #eb6834;
+    --s-image: #1baf7a;
+    --good: #006300;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 400 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px 72px; }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 6px;
+  }
+  h1 { font-size: 27px; font-weight: 650; letter-spacing: -0.015em; margin: 0 0 6px; text-wrap: balance; }
+  .lede { color: var(--sub); max-width: 62ch; margin: 0; }
+  h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 4px; }
+  .sec { margin-top: 40px; }
+  .sec-sub { color: var(--sub); font-size: 13px; margin: 0 0 14px; max-width: 74ch; }
+
+  /* ---------- control bar ---------- */
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-end;
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 10px;
+    padding: 16px 18px; margin-top: 22px;
+  }
+  .ctl { display: flex; flex-direction: column; gap: 6px; }
+  .ctl-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; color: var(--sub);
+    font: 500 13px/1 inherit; font-family: inherit; padding: 8px 13px; cursor: pointer;
+    border-right: 1px solid var(--line);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
+  .seg button:focus-visible, .cell:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  .ctl input[type="number"] {
+    width: 84px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px;
+    background: var(--card); color: var(--ink); font: 500 13px/1 inherit; font-family: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- stat strip ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 18px; }
+  .tile { background: var(--card); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px 16px 12px; }
+  .tile .t-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .tile .t-value { font-size: 23px; font-weight: 650; letter-spacing: -0.01em; margin-top: 4px; }
+  .tile .t-note { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+  /* ---------- matrix ---------- */
+  .matrix-scroll { overflow-x: auto; }
+  table.matrix { border-collapse: collapse; width: 100%; min-width: 640px; background: var(--card); border: 1px solid var(--hairline); border-radius: 10px; overflow: hidden; }
+  .matrix th, .matrix td { padding: 0; border-bottom: 1px solid var(--line); }
+  .matrix thead th {
+    text-align: right; font-size: 12px; font-weight: 650; color: var(--ink);
+    padding: 12px 16px; background: var(--card);
+  }
+  .matrix thead th:first-child { text-align: left; }
+  .matrix thead .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2.5px; margin-right: 7px; vertical-align: 0; }
+  .matrix tbody tr:last-child td, .matrix tbody tr:last-child th { border-bottom: 0; }
+  .matrix tbody th {
+    text-align: left; font-weight: 550; font-size: 13.5px; padding: 13px 16px; color: var(--ink); white-space: nowrap;
+  }
+  .matrix tbody th .op-note { display: block; font-size: 11.5px; font-weight: 400; color: var(--muted); white-space: normal; }
+  .cell {
+    display: block; width: 100%; text-align: right; appearance: none; border: 0; background: transparent;
+    font-family: inherit; color: var(--ink); padding: 13px 16px; cursor: pointer;
+  }
+  .cell .c-usd { font-size: 15.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .cell .c-inr { display: block; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cell:hover { background: var(--accent-soft); }
+  .cell[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+
+  /* ---------- breakdown ---------- */
+  .breakdown { background: var(--card); border: 1px solid var(--hairline); border-radius: 10px; padding: 16px 18px; margin-top: 14px; }
+  .bd-title { font-size: 13.5px; font-weight: 650; margin: 0 0 2px; }
+  .bd-sub { font-size: 12px; color: var(--sub); margin: 0 0 10px; }
+  .bd-scroll { overflow-x: auto; }
+  table.bd { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; }
+  .bd th { text-align: right; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); }
+  .bd th:first-child, .bd td:first-child { text-align: left; padding-left: 0; }
+  .bd th:last-child, .bd td:last-child { padding-right: 0; }
+  .bd td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; text-align: right; color: var(--sub); }
+  .bd td:first-child { color: var(--ink); }
+  .bd td .mdl { color: var(--muted); font-size: 12px; }
+  .bd tr.total td { border-bottom: 0; font-weight: 650; color: var(--ink); }
+  .bd-range { font-size: 12.5px; color: var(--sub); margin: 10px 0 0; }
+  .bd-range b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ---------- bars ---------- */
+  .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .panel { background: var(--card); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px 16px 10px; }
+  .panel h3 { font-size: 12.5px; font-weight: 650; margin: 0 0 10px; }
+  .barrow { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .barrow .b-name { font-size: 11.5px; color: var(--sub); }
+  .b-track { position: relative; height: 18px; }
+  .b-fill { position: absolute; left: 0; top: 2px; height: 14px; border-radius: 0 4px 4px 0; min-width: 2px; }
+  .b-val { position: absolute; top: 0; font-size: 11.5px; font-variant-numeric: tabular-nums; color: var(--sub); white-space: nowrap; line-height: 18px; }
+  .legend { display: flex; gap: 16px; margin: 2px 0 12px; font-size: 12px; color: var(--sub); flex-wrap: wrap; }
+  .legend .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2.5px; margin-right: 6px; }
+
+  /* ---------- monthly ---------- */
+  .month-grid { display: flex; flex-wrap: wrap; gap: 16px 24px; margin-bottom: 14px; }
+  .m-scroll { overflow-x: auto; }
+  table.month { border-collapse: collapse; width: 100%; min-width: 560px; background: var(--card); border: 1px solid var(--hairline); border-radius: 10px; overflow: hidden; font-size: 13.5px; }
+  .month th, .month td { padding: 11px 16px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+  .month th:first-child, .month td:first-child { text-align: left; }
+  .month thead th { font-size: 12px; font-weight: 650; }
+  .month tbody tr:last-child td { border-bottom: 0; font-weight: 650; }
+  .month td { color: var(--sub); }
+  .month td:first-child, .month tbody tr:last-child td { color: var(--ink); }
+  .month .sub-inr { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; }
+
+  /* ---------- prices / assumptions ---------- */
+  details { border: 1px solid var(--hairline); border-radius: 10px; background: var(--card); margin-top: 12px; }
+  details summary { cursor: pointer; padding: 13px 18px; font-weight: 600; font-size: 13.5px; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "▸ "; color: var(--muted); }
+  details[open] summary::before { content: "▾ "; }
+  details .d-body { padding: 0 18px 16px; }
+  .price-scroll { overflow-x: auto; }
+  table.prices { border-collapse: collapse; min-width: 520px; font-size: 13px; }
+  .prices th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); padding: 6px 14px 6px 0; border-bottom: 1px solid var(--line); }
+  .prices td { padding: 7px 14px 7px 0; border-bottom: 1px solid var(--line); color: var(--sub); }
+  .prices tr:last-child td { border-bottom: 0; }
+  .prices td:first-child { color: var(--ink); font-weight: 550; }
+  .prices input { width: 78px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); font: 500 13px/1 inherit; font-family: inherit; font-variant-numeric: tabular-nums; }
+  .assump { margin: 8px 0 0; padding-left: 18px; color: var(--sub); font-size: 13px; }
+  .assump li { margin-bottom: 5px; }
+  .assump code, .lede code, .sec-sub code { font: 500 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+  .foot { margin-top: 34px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; max-width: 80ch; }
+  .foot a { color: var(--accent); }
+
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 10; background: var(--ink); color: var(--page);
+    font-size: 12px; padding: 5px 9px; border-radius: 6px; opacity: 0; transition: opacity 80ms;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: reduce) { .tooltip { transition: none; } }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Auditify · AI Platform</p>
+  <h1>LLM Cost Calculator — per operation, per file type</h1>
+  <p class="lede">Average model-spend for one operation on the Auditify agentic engine, derived from the
+  actual call graph in the codebase (agent steps, OCR pages, extraction chunks) and current provider
+  price lists. Defaults assume a <b>200&nbsp;KB Excel workbook</b> (3 sheets), a <b>20-page PDF</b>, and a
+  <b>1-page scanned image</b>. All figures are estimates, not metered billing.</p>
+
+  <div class="controls" id="controls">
+    <div class="ctl">
+      <span class="ctl-label">Model stack</span>
+      <div class="seg" id="seg-stack" role="group" aria-label="Model stack">
+        <button data-stack="openai" aria-pressed="true">OpenAI (current)</button>
+        <button data-stack="budget" aria-pressed="false">OpenAI budget</button>
+        <button data-stack="google" aria-pressed="false">Google</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span class="ctl-label">Scenario</span>
+      <div class="seg" id="seg-scen" role="group" aria-label="Scenario">
+        <button data-scen="low" aria-pressed="false">Light</button>
+        <button data-scen="typ" aria-pressed="true">Typical</button>
+        <button data-scen="high" aria-pressed="false">Heavy</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span class="ctl-label">PDF pages</span>
+      <input type="number" id="in-pages" value="20" min="1" max="1000" step="1">
+    </div>
+    <div class="ctl">
+      <span class="ctl-label">Excel sheets</span>
+      <input type="number" id="in-sheets" value="3" min="1" max="60" step="1">
+    </div>
+    <div class="ctl">
+      <span class="ctl-label">₹ per $</span>
+      <input type="number" id="in-fx" value="87" min="0" max="500" step="0.5">
+    </div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="sec">
+    <h2>Cost per operation</h2>
+    <p class="sec-sub">One click on any figure shows the line-item build-up below. Ranges across file
+    types come from where the file type actually bites: OCR at upload, and per-document extraction
+    calls inside query and run.</p>
+    <div class="matrix-scroll"><table class="matrix" id="matrix"></table></div>
+    <div class="breakdown" id="breakdown"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Side-by-side</h2>
+    <p class="sec-sub">Same numbers as the matrix, drawn to scale per operation (scales differ between
+    panels — workflow creation is an order of magnitude above the rest).</p>
+    <div class="legend" id="legend"></div>
+    <div class="panels" id="panels"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Monthly estimate</h2>
+    <p class="sec-sub">Multiply the per-operation figures by expected monthly volumes. Each column
+    assumes all activity is on that file type — a real month is a blend, so quote between columns.</p>
+    <div class="month-grid">
+      <div class="ctl"><span class="ctl-label">Uploads / mo</span><input type="number" id="v-up" value="50" min="0" step="10"></div>
+      <div class="ctl"><span class="ctl-label">Queries / mo</span><input type="number" id="v-q" value="300" min="0" step="10"></div>
+      <div class="ctl"><span class="ctl-label">Workflows built / mo</span><input type="number" id="v-b" value="10" min="0" step="1"></div>
+      <div class="ctl"><span class="ctl-label">Workflow runs / mo</span><input type="number" id="v-r" value="100" min="0" step="10"></div>
+    </div>
+    <div class="m-scroll"><table class="month" id="month"></table></div>
+  </section>
+
+  <section class="sec">
+    <h2>Model stack &amp; pricing</h2>
+    <details open>
+      <summary>Prices (editable — $ per 1M tokens; OCR per page)</summary>
+      <div class="d-body price-scroll" id="prices"></div>
+    </details>
+    <details>
+      <summary>Assumptions behind the token counts</summary>
+      <div class="d-body">
+        <ul class="assump">
+          <li><b>Query</b> = one ReAct agent loop on the reasoning model: typically 4–6 LLM steps,
+            ~35k tokens in / ~3.5k out cumulative (history grows each step; tool output is capped at
+            10k chars per step). Heavy = ~8–10 steps with corrective re-calls (~90k/9k).</li>
+          <li><b>Workflow creation</b> = plan loop (~80k/15k) + execute loop that builds all widgets in
+            one run (~200k/40k, hard step-cap 60, token ceiling 400k) + one consolidation call
+            (~20k/5k) + naming on the fast tier. It is intentionally the expensive step — it happens once.</li>
+          <li><b>Workflow run</b> = the frozen consolidated script replays with no per-widget LLM;
+            the rerun agent spends ~2–4 steps to execute, verify and finalize (~15k/3k). Heavy =
+            schema-drift repair, up to 30 steps (~250k/50k) — the adaptation is then cached.</li>
+          <li><b>PDF</b>: ingest = Mistral OCR per page + ~10% low-confidence pages re-OCR'd on the
+            light vision tier + a page-retrieval index (1 fast call per 8 pages, docs ≥ 10 pages).
+            Query/run add ~1 reasoning-model extraction call per ~12 pages of document text
+            (~7.5k in / 3k out each, capped per document).</li>
+          <li><b>Excel</b>: ingest is heuristic-first — an LLM structure call (fast tier, top-50 rows)
+            fires only when heuristic confidence &lt; 0.85; a sheet index only at ≥ 15 sheets. Query
+            and run read the ingested tables via DuckDB — no extraction calls.</li>
+          <li><b>Image</b>: converted to a 1-page PDF and OCR'd; analysis adds at most a single
+            small vision call.</li>
+          <li>Vision-call token figures for page images are approximations (~1.6k in / 1.5k out per
+            page at 200 DPI). Cached-input discounts (≈ 90% off repeated prompt prefixes) are NOT
+            applied — real bills for the agent loops can come in meaningfully lower.</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <p class="foot" id="foot">
+    Token counts derived from the auditify-be call graph (agent kernel limits, chunk sizes, OCR
+    engine caps) on the agentic-engine branch. Prices as of 22 Jul 2026:
+    <a href="https://developers.openai.com/api/docs/pricing">OpenAI pricing</a> ·
+    <a href="https://benchlm.ai/google/api-pricing">Gemini pricing</a> ·
+    Mistral OCR $4 / 1,000 pages. Estimates only — actual spend depends on question complexity,
+    data messiness and retries. Infrastructure (compute, storage, OCR fallback via Textract) not included.
+  </p>
+</div>
+<div class="tooltip" id="tip"></div>
+
+<script>
+(function () {
+  "use strict";
+  var K = 1000;
+
+  var STACKS = {
+    openai: {
+      label: "OpenAI (current)",
+      note: "Reasoning on gpt-5.5 — the configured default",
+      models: {
+        reason:     { name: "gpt-5.5",              inP: 5.00, outP: 30.00 },
+        fast:       { name: "gpt-5.4-mini",         inP: 0.75, outP: 4.50 },
+        vision:     { name: "gemini-3.5-flash",     inP: 1.50, outP: 9.00 },
+        visionLite: { name: "gemini-3.1-flash-lite", inP: 0.25, outP: 1.50 }
+      },
+      ocr: { name: "mistral-ocr-4-0", perPage: 0.004 }
+    },
+    budget: {
+      label: "OpenAI budget",
+      note: "Reasoning dropped to gpt-5.4-mini (config override)",
+      models: {
+        reason:     { name: "gpt-5.4-mini",         inP: 0.75, outP: 4.50 },
+        fast:       { name: "gpt-5.4-mini",         inP: 0.75, outP: 4.50 },
+        vision:     { name: "gemini-3.5-flash",     inP: 1.50, outP: 9.00 },
+        visionLite: { name: "gemini-3.1-flash-lite", inP: 0.25, outP: 1.50 }
+      },
+      ocr: { name: "mistral-ocr-4-0", perPage: 0.004 }
+    },
+    google: {
+      label: "Google",
+      note: "LLM_PROVIDER=google — reasoning on gemini-3.1-pro",
+      models: {
+        reason:     { name: "gemini-3.1-pro",        inP: 2.00, outP: 12.00 },
+        fast:       { name: "gemini-3.1-flash-lite", inP: 0.25, outP: 1.50 },
+        vision:     { name: "gemini-3.5-flash",      inP: 1.50, outP: 9.00 },
+        visionLite: { name: "gemini-3.1-flash-lite", inP: 0.25, outP: 1.50 }
+      },
+      ocr: { name: "mistral-ocr-4-0", perPage: 0.004 }
+    }
+  };
+
+  // agent-loop token presets [input, output], cumulative per run
+  var AGENT = {
+    query:  { low: [20*K, 2*K],    typ: [35*K, 3.5*K],  high: [90*K, 9*K] },
+    plan:   { low: [30*K, 5*K],    typ: [80*K, 15*K],   high: [150*K, 30*K] },
+    exec:   { low: [100*K, 20*K],  typ: [200*K, 40*K],  high: [400*K, 80*K] },
+    consol: { low: [10*K, 2*K],    typ: [20*K, 5*K],    high: [35*K, 8*K] },
+    rerun:  { low: [8*K, 1.5*K],   typ: [15*K, 3*K],    high: [250*K, 50*K] }
+  };
+
+  var state = {
+    stack: "openai",
+    scen: "typ",
+    pages: 20,
+    sheets: 3,
+    fx: 87,
+    prices: null,        // live editable copy
+    sel: { file: "pdf", op: "create" },
+    vols: { up: 50, q: 300, b: 10, r: 100 }
+  };
+
+  function clonePrices(stackKey) {
+    var s = STACKS[stackKey];
+    return {
+      models: {
+        reason:     Object.assign({}, s.models.reason),
+        fast:       Object.assign({}, s.models.fast),
+        vision:     Object.assign({}, s.models.vision),
+        visionLite: Object.assign({}, s.models.visionLite)
+      },
+      ocr: Object.assign({}, s.ocr)
+    };
+  }
+  state.prices = clonePrices("openai");
+
+  var FILES = [
+    { key: "excel", label: "Excel", sub: "200 KB · 3 sheets", color: "var(--s-excel)" },
+    { key: "pdf",   label: "PDF",   sub: "20 pages",          color: "var(--s-pdf)" },
+    { key: "image", label: "Image", sub: "1 page scan",       color: "var(--s-image)" }
+  ];
+  var OPS = [
+    { key: "ingest", label: "Ingest",            note: "one-time, per upload" },
+    { key: "query",  label: "Query",             note: "one question in chat" },
+    { key: "create", label: "Workflow creation", note: "plan + build + consolidate, one-time" },
+    { key: "run",    label: "Workflow run",      note: "per execution, frozen code" }
+  ];
+
+  function pdfChunks(pages) { return Math.max(1, Math.ceil(pages / 12)); }
+
+  // Line items: {label, model|'ocr', calls, inT, outT} — model keys into state.prices.models
+  function lineItems(file, op, scen) {
+    var p = state.pages, sh = state.sheets, items = [];
+    function agent(label, key) {
+      var t = AGENT[key][scen];
+      items.push({ label: label, model: "reason", calls: 1, inT: t[0], outT: t[1] });
+    }
+    var ch = pdfChunks(p);
+    var exCalls = { low: 1, typ: ch, high: Math.min(4, ch + 1) }[scen];
+
+    if (op === "ingest") {
+      if (file === "excel") {
+        var sc = { low: 0, typ: 1, high: 2 * sh }[scen];
+        if (sc > 0) items.push({ label: "Structure detection (top-50 rows, gated)", model: "fast", calls: sc, inT: 4.5*K, outT: 0.3*K });
+        if (sh >= 15) items.push({ label: "Sheet retrieval index (≥15 sheets)", model: "fast", calls: sh, inT: 0.35*K, outT: 0.05*K });
+        if (items.length === 0) items.push({ label: "Heuristic scan only — no LLM", model: null, calls: 0, inT: 0, outT: 0 });
+      } else if (file === "pdf") {
+        items.push({ label: "OCR (" + p + " pages)", model: "ocr", calls: p, inT: 0, outT: 0 });
+        var redo = { low: 0, typ: Math.ceil(0.1 * p), high: Math.ceil(0.2 * p) }[scen];
+        if (redo > 0) items.push({ label: "Low-confidence pages re-OCR", model: "visionLite", calls: redo, inT: 2*K, outT: 3*K });
+        if (p >= 10) items.push({ label: "Page retrieval index (per 8 pages)", model: "fast", calls: Math.ceil(p / 8), inT: 1.8*K, outT: 0.5*K });
+      } else {
+        items.push({ label: "OCR (1 page, via 1-page PDF)", model: "ocr", calls: 1, inT: 0, outT: 0 });
+        var r2 = { low: 0, typ: 1, high: 3 }[scen];
+        if (r2 > 0) items.push({ label: "Fallback vision re-OCR", model: "visionLite", calls: r2, inT: 2*K, outT: 3*K });
+      }
+    }
+
+    if (op === "query") {
+      agent("Agent loop (plan → code → verify → answer)", "query");
+      if (file === "pdf") {
+        items.push({ label: "Document extraction (per ~12 pages)", model: "reason", calls: exCalls, inT: 7.5*K, outT: 3*K });
+        if (scen === "high") items.push({ label: "Extraction fill / column repair", model: "fast", calls: 1, inT: 5*K, outT: 1*K });
+      }
+      if (file === "image") {
+        items.push({ label: "Vision extraction (1 page)", model: "vision", calls: { low: 1, typ: 1, high: 3 }[scen], inT: 1.6*K, outT: 1.5*K });
+      }
+    }
+
+    if (op === "create") {
+      agent("Plan agent (builder_plan)", "plan");
+      agent("Execute agent — all widgets, one run", "exec");
+      agent("Consolidation pass (background)", "consol");
+      items.push({ label: "Workflow naming", model: "fast", calls: 1, inT: 0.5*K, outT: 0.05*K });
+      if (file === "pdf") {
+        var cc = { low: 1, typ: ch + 1, high: 2 * ch }[scen];
+        items.push({ label: "Document extraction during build", model: "reason", calls: cc, inT: 7.5*K, outT: 3*K });
+      }
+      if (file === "image") {
+        items.push({ label: "Vision extraction during build", model: "vision", calls: { low: 1, typ: 2, high: 4 }[scen], inT: 1.6*K, outT: 1.5*K });
+      }
+    }
+
+    if (op === "run") {
+      var lbl = scen === "high" ? "Rerun agent — schema-drift repair (≤30 steps)" : "Rerun agent (replay frozen code, 2–4 steps)";
+      agent(lbl, "rerun");
+      if (scen === "high" && file !== "image") {
+        items.push({ label: "Column-automap tiebreaker (on confusion)", model: "fast", calls: 1, inT: 3*K, outT: 0.5*K });
+      }
+      if (file === "pdf") {
+        items.push({ label: "Document extraction (frozen code)", model: "reason", calls: exCalls, inT: 7.5*K, outT: 3*K });
+        if (scen === "high") items.push({ label: "Extraction fill / column repair", model: "fast", calls: 1, inT: 5*K, outT: 1*K });
+      }
+      if (file === "image") {
+        items.push({ label: "Vision extraction (1 page)", model: "vision", calls: { low: 1, typ: 1, high: 2 }[scen], inT: 1.6*K, outT: 1.5*K });
+      }
+    }
+    return items;
+  }
+
+  function itemCost(it) {
+    if (it.model === null) return 0;
+    if (it.model === "ocr") return it.calls * state.prices.ocr.perPage;
+    var m = state.prices.models[it.model];
+    return it.calls * (it.inT * m.inP + it.outT * m.outP) / 1e6;
+  }
+  function cellCost(file, op, scen) {
+    return lineItems(file, op, scen).reduce(function (a, it) { return a + itemCost(it); }, 0);
+  }
+
+  function fmtUsd(v) {
+    if (v === 0) return "$0";
+    if (v < 0.01) return "$" + v.toFixed(4);
+    if (v < 1) return "$" + v.toFixed(3);
+    if (v < 100) return "$" + v.toFixed(2);
+    return "$" + Math.round(v).toLocaleString("en-US");
+  }
+  function fmtInr(v) {
+    var r = v * state.fx;
+    if (r === 0) return "₹0";
+    if (r < 1) return "₹" + r.toFixed(2);
+    if (r < 100) return "₹" + r.toFixed(1);
+    return "₹" + Math.round(r).toLocaleString("en-IN");
+  }
+  function fmtTok(t) {
+    if (t === 0) return "—";
+    if (t >= 1000) return (t / 1000).toFixed(t % 1000 === 0 ? 0 : 1) + "k";
+    return String(t);
+  }
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  // ---------- renders ----------
+  function renderTiles() {
+    var el = document.getElementById("tiles");
+    el.innerHTML = OPS.map(function (op) {
+      var costs = FILES.map(function (f) { return cellCost(f.key, op.key, state.scen); });
+      var lo = Math.min.apply(null, costs), hi = Math.max.apply(null, costs);
+      var v = lo === hi || (hi - lo) < 0.005 ? fmtUsd(hi) : fmtUsd(lo) + " – " + fmtUsd(hi);
+      var inr = lo === hi || (hi - lo) < 0.005 ? fmtInr(hi) : fmtInr(lo) + " – " + fmtInr(hi);
+      return '<div class="tile"><div class="t-label">' + op.label + '</div>' +
+        '<div class="t-value">' + v + '</div>' +
+        '<div class="t-note">' + inr + ' · across file types</div></div>';
+    }).join("");
+  }
+
+  function renderMatrix() {
+    var t = document.getElementById("matrix");
+    var head = "<thead><tr><th>Operation</th>" + FILES.map(function (f) {
+      return '<th><span class="swatch" style="background:' + f.color + '"></span>' + f.label +
+        ' <span style="font-weight:400;color:var(--muted)">· ' + f.sub + "</span></th>";
+    }).join("") + "</tr></thead>";
+    var body = "<tbody>" + OPS.map(function (op) {
+      return "<tr><th>" + op.label + '<span class="op-note">' + op.note + "</span></th>" +
+        FILES.map(function (f) {
+          var c = cellCost(f.key, op.key, state.scen);
+          var sel = state.sel.file === f.key && state.sel.op === op.key;
+          return '<td><button class="cell" data-file="' + f.key + '" data-op="' + op.key +
+            '" aria-pressed="' + sel + '"><span class="c-usd">' + fmtUsd(c) +
+            '</span><span class="c-inr">' + fmtInr(c) + "</span></button></td>";
+        }).join("") + "</tr>";
+    }).join("") + "</tbody>";
+    t.innerHTML = head + body;
+    t.querySelectorAll(".cell").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.sel = { file: b.dataset.file, op: b.dataset.op };
+        renderMatrix(); renderBreakdown();
+      });
+    });
+  }
+
+  function renderBreakdown() {
+    var f = FILES.find(function (x) { return x.key === state.sel.file; });
+    var op = OPS.find(function (x) { return x.key === state.sel.op; });
+    var items = lineItems(f.key, op.key, state.scen);
+    var total = 0;
+    var rows = items.map(function (it) {
+      var c = itemCost(it); total += c;
+      var mdl = it.model === null ? "—" : it.model === "ocr" ? state.prices.ocr.name : state.prices.models[it.model].name;
+      var toks = it.model === "ocr" ? "<td>" + it.calls + " pages</td><td>—</td><td>—</td>"
+        : "<td>" + it.calls + "</td><td>" + fmtTok(it.inT) + "</td><td>" + fmtTok(it.outT) + "</td>";
+      return "<tr><td>" + esc(it.label) + ' <span class="mdl">· ' + mdl + "</span></td>" + toks +
+        "<td>" + fmtUsd(c) + "</td></tr>";
+    }).join("");
+    var lo = cellCost(f.key, op.key, "low"), hi = cellCost(f.key, op.key, "high");
+    document.getElementById("breakdown").innerHTML =
+      '<p class="bd-title">' + op.label + " · " + f.label + " (" + f.sub + ")</p>" +
+      '<p class="bd-sub">Scenario: ' + ({low:"Light",typ:"Typical",high:"Heavy"})[state.scen] + " · click any matrix figure to switch</p>" +
+      '<div class="bd-scroll"><table class="bd"><thead><tr><th>Line item · model</th><th>Calls</th><th>Tok in / call</th><th>Tok out / call</th><th>Cost</th></tr></thead><tbody>' +
+      rows + '<tr class="total"><td>Total</td><td></td><td></td><td></td><td>' + fmtUsd(total) +
+      " · " + fmtInr(total) + "</td></tr></tbody></table></div>" +
+      '<p class="bd-range">Full range for this cell — light <b>' + fmtUsd(lo) + "</b> · heavy <b>" + fmtUsd(hi) + "</b></p>";
+  }
+
+  function renderLegend() {
+    document.getElementById("legend").innerHTML = FILES.map(function (f) {
+      return '<span><span class="swatch" style="background:' + f.color + '"></span>' + f.label + "</span>";
+    }).join("");
+  }
+
+  function renderPanels() {
+    var el = document.getElementById("panels");
+    el.innerHTML = OPS.map(function (op) {
+      var vals = FILES.map(function (f) { return cellCost(f.key, op.key, state.scen); });
+      var max = Math.max.apply(null, vals) || 1;
+      var rows = FILES.map(function (f, i) {
+        var w = Math.max(1.5, vals[i] / max * 68);
+        return '<div class="barrow"><span class="b-name">' + f.label + '</span>' +
+          '<div class="b-track"><div class="b-fill" data-tip="' + f.label + " · " + op.label + " — " + fmtUsd(vals[i]) + " (" + fmtInr(vals[i]) + ')" style="width:' + w + "%;background:" + f.color + '"></div>' +
+          '<span class="b-val" style="left:calc(' + w + "% + 7px)\">" + fmtUsd(vals[i]) + "</span></div></div>";
+      }).join("");
+      return '<div class="panel"><h3>' + op.label + "</h3>" + rows + "</div>";
+    }).join("");
+
+    var tip = document.getElementById("tip");
+    el.querySelectorAll(".b-fill").forEach(function (b) {
+      b.addEventListener("mousemove", function (e) {
+        tip.textContent = b.dataset.tip;
+        tip.style.left = Math.min(e.clientX + 12, window.innerWidth - 240) + "px";
+        tip.style.top = (e.clientY - 34) + "px";
+        tip.style.opacity = "1";
+      });
+      b.addEventListener("mouseleave", function () { tip.style.opacity = "0"; });
+    });
+  }
+
+  function renderMonth() {
+    var v = state.vols;
+    var t = document.getElementById("month");
+    var head = "<thead><tr><th>Line</th>" + FILES.map(function (f) {
+      return '<th><span class="swatch" style="background:' + f.color + ';display:inline-block;width:9px;height:9px;border-radius:2.5px;margin-right:7px"></span>' + f.label + " only</th>";
+    }).join("") + "</tr></thead>";
+    var lines = [
+      { label: v.up + " uploads", op: "ingest", n: v.up },
+      { label: v.q + " queries", op: "query", n: v.q },
+      { label: v.b + " workflows built", op: "create", n: v.b },
+      { label: v.r + " workflow runs", op: "run", n: v.r }
+    ];
+    var totals = [0, 0, 0];
+    var body = lines.map(function (ln) {
+      return "<tr><td>" + ln.label + "</td>" + FILES.map(function (f, i) {
+        var c = cellCost(f.key, ln.op, state.scen) * ln.n;
+        totals[i] += c;
+        return "<td>" + fmtUsd(c) + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    body += "<tr><td>Monthly total</td>" + totals.map(function (c) {
+      return "<td>" + fmtUsd(c) + '<span class="sub-inr">' + fmtInr(c) + "</span></td>";
+    }).join("") + "</tr>";
+    t.innerHTML = head + "<tbody>" + body + "</tbody>";
+  }
+
+  function renderPrices() {
+    var el = document.getElementById("prices");
+    var roles = [
+      ["reason", "Reasoning (agent loops)"],
+      ["fast", "Fast tier (structure, mapping, naming)"],
+      ["vision", "Vision (page extraction)"],
+      ["visionLite", "Vision light (re-OCR, bands)"]
+    ];
+    var rows = roles.map(function (r) {
+      var m = state.prices.models[r[0]];
+      return "<tr><td>" + r[1] + "</td><td>" + m.name + "</td>" +
+        '<td><input data-role="' + r[0] + '" data-f="inP" type="number" step="0.05" min="0" value="' + m.inP + '"></td>' +
+        '<td><input data-role="' + r[0] + '" data-f="outP" type="number" step="0.05" min="0" value="' + m.outP + '"></td></tr>';
+    }).join("");
+    rows += "<tr><td>OCR engine</td><td>" + state.prices.ocr.name +
+      '</td><td colspan="2"><input data-role="ocr" data-f="perPage" type="number" step="0.001" min="0" value="' + state.prices.ocr.perPage + '"> $/page</td></tr>';
+    el.innerHTML = '<table class="prices"><thead><tr><th>Role</th><th>Model</th><th>$ in / 1M</th><th>$ out / 1M</th></tr></thead><tbody>' + rows + "</tbody></table>" +
+      '<p class="sec-sub" style="margin-top:10px">' + esc(STACKS[state.stack].note) + ". Switching the stack preset resets these fields.</p>";
+    el.querySelectorAll("input").forEach(function (inp) {
+      inp.addEventListener("input", function () {
+        var val = parseFloat(inp.value);
+        if (isNaN(val) || val < 0) return;
+        if (inp.dataset.role === "ocr") state.prices.ocr.perPage = val;
+        else state.prices.models[inp.dataset.role][inp.dataset.f] = val;
+        renderAll(false);
+      });
+    });
+  }
+
+  function renderAll(withPrices) {
+    renderTiles(); renderMatrix(); renderBreakdown(); renderLegend(); renderPanels(); renderMonth();
+    if (withPrices !== false) renderPrices();
+  }
+
+  // ---------- wiring ----------
+  document.getElementById("seg-stack").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    state.stack = b.dataset.stack;
+    state.prices = clonePrices(state.stack);
+    this.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    renderAll();
+  });
+  document.getElementById("seg-scen").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    state.scen = b.dataset.scen;
+    this.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    renderAll(false);
+  });
+  function num(id, fn) {
+    document.getElementById(id).addEventListener("input", function () {
+      var v = parseFloat(this.value);
+      if (!isNaN(v) && v >= 0) { fn(v); renderAll(false); }
+    });
+  }
+  num("in-pages", function (v) { state.pages = Math.max(1, Math.round(v)); });
+  num("in-sheets", function (v) { state.sheets = Math.max(1, Math.round(v)); });
+  num("in-fx", function (v) { state.fx = v; });
+  num("v-up", function (v) { state.vols.up = v; });
+  num("v-q", function (v) { state.vols.q = v; });
+  num("v-b", function (v) { state.vols.b = v; });
+  num("v-r", function (v) { state.vols.r = v; });
+
+  renderAll();
+})();
+</script>
