@@ -2815,49 +2815,61 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function buildExcel(sch){
     var wb=new ExcelJS.Workbook(); wb.creator="Irame"; wb.created=new Date();
     var ws=wb.addWorksheet("Project Plan",{views:[{state:"frozen",xSplit:6,ySplit:4,showGridLines:false}],properties:{defaultRowHeight:15}});
-    var sp=projSpan(sch), days=bizDays(sp.start,sp.end), nDay=days.length, lastCol=6+nDay;
-    // colours
-    var C={brand:"FF2E6DB4",brandDk:"FF16395C",head:"FF255E9E",band:"FFF5F8FC",bandAlt:"FFFFFFFF",peach:"FFF9E4D4",bar:"FF3B7DD8",barEnd:"FF2E6DB4",grid:"FFE6EBF1",mon:"FFDCE7F4",dayhdr:"FFEEF3F9",ink:"FF1F2A37",sub:"FF6B7280",wknd:"FFF6F7F9"};
-    // widths
-    ws.getColumn(1).width=5; ws.getColumn(2).width=48; ws.getColumn(3).width=22; ws.getColumn(4).width=11; ws.getColumn(5).width=11; ws.getColumn(6).width=6.5;
+    var sp=projSpan(sch);
+    // date grid = project business days + a buffer, so manual duration increases still show a bar
+    var base=bizDays(sp.start,sp.end);
+    var buffer=Math.min(60,Math.max(15,Math.round(base.length*0.4)));
+    var days=base.slice(); var lastd=days.length?days[days.length-1]:firstBiz(sp.start);
+    for(var bi=0;bi<buffer;bi++){ lastd=nextBiz(lastd); days.push(new Date(lastd)); }
+    var nDay=days.length, lastCol=6+nDay, DATEFMT="dd-mmm-yy";
+    function colLetter(n){ var s=""; while(n>0){ var m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=(n-m-1)/26|0; } return s; }
+    var C={brand:"FF2E6DB4",brandDk:"FF16395C",head:"FF255E9E",band:"FFF5F8FC",bandAlt:"FFFFFFFF",bar:"FF3B7DD8",grid:"FFE6EBF1",mon:"FFDCE7F4",dayhdr:"FFEEF3F9",ink:"FF1F2A37",sub:"FF6B7280"};
+    ws.getColumn(1).width=5; ws.getColumn(2).width=44; ws.getColumn(3).width=20; ws.getColumn(4).width=11; ws.getColumn(5).width=11; ws.getColumn(6).width=6.5;
     for(var c=0;c<nDay;c++){ ws.getColumn(7+c).width=3.0; }
     // title band (rows 1–2)
     ws.mergeCells(1,1,1,lastCol); var t=ws.getCell(1,1); t.value=(META.project||"Project")+"  —  Project Plan"; t.font={name:FONT,bold:true,size:16,color:{argb:"FFFFFFFF"}}; t.alignment={vertical:"middle",indent:1}; t.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.brandDk}}; ws.getRow(1).height=30;
     ws.mergeCells(2,1,2,lastCol); var st=ws.getCell(2,1);
-    st.value=(META.client?("Client: "+META.client+"      "):"")+"Generated "+fmt(new Date())+", "+new Date().getFullYear()+"      "+sch.length+" stages      "+fmt(sp.start)+" – "+fmt(sp.end)+", "+sp.end.getFullYear();
+    st.value=(META.client?("Client: "+META.client+"      "):"")+"Generated "+fmt(new Date())+", "+new Date().getFullYear()+"      "+sch.length+" stages      Live sheet: edit any Days or the first Start date and every End/Start/timeline recalculates.";
     st.font={name:FONT,size:9.5,color:{argb:"FFDCE7F4"}}; st.alignment={vertical:"middle",indent:1}; st.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.brand}}; ws.getRow(2).height=18;
-    // header row (row 4) left labels
+    // header labels (row 4)
     var heads=["#","Stage / Line item","Owner","Start","End","Days"];
     heads.forEach(function(h,i){ var cell=ws.getCell(4,i+1); cell.value=h; cell.font={name:FONT,bold:true,size:9.5,color:{argb:"FFFFFFFF"}}; cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.head}}; cell.alignment={vertical:"middle",horizontal:(i===0||i>=3)?"center":"left",indent:(i>=1&&i<=2)?1:0}; });
-    // month header (row 3) + day numbers (row 4) + weekday letters implied
-    ws.getCell(3,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:C.brandDk}}; ws.mergeCells(3,1,3,6); var lh=ws.getCell(3,1); lh.value="Timeline"; lh.font={name:FONT,bold:true,size:9.5,color:{argb:"FFFFFFFF"}}; lh.alignment={vertical:"middle",horizontal:"center"};
+    // month band (row 3) + real-date day header (row 4 grid — holds actual dates, shown as day number)
+    ws.mergeCells(3,1,3,6); var lh=ws.getCell(3,1); lh.value="Timeline"; lh.font={name:FONT,bold:true,size:9.5,color:{argb:"FFFFFFFF"}}; lh.alignment={vertical:"middle",horizontal:"center"}; lh.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.brandDk}};
     var mstart=0;
-    for(var i=0;i<nDay;i++){ var col=7+i; var d=days[i];
-      var dn=ws.getCell(4,col); dn.value=d.getDate(); dn.font={name:FONT,bold:true,size:8,color:{argb:C.sub}}; dn.alignment={horizontal:"center",vertical:"middle"}; dn.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.dayhdr}};
+    for(var i=0;i<nDay;i++){ var col=7+i, d=days[i];
+      var dn=ws.getCell(4,col); dn.value=new Date(d.getFullYear(),d.getMonth(),d.getDate()); dn.numFmt="d"; dn.font={name:FONT,bold:true,size:8,color:{argb:C.sub}}; dn.alignment={horizontal:"center",vertical:"middle"}; dn.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.dayhdr}};
       if(i===nDay-1 || days[i+1].getMonth()!==d.getMonth()){
         ws.mergeCells(3,7+mstart,3,col); var mc=ws.getCell(3,7+mstart); mc.value=MONF[d.getMonth()]+" "+d.getFullYear(); mc.font={name:FONT,bold:true,size:9,color:{argb:C.brandDk}}; mc.alignment={horizontal:"center",vertical:"middle"}; mc.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.mon}}; mstart=i+1;
       }
     }
     ws.getRow(3).height=17; ws.getRow(4).height=17;
-    // data rows
+    // data rows — Start/End are live formulas; Days is the editable duration; first Start is an editable date
+    var cursorEndRow=null, lastMainStartRow=null;
     sch.forEach(function(r,ri){ var row=5+ri, band=(ri%2===0)?C.band:C.bandAlt;
-      var vals=[ri+1, r.s.name, r.s.owner||"", fmt(r.start), fmt(r.end), r.s.days];
-      for(var c=1;c<=6;c++){ var cc=ws.getCell(row,c); cc.value=vals[c-1];
-        cc.fill={type:"pattern",pattern:"solid",fgColor:{argb:band}};
-        cc.font={name:FONT,size:9.5,bold:c===2,color:{argb:C.ink}};
-        cc.alignment={vertical:"middle",horizontal:(c===1||c>=4)?"center":"left",wrapText:c===2,indent:(c===2||c===3)?1:0};
-      }
-      var s0=stripTime(r.start),e0=stripTime(r.end);
-      for(var k=0;k<nDay;k++){ var cell=ws.getCell(row,7+k), isW=(days[k].getDay()===0||days[k].getDay()===6);
-        if(days[k]>=s0&&days[k]<=e0){ cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.bar}}; }
-        else if(isW){ cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:C.wknd}}; }
-      }
+      ws.getCell(row,1).value=ri+1; ws.getCell(row,2).value=r.s.name; ws.getCell(row,3).value=r.s.owner||"";
+      var isPar=!!(r.s.parallel && lastMainStartRow);
+      var sc=ws.getCell(row,4);
+      if(isPar) sc.value={formula:"D"+lastMainStartRow, result:stripTime(r.start)};
+      else if(cursorEndRow==null) sc.value=stripTime(r.start);       // project start — editable
+      else sc.value={formula:"WORKDAY(E"+cursorEndRow+",1)", result:stripTime(r.start)};
+      sc.numFmt=DATEFMT;
+      var ec=ws.getCell(row,5); ec.value={formula:"WORKDAY(D"+row+",F"+row+"-1)", result:stripTime(r.end)}; ec.numFmt=DATEFMT;
+      ws.getCell(row,6).value=r.s.days;                              // duration — editable
+      for(var c=1;c<=6;c++){ var cc=ws.getCell(row,c); cc.fill={type:"pattern",pattern:"solid",fgColor:{argb:band}}; cc.font={name:FONT,size:9.5,bold:c===2,color:{argb:C.ink}}; cc.alignment={vertical:"middle",horizontal:(c===1||c>=4)?"center":"left",wrapText:c===2,indent:(c===2||c===3)?1:0}; }
+      for(var k=0;k<nDay;k++){ ws.getCell(row,7+k).fill={type:"pattern",pattern:"solid",fgColor:{argb:C.bandAlt}}; } // base fill; CF paints the bar
       ws.getRow(row).height=19;
+      if(!isPar){ cursorEndRow=row; lastMainStartRow=row; }
     });
-    // subtle borders across the whole table
+    // conditional-formatting bars: fill a grid cell when its column date (row 4) is within [Start, End]
+    var firstRow=5, lastDataRow=4+sch.length, g0=colLetter(7), g1=colLetter(6+nDay);
+    ws.addConditionalFormatting({ ref:g0+firstRow+":"+g1+lastDataRow, rules:[
+      { type:"expression", priority:1, formulae:["AND($D"+firstRow+"<>\"\","+g0+"$4>=$D"+firstRow+","+g0+"$4<=$E"+firstRow+")"],
+        style:{ fill:{type:"pattern",pattern:"solid",bgColor:{argb:C.bar},fgColor:{argb:C.bar}} } }
+    ]});
+    // borders
     var lastRow=4+sch.length, thin={style:"thin",color:{argb:C.grid}};
-    for(var rr=3;rr<=lastRow;rr++){ for(var cc=1;cc<=lastCol;cc++){ var e=ws.getCell(rr,cc); var b=e.border||{}; e.border={top:thin,left:thin,bottom:thin,right:thin}; } }
-    // thicker separator under header
+    for(var rr=3;rr<=lastRow;rr++){ for(var cc=1;cc<=lastCol;cc++){ ws.getCell(rr,cc).border={top:thin,left:thin,bottom:thin,right:thin}; } }
     for(var cc2=1;cc2<=lastCol;cc2++){ var hc=ws.getCell(4,cc2); hc.border={top:{style:"thin",color:{argb:C.grid}},left:{style:"thin",color:{argb:C.grid}},right:{style:"thin",color:{argb:C.grid}},bottom:{style:"medium",color:{argb:C.brand}}}; }
     ws.autoFilter=undefined;
     return wb.xlsx.writeBuffer().then(function(buf){
