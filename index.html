@@ -272,6 +272,15 @@ body:not(.app-bom) > .layout{display:none !important}
 /* ── Deployment Tracker (Card 2) — live Notion embed ── */
 #tracker{flex-direction:column;height:100vh;background:var(--bg)}
 .tk-top{display:flex;align-items:center;gap:14px;padding:12px 22px;background:linear-gradient(120deg,#16395c 0%,var(--brand) 55%,var(--brand-500) 100%);color:#fff;box-shadow:0 2px 14px rgba(16,57,92,.25);flex-shrink:0}
+/* per-tool header colours — match each welcome-card accent */
+body.app-bom>header{background:linear-gradient(120deg,#12336b 0%,#2563eb 55%,#3b82f6 100%)}
+#tracker .tk-top{background:linear-gradient(120deg,#0a4f47 0%,#0d9488 55%,#14b8a6 100%)}
+#clientform .tk-top{background:linear-gradient(120deg,#3b1d75 0%,#7c3aed 55%,#8b5cf6 100%)}
+#gantt .tk-top{background:linear-gradient(120deg,#7a4708 0%,#d97706 55%,#f59e0b 100%)}
+#boqform .tk-top{background:linear-gradient(120deg,#7a184a 0%,#db2777 55%,#ec4899 100%)}
+#documents .tk-top{background:linear-gradient(120deg,#0a4a5c 0%,#0891b2 55%,#06b6d4 100%)}
+#avengine .tk-top{background:linear-gradient(120deg,#2a2578 0%,#4f46e5 55%,#6366f1 100%)}
+#llmcalc .tk-top{background:linear-gradient(120deg,#054434 0%,#059669 55%,#10b981 100%)}
 .tk-home{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:9px;color:#fff;cursor:pointer}
 .tk-home:hover{background:rgba(255,255,255,.26)}.tk-home svg{width:17px;height:17px}
 .tk-title{font-size:16px;font-weight:750;display:flex;align-items:center;gap:8px;flex-shrink:0}
