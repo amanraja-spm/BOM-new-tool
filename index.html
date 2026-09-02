@@ -344,6 +344,30 @@ body.app-bom>header{background:linear-gradient(120deg,#12336b 0%,#2563eb 55%,#3b
 .bc-sub{font-size:11.5px;color:var(--ink-2);margin-top:2px}
 .bc-own{font-size:11px;color:var(--ink-3);margin-top:4px}
 
+/* pipeline board — stage-flow bar + coloured stage columns + close-date cards */
+.pb-wrap{overflow-x:auto;padding-bottom:14px}
+.pb-bar{display:flex;gap:3px;min-width:760px;margin-bottom:16px;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(16,24,40,.10)}
+.pb-seg{min-width:70px;padding:10px 12px;color:#fff;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.pb-seg-nm{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.pb-seg-ct{font-size:17px;font-weight:850;line-height:1.1}
+.pb-cols{display:flex;gap:12px;align-items:flex-start;min-width:min-content}
+.pb-col{flex:0 0 232px;background:var(--bg);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+.pb-col-h{display:flex;align-items:center;gap:8px;padding:9px 12px;color:#fff}
+.pb-col-h .nm{font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.3px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.pb-col-h .ct{font-size:11px;font-weight:800;color:#fff;background:rgba(255,255,255,.28);border-radius:999px;padding:1px 9px}
+.pb-col-b{padding:10px;display:flex;flex-direction:column;gap:9px;min-height:8px}
+.pb-card{background:#fff;border:1px solid var(--line-2);border-left:4px solid #64748b;border-radius:9px;padding:9px 11px;cursor:pointer;transition:box-shadow .15s ease,transform .15s ease}
+.pb-card:hover{box-shadow:0 6px 16px rgba(16,24,40,.12);transform:translateY(-1px)}
+.pb-name{font-size:13.5px;font-weight:800;color:var(--ink)}
+.pb-sub{font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.pb-own{font-size:11px;color:var(--ink-3);margin-top:5px}
+.pb-close{font-size:11px;font-weight:750;margin-top:6px;padding:2px 8px;border-radius:6px;display:inline-block}
+.pb-close.ci-ok{background:#eef2ff;color:#4338ca}
+.pb-close.ci-soon{background:#fff3e3;color:#b47900}
+.pb-close.ci-late{background:var(--warn-bg);color:var(--warn)}
+.pb-close.ci-done{background:#e7f7ef;color:#127a4a}
+.pb-close.ci-none{background:var(--line-2);color:var(--ink-3)}
+
 .tk-grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start}
 @media(max-width:900px){.tk-grid2{grid-template-columns:1fr}}
 .tk-panel{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px}
@@ -2236,6 +2260,18 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var SEG="all", VIEW="board", Q="", OWN="", BUCK={};   // dashboard segment + view + filter state
   // left→right pipeline order for the stage board (unknown stages slot in just before Closed)
   var STAGE_ORDER=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","Client Testing","Revised deployment pending","Test & Bug FIx PProd","Vendor Testing","Infra VAPT - Vendor","Closed"];
+  // a distinct colour per stage (gray → blues/purples → green as work progresses toward Closed)
+  var STAGE_COLORS={"On Hold":"#64748b","Requirement Gathering":"#6366f1","Infra Prep (Client)":"#3b82f6","Validate Infra (Client)":"#0ea5e9","Data Source Integration":"#06b6d4","Deployment (irame)":"#14b8a6","Workflow Creation":"#8b5cf6","Client Testing":"#f59e0b","Revised deployment pending":"#f97316","Test & Bug FIx PProd":"#ec4899","Vendor Testing":"#d946ef","Infra VAPT - Vendor":"#f43f5e","Closed":"#22c55e"};
+  function stageColor(st){ return STAGE_COLORS[st]||"#64748b"; }
+  // closure = the Overall Timeline date; show days remaining / overdue
+  function closeInfo(r){
+    if(r.stage==="Closed" || /^done$/i.test(r.status||"")){ var dd=parse(r.overall); return {txt:"Delivered"+(dd?" · "+fmt(dd):""), cls:"done"}; }
+    var d=parse(r.overall); if(!d) return {txt:"No close date set", cls:"none"};
+    var diff=days(today(),d);
+    if(diff<0) return {txt:"Overdue "+(-diff)+"d · was "+fmt(d), cls:"late"};
+    if(diff<=7) return {txt:"Closes "+fmt(d)+" · "+diff+"d", cls:"soon"};
+    return {txt:"Closes "+fmt(d)+" · "+diff+"d", cls:"ok"};
+  }
 
   // segment definitions (order = KPI tile order)
   var SEGS=[
@@ -2264,23 +2300,31 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
 
   // compact card for the stage board (the column already tells you the stage)
-  function boardCard(r){ var c=r.__c, cat=c.cat, own=ownerOf(r);
-    var cls=cat==="closed"?"ontrack":cat==="onhold"?"hold":"notime";
-    return "<div class='tk-bcard "+cls+"' data-ri='"+DATA.indexOf(r)+"'>"
-      +"<div class='bc-name'>"+esc(r.client)+"</div>"
-      +(r.product?"<div class='bc-sub'>"+esc(r.product)+"</div>":"")
-      +(own?"<div class='bc-own'>👤 "+esc(own)+"</div>":"")+"</div>";
+  function boardCard(r){ var own=ownerOf(r), sc=stageColor(r.stage), ci=closeInfo(r);
+    return "<div class='pb-card ci-"+ci.cls+"' style='border-left-color:"+sc+"' data-ri='"+DATA.indexOf(r)+"'>"
+      +"<div class='pb-name'>"+esc(r.client)+"</div>"
+      +(r.product?"<div class='pb-sub'>"+esc(r.product)+"</div>":"")
+      +"<div class='pb-close ci-"+ci.cls+"'>"+ci.txt+"</div>"
+      +(own?"<div class='pb-own'>👤 "+esc(own)+"</div>":"")+"</div>";
   }
   function boardHtml(list){
     if(!list.length) return "<div class='tk-empty'>No matching clients. Try a different filter.</div>";
     var groups={}; list.forEach(function(r){ var st=r.stage||"—"; (groups[st]=groups[st]||[]).push(r); });
     function rank(s){ var i=STAGE_ORDER.indexOf(s); return i<0?STAGE_ORDER.length-1.5:i; }
     var stages=Object.keys(groups).sort(function(a,b){ return rank(a)-rank(b); });
-    return "<div class='tk-board'>"+stages.map(function(st){ var items=groups[st];
-      items.sort(function(a,b){return String(a.client).localeCompare(String(b.client));});
-      return "<div class='tk-col'><div class='tk-col-h'><span class='nm'>"+esc(st)+"</span><span class='ct'>"+items.length+"</span></div>"
-        +"<div class='tk-col-b'>"+items.map(boardCard).join("")+"</div></div>";
+    var total=list.length;
+    // top stage-flow bar — one coloured segment per stage, width ∝ number of clients
+    var bar="<div class='pb-bar'>"+stages.map(function(st){ var n=groups[st].length;
+      return "<div class='pb-seg' style='flex:"+n+";background:"+stageColor(st)+"' title='"+esc(st)+" — "+n+" client"+(n===1?"":"s")+"'>"
+        +"<span class='pb-seg-nm'>"+esc(st)+"</span><span class='pb-seg-ct'>"+n+"</span></div>";
     }).join("")+"</div>";
+    // stage columns — clients sit under their stage, soonest close first
+    var cols="<div class='pb-cols'>"+stages.map(function(st){ var items=groups[st], sc=stageColor(st);
+      items.sort(function(a,b){ var da=parse(a.overall), db=parse(b.overall); return (da?da.getTime():9e15)-(db?db.getTime():9e15); });
+      return "<div class='pb-col'><div class='pb-col-h' style='background:"+sc+"'><span class='nm'>"+esc(st)+"</span><span class='ct'>"+items.length+"</span></div>"
+        +"<div class='pb-col-b'>"+items.map(boardCard).join("")+"</div></div>";
+    }).join("")+"</div>";
+    return "<div class='pb-wrap'>"+bar+cols+"</div>";
   }
 
   // repaint the filtered records (segment ∩ search ∩ owner) as a board or a card list
