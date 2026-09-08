@@ -1947,7 +1947,9 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   // Rich, styled workbook via ExcelJS (BOM sheet + Assumptions sheet)
   function exportExcelJS(r, fname){
-    var BRAND="FF1F4E79", BRAND2="FF23588A", LIGHT="FFEEF4FB", ALT="FFF5F9FC", LINE="FFDCE8F5", INK="FF0F172A", SUB="FF475569", CURFMT='₹#,##0.00';
+    var BRAND="FF1F4E79", BRAND2="FF23588A", LIGHT="FFEEF4FB", ALT="FFF5F9FC", LINE="FFDCE8F5", INK="FF0F172A", SUB="FF475569";
+    var isUSD=(CUR==="USD"), curLabel=isUSD?"USD":"INR", CURFMT=isUSD?'$#,##0.00':'₹#,##0.00';
+    function cv(n){ return isUSD ? (+n||0)/FX : (+n||0); }   // values are stored in INR; convert on export if USD chosen
     function bd(){ var s={style:"thin",color:{argb:LINE}}; return {top:s,left:s,bottom:s,right:s}; }
     var wb=new ExcelJS.Workbook(); wb.creator="Irame"; wb.created=new Date();
     var regionTxt=(r.pKey==="azure"?(REGION_LABEL[r.boq.region]||r.prov.region):r.prov.region);
@@ -1962,11 +1964,11 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     t.fill={type:"pattern",pattern:"solid",fgColor:{argb:BRAND}}; ws.getRow(1).height=32;
     ws.mergeCells("A2:F2");
     var m=ws.getCell("A2");
-    m.value="Provider: "+r.prov.label+"        Region: "+regionTxt+"        Pricing: "+pricingTxt+"        Generated: "+today()+"        FX: US$1 = ₹"+FX.toFixed(2);
+    m.value="Provider: "+r.prov.label+"        Region: "+regionTxt+"        Pricing: "+pricingTxt+"        Currency: "+curLabel+"        Generated: "+today()+"        FX: US$1 = ₹"+FX.toFixed(2);
     m.font={size:10,color:{argb:SUB}}; m.alignment={vertical:"middle",indent:1};
     m.fill={type:"pattern",pattern:"solid",fgColor:{argb:LIGHT}}; ws.getRow(2).height=20;
     ws.getRow(3).height=6;
-    var head=["Service category","Service type","Region","Description","Est. monthly cost (INR)","Est. upfront cost (INR)"];
+    var head=["Service category","Service type","Region","Description","Est. monthly cost ("+curLabel+")","Est. upfront cost ("+curLabel+")"];
     var hr=ws.getRow(4);
     head.forEach(function(h,i){ var c=hr.getCell(i+1); c.value=h;
       c.font={bold:true,size:10,color:{argb:"FFFFFFFF"}}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:BRAND2}};
@@ -1978,8 +1980,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       var row=ws.getRow(rn);
       row.getCell(1).value=x.cat; row.getCell(2).value=stripTags(x.type); row.getCell(3).value=x.region;
       row.getCell(4).value=desc;
-      row.getCell(5).value=r2(x.monthly); row.getCell(5).numFmt=CURFMT;
-      row.getCell(6).value=r2(x.upfront); row.getCell(6).numFmt=CURFMT;
+      row.getCell(5).value=r2(cv(x.monthly)); row.getCell(5).numFmt=CURFMT;
+      row.getCell(6).value=r2(cv(x.upfront)); row.getCell(6).numFmt=CURFMT;
       for(var c=1;c<=6;c++){ var cell=row.getCell(c); cell.border=bd();
         cell.alignment={vertical:"top",horizontal:(c>=5?"right":"left"),wrapText:(c===4)};
         cell.font={size:10,color:{argb:INK}};
@@ -1990,8 +1992,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     ws.mergeCells("A"+rn+":D"+rn);
     var tr=ws.getRow(rn);
     tr.getCell(1).value="TOTAL — monthly estimate";
-    tr.getCell(5).value=r2(r.totM); tr.getCell(5).numFmt=CURFMT;
-    tr.getCell(6).value=r2(r.totU); tr.getCell(6).numFmt=CURFMT;
+    tr.getCell(5).value=r2(cv(r.totM)); tr.getCell(5).numFmt=CURFMT;
+    tr.getCell(6).value=r2(cv(r.totU)); tr.getCell(6).numFmt=CURFMT;
     for(var c=1;c<=6;c++){ var cell=tr.getCell(c); cell.font={bold:true,size:11,color:{argb:"FFFFFFFF"}};
       cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:BRAND}};
       cell.alignment={vertical:"middle",horizontal:(c>=5?"right":"left"),indent:(c===1?1:0)}; cell.border=bd(); }
@@ -2032,12 +2034,14 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   // Plain fallback (SheetJS: two sheets, no styling) then CSV
   function exportFallback(r, fname){
-    var head=["Service category","Service type","Region","Description","Est. monthly cost (INR)","Est. upfront cost (INR)"];
+    var isUSD=(CUR==="USD"), curLabel=isUSD?"USD":"INR";
+    function cv(n){ return isUSD ? Math.round(((+n||0)/FX)*100)/100 : (+n||0); }
+    var head=["Service category","Service type","Region","Description","Est. monthly cost ("+curLabel+")","Est. upfront cost ("+curLabel+")"];
     var bom=[["Irame — Infrastructure Sizing & Bill of Materials"],
-      ["Provider",r.prov.label,"Region",(r.pKey==="azure"?(REGION_LABEL[r.boq.region]||r.prov.region):r.prov.region),"Generated",today(),"FX US$1=",r2(FX)],[],head];
+      ["Provider",r.prov.label,"Region",(r.pKey==="azure"?(REGION_LABEL[r.boq.region]||r.prov.region):r.prov.region),"Currency",curLabel,"Generated",today(),"FX US$1=",r2(FX)],[],head];
     for(var i=0;i<r.rows.length;i++){ var x=r.rows[i]; if(x.excluded) continue;
-      bom.push([x.cat,stripTags(x.type),x.region,(x.nodeKey?x.nodeCount+"× ":"")+stripTags(x.desc),r2(x.monthly),r2(x.upfront)]); }
-    bom.push(["TOTAL — monthly estimate","","","",r2(r.totM),r2(r.totU)]);
+      bom.push([x.cat,stripTags(x.type),x.region,(x.nodeKey?x.nodeCount+"× ":"")+stripTags(x.desc),cv(x.monthly),cv(x.upfront)]); }
+    bom.push(["TOTAL — monthly estimate","","","",cv(r.totM),cv(r.totU)]);
     var asrows=[["Assumptions & Requirements"],[],["Requirements summary"]];
     boqItems(r).forEach(function(kv){ asrows.push([kv[0],kv[1]]); });
     if(BOQ_ASSUMED && BOQ_ASSUMED.length){ asrows.push([],["Assumed inputs (not supplied in the client intake)"]);
