@@ -2272,7 +2272,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   // left→right pipeline order for the stage board (unknown stages slot in just before Closed)
   var STAGE_ORDER=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","Client Testing","Revised deployment pending","Test & Bug FIx PProd","Vendor Testing","Infra VAPT - Vendor","Closed"];
   // a distinct colour per stage (gray → blues/purples → green as work progresses toward Closed)
-  var STAGE_COLORS={"On Hold":"#64748b","Requirement Gathering":"#6366f1","Infra Prep (Client)":"#3b82f6","Validate Infra (Client)":"#0ea5e9","Data Source Integration":"#06b6d4","Deployment (irame)":"#14b8a6","Workflow Creation":"#8b5cf6","Client Testing":"#f59e0b","Revised deployment pending":"#f97316","Test & Bug FIx PProd":"#ec4899","Vendor Testing":"#d946ef","Infra VAPT - Vendor":"#f43f5e","Closed":"#22c55e"};
+  // calm, muted palette — a gentle gray → blue → teal → green progression (cooler = earlier, green = done)
+  var STAGE_COLORS={"On Hold":"#6b7280","Requirement Gathering":"#6280a3","Infra Prep (Client)":"#5580a8","Validate Infra (Client)":"#4f86a0","Data Source Integration":"#4a8b95","Deployment (irame)":"#4b9187","Workflow Creation":"#559483","Client Testing":"#6f9a6f","Revised deployment pending":"#b58a5c","Test & Bug FIx PProd":"#8a86ac","Vendor Testing":"#7891b0","Infra VAPT - Vendor":"#b08268","Closed":"#4f9a72"};
   function stageColor(st){ return STAGE_COLORS[st]||"#64748b"; }
   // closure = the Overall Timeline date; show days remaining / overdue
   function closeInfo(r){
