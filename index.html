@@ -2225,7 +2225,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   function classify(r){
     var st=r.stage||"", T=today();
-    if(isClosedStage(st)||/^done$/i.test(r.status||"")) return {cat:"closed"};
+    if(isClosedStage(st)) return {cat:"closed"};   // Delivered = stage is Closed (matches the board column & tile label)
     if(isOnHoldStage(st)) return {cat:"onhold"};
     var ov=parse(r.overall), ac=parse(r.actual), slip=(ov&&ac&&ac>ov)?days(ov,ac):0;
     if(/^done$/i.test(r.status||"")) return {cat:"ontrack",doneStage:true,slip:slip};
@@ -2310,7 +2310,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function inkOn(h){ return _hexLum(h)>0.45 ? "#243244" : "#ffffff"; }
   // closure = the Overall Timeline date; show days remaining / overdue
   function closeInfo(r){
-    if(isClosedStage(r.stage) || /^done$/i.test(r.status||"")){ var dd=parse(r.overall); return {txt:"Delivered"+(dd?" · "+fmt(dd):""), cls:"done"}; }
+    if(isClosedStage(r.stage)){ var dd=parse(r.overall); return {txt:"Delivered"+(dd?" · "+fmt(dd):""), cls:"done"}; }
     var d=parse(r.overall); if(!d) return {txt:"No close date set", cls:"none"};
     var diff=days(today(),d);
     if(diff<0) return {txt:"Overdue "+(-diff)+"d · was "+fmt(d), cls:"late"};
