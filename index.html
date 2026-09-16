@@ -2315,7 +2315,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     if(!list.length) return "<div class='tk-empty'>No matching clients. Try a different filter.</div>";
     var groups={}; list.forEach(function(r){ var st=r.stage||"—"; (groups[st]=groups[st]||[]).push(r); });
     function rank(s){ var i=STAGE_ORDER.indexOf(s); return i<0?STAGE_ORDER.length-1.5:i; }
-    var stages=Object.keys(groups).sort(function(a,b){ return rank(a)-rank(b); });
+    // reversed pipeline: Closed first (right end of the pipeline) → On Hold last
+    var stages=Object.keys(groups).sort(function(a,b){ return rank(b)-rank(a); });
     var total=list.length;
     // top stage-flow bar — one coloured segment per stage, width ∝ number of clients
     var bar="<div class='pb-bar'>"+stages.map(function(st){ var n=groups[st].length;
