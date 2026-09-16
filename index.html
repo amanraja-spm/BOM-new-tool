@@ -2189,8 +2189,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   // Pipeline order (open stages, then Closed)
   var STAGES=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
   // Linear delivery pipeline used for the per-client progress bar (On Hold sits before the track)
-  var PIPE=["Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","QA & Bug Fix","Final Testing (Client)","Closed"];
-  function pipeIdx(stage){ var i=PIPE.indexOf(stage); return i; } // -1 = On Hold / not started
+  var PIPE_LEN=8; // delivery-pipeline stages (all stages except On Hold), for the per-client progress track
+  function pipeIdx(stage){ var d=stageDef(stage); return (!d||d.idx===0)?-1:d.idx-1; } // -1 = On Hold / not started
 
   // Baked-in snapshot — live pull from Notion Deployment Tracker (21 Aug 2026).
   // Auto-replaced by live data once NOTION_TOKEN + NOTION_DB_ID are set on the server.
@@ -2225,8 +2225,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   function classify(r){
     var st=r.stage||"", T=today();
-    if(st==="Closed"||/^closed$/i.test(r.status||"")) return {cat:"closed"};
-    if(/^on hold/i.test(st)) return {cat:"onhold"};
+    if(isClosedStage(st)||/^done$/i.test(r.status||"")) return {cat:"closed"};
+    if(isOnHoldStage(st)) return {cat:"onhold"};
     var ov=parse(r.overall), ac=parse(r.actual), slip=(ov&&ac&&ac>ov)?days(ov,ac):0;
     if(/^done$/i.test(r.status||"")) return {cat:"ontrack",doneStage:true,slip:slip};
     var due=parse(r.stageTimeline)||parse(r.actual)||parse(r.overall);
@@ -2254,10 +2254,10 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       :c.cat==="closed"?"<span class='dt-badge done'>Delivered</span>"
       :c.cat==="notime"?"<span class='dt-badge ok'>In pipeline</span>"
       :"<span class='dt-badge ok'>On track</span>";
-    var idx=pipeIdx(r.stage), filled=idx<0?0:idx+1, pct=idx<0?0:Math.round(filled/PIPE.length*100);
+    var idx=pipeIdx(r.stage), filled=idx<0?0:idx+1, pct=idx<0?0:Math.round(filled/PIPE_LEN*100);
     var track="";
-    if(c.cat!=="onhold"){ var segs=""; for(var i=0;i<PIPE.length;i++){ segs+="<span class='dt-seg"+(i<filled?" on":"")+"'></span>"; }
-      track="<div class='dt-track'>"+segs+"</div><div class='dt-pct'>Stage "+(idx<0?0:filled)+" of "+PIPE.length+" · "+pct+"% through delivery pipeline</div>"; }
+    if(c.cat!=="onhold"){ var segs=""; for(var i=0;i<PIPE_LEN;i++){ segs+="<span class='dt-seg"+(i<filled?" on":"")+"'></span>"; }
+      track="<div class='dt-track'>"+segs+"</div><div class='dt-pct'>Stage "+(idx<0?0:filled)+" of "+PIPE_LEN+" · "+pct+"% through delivery pipeline</div>"; }
     var rs=(c.cat==="late"||c.cat==="soon"||(c.cat==="ontrack"&&c.slip))?reason(r,c):"";
     var note=rs?"<div class='dt-note'>"+rs+"</div>":"";
     var rows=dRow("Product / Type",esc(r.product))
@@ -2282,21 +2282,26 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   var DATA=null, SOURCE="snapshot", UPDATED="";
   var SEG="all", VIEW="board", Q="", OWN="", BUCK={};   // dashboard segment + view + filter state
-  // left→right pipeline order for the stage board (unknown stages slot in just before Closed)
-  var STAGE_ORDER=["On Hold / Not Started","On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","QA & Bug Fix","Test & Bug FIx PProd","Final Testing (Client)","Client Testing","Revised deployment pending","Vendor Testing","Infra VAPT - Vendor","Closed"];
-  // client-specified palette (keys cover current & legacy Notion stage names)
-  var STAGE_COLORS={
-    "On Hold / Not Started":"#b2bbca","On Hold":"#b2bbca",              // silver
-    "Requirement Gathering":"#3762e3",                                  // royal blue
-    "Infra Prep (Client)":"#418faf","Validate Infra (Client)":"#418faf",// steel blue
-    "Data Source Integration":"#439288",                                // cadet teal
-    "Deployment (irame)":"#cc7c2e","Revised deployment pending":"#cc7c2e",// peru
-    "Workflow Creation":"#fcf2cc",                                      // blanched almond
-    "QA & Bug Fix":"#ca3b76","Test & Bug FIx PProd":"#ca3b76","Vendor Testing":"#ca3b76", // medium violet red
-    "Final Testing (Client)":"#f9e8f3","Client Testing":"#f9e8f3","Infra VAPT - Vendor":"#f9e8f3", // lavender blush
-    "Closed":"#d9f9e6"                                                  // honeydew mint
-  };
-  function stageColor(st){ return STAGE_COLORS[st]||"#b2bbca"; }
+  // Stage definitions in delivery order — matched by KEYWORD so renaming a stage in Notion
+  // (e.g. "Deployment (irame)" → "Deployment") keeps its colour and board position automatically.
+  // Colours follow the client-specified palette.
+  var STAGE_DEFS=[
+    {color:"#b2bbca", match:["on hold","not started","backlog","paused"]},                  // silver
+    {color:"#3762e3", match:["requirement","scoping","discovery","kickoff","kick off"]},     // royal blue
+    {color:"#418faf", match:["infra prep","validate infra","infra","provision","environment","setup"]}, // steel blue
+    {color:"#439288", match:["data source","ingestion","integration"]},                      // cadet teal
+    {color:"#cc7c2e", match:["deployment","deploy","implementation","rollout","go live","go-live"]}, // peru
+    {color:"#fcf2cc", match:["workflow","configuration","config","build"]},                  // blanched almond
+    {color:"#ca3b76", match:["qa","bug","vendor test","internal test"]},                     // medium violet red
+    {color:"#f9e8f3", match:["final testing","client test","uat","acceptance","vapt","sign off","sign-off"]}, // lavender blush
+    {color:"#d9f9e6", match:["closed","done","complete","delivered","live"]}                 // honeydew mint
+  ];
+  function normStage(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
+  function stageDef(st){ var n=normStage(st); for(var i=0;i<STAGE_DEFS.length;i++){ var m=STAGE_DEFS[i].match; for(var j=0;j<m.length;j++){ if(n.indexOf(m[j])>=0) return {def:STAGE_DEFS[i],idx:i}; } } return null; }
+  function stageColor(st){ var d=stageDef(st); return d?d.def.color:"#b2bbca"; }
+  function stageRank(st){ var d=stageDef(st); return d?d.idx:STAGE_DEFS.length-1.5; }
+  function isClosedStage(st){ var d=stageDef(st); return !!(d&&d.idx===STAGE_DEFS.length-1); }
+  function isOnHoldStage(st){ var d=stageDef(st); return !!(d&&d.idx===0); }
   // pick readable text colour for a given background: dark ink on light colours, white on dark
   function _hexLum(h){ h=String(h).replace("#",""); if(h.length===3){h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];}
     var r=parseInt(h.substr(0,2),16)/255,g=parseInt(h.substr(2,2),16)/255,b=parseInt(h.substr(4,2),16)/255;
@@ -2305,7 +2310,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function inkOn(h){ return _hexLum(h)>0.45 ? "#243244" : "#ffffff"; }
   // closure = the Overall Timeline date; show days remaining / overdue
   function closeInfo(r){
-    if(r.stage==="Closed" || /^done$/i.test(r.status||"")){ var dd=parse(r.overall); return {txt:"Delivered"+(dd?" · "+fmt(dd):""), cls:"done"}; }
+    if(isClosedStage(r.stage) || /^done$/i.test(r.status||"")){ var dd=parse(r.overall); return {txt:"Delivered"+(dd?" · "+fmt(dd):""), cls:"done"}; }
     var d=parse(r.overall); if(!d) return {txt:"No close date set", cls:"none"};
     var diff=days(today(),d);
     if(diff<0) return {txt:"Overdue "+(-diff)+"d · was "+fmt(d), cls:"late"};
@@ -2350,7 +2355,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function boardHtml(list){
     if(!list.length) return "<div class='tk-empty'>No matching clients. Try a different filter.</div>";
     var groups={}; list.forEach(function(r){ var st=r.stage||"—"; (groups[st]=groups[st]||[]).push(r); });
-    function rank(s){ var i=STAGE_ORDER.indexOf(s); return i<0?STAGE_ORDER.length-1.5:i; }
+    function rank(s){ return stageRank(s); }
     // reversed pipeline: Closed first (right end of the pipeline) → On Hold last
     var stages=Object.keys(groups).sort(function(a,b){ return rank(b)-rank(a); });
     var total=list.length;
