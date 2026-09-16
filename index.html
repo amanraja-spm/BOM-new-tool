@@ -2271,9 +2271,25 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var SEG="all", VIEW="board", Q="", OWN="", BUCK={};   // dashboard segment + view + filter state
   // left→right pipeline order for the stage board (unknown stages slot in just before Closed)
   var STAGE_ORDER=["On Hold / Not Started","On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","QA & Bug Fix","Test & Bug FIx PProd","Final Testing (Client)","Client Testing","Revised deployment pending","Vendor Testing","Infra VAPT - Vendor","Closed"];
-  // muted-but-distinct palette — each stage a soft, desaturated hue that's easy to tell apart (keys cover both current & legacy Notion stage names)
-  var STAGE_COLORS={"On Hold / Not Started":"#7b8390","On Hold":"#7b8390","Requirement Gathering":"#5f88bd","Infra Prep (Client)":"#4f9cb5","Validate Infra (Client)":"#4ea597","Data Source Integration":"#5ba463","Deployment (irame)":"#7f9150","Workflow Creation":"#a98c4e","QA & Bug Fix":"#b57e52","Test & Bug FIx PProd":"#b57e52","Final Testing (Client)":"#b06f8c","Client Testing":"#b06f8c","Revised deployment pending":"#b87066","Vendor Testing":"#8e72a8","Infra VAPT - Vendor":"#6f78b4","Closed":"#3f9e6e"};
-  function stageColor(st){ return STAGE_COLORS[st]||"#64748b"; }
+  // client-specified palette (keys cover current & legacy Notion stage names)
+  var STAGE_COLORS={
+    "On Hold / Not Started":"#b2bbca","On Hold":"#b2bbca",              // silver
+    "Requirement Gathering":"#3762e3",                                  // royal blue
+    "Infra Prep (Client)":"#418faf","Validate Infra (Client)":"#418faf",// steel blue
+    "Data Source Integration":"#439288",                                // cadet teal
+    "Deployment (irame)":"#cc7c2e","Revised deployment pending":"#cc7c2e",// peru
+    "Workflow Creation":"#fcf2cc",                                      // blanched almond
+    "QA & Bug Fix":"#ca3b76","Test & Bug FIx PProd":"#ca3b76","Vendor Testing":"#ca3b76", // medium violet red
+    "Final Testing (Client)":"#f9e8f3","Client Testing":"#f9e8f3","Infra VAPT - Vendor":"#f9e8f3", // lavender blush
+    "Closed":"#d9f9e6"                                                  // honeydew mint
+  };
+  function stageColor(st){ return STAGE_COLORS[st]||"#b2bbca"; }
+  // pick readable text colour for a given background: dark ink on light colours, white on dark
+  function _hexLum(h){ h=String(h).replace("#",""); if(h.length===3){h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];}
+    var r=parseInt(h.substr(0,2),16)/255,g=parseInt(h.substr(2,2),16)/255,b=parseInt(h.substr(4,2),16)/255;
+    function f(c){return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);}
+    return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b); }
+  function inkOn(h){ return _hexLum(h)>0.45 ? "#243244" : "#ffffff"; }
   // closure = the Overall Timeline date; show days remaining / overdue
   function closeInfo(r){
     if(r.stage==="Closed" || /^done$/i.test(r.status||"")){ var dd=parse(r.overall); return {txt:"Delivered"+(dd?" · "+fmt(dd):""), cls:"done"}; }
@@ -2326,14 +2342,15 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     var stages=Object.keys(groups).sort(function(a,b){ return rank(b)-rank(a); });
     var total=list.length;
     // top stage-flow bar — one coloured segment per stage, width ∝ number of clients
-    var bar="<div class='pb-bar'>"+stages.map(function(st){ var n=groups[st].length;
-      return "<div class='pb-seg' style='flex:"+n+";background:"+stageColor(st)+"' title='"+esc(st)+" — "+n+" client"+(n===1?"":"s")+"'>"
+    var bar="<div class='pb-bar'>"+stages.map(function(st){ var n=groups[st].length, sgc=stageColor(st), sgi=inkOn(sgc);
+      return "<div class='pb-seg' style='flex:"+n+";background:"+sgc+";color:"+sgi+"' title='"+esc(st)+" — "+n+" client"+(n===1?"":"s")+"'>"
         +"<span class='pb-seg-nm'>"+esc(st)+"</span><span class='pb-seg-ct'>"+n+"</span></div>";
     }).join("")+"</div>";
     // stage columns — clients sit under their stage, soonest close first
     var cols="<div class='pb-cols'>"+stages.map(function(st){ var items=groups[st], sc=stageColor(st);
       items.sort(function(a,b){ var da=parse(a.overall), db=parse(b.overall); return (da?da.getTime():9e15)-(db?db.getTime():9e15); });
-      return "<div class='pb-col'><div class='pb-col-h' style='background:"+sc+"'><span class='nm'>"+esc(st)+"</span><span class='ct'>"+items.length+"</span></div>"
+      var ci2=inkOn(sc), ctbg=(ci2==="#ffffff"?"rgba(255,255,255,.28)":"rgba(0,0,0,.12)");
+      return "<div class='pb-col'><div class='pb-col-h' style='background:"+sc+";color:"+ci2+"'><span class='nm' style='color:"+ci2+"'>"+esc(st)+"</span><span class='ct' style='color:"+ci2+";background:"+ctbg+"'>"+items.length+"</span></div>"
         +"<div class='pb-col-b'>"+items.map(boardCard).join("")+"</div></div>";
     }).join("")+"</div>";
     return "<div class='pb-wrap'>"+bar+cols+"</div>";
