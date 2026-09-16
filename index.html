@@ -2176,7 +2176,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   // Pipeline order (open stages, then Closed)
   var STAGES=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
   // Linear delivery pipeline used for the per-client progress bar (On Hold sits before the track)
-  var PIPE=["Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Deployment (irame)","Test & Bug FIx PProd","Data Source Integration","Workflow Creation","Vendor Testing","Infra VAPT - Vendor","Closed"];
+  var PIPE=["Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","QA & Bug Fix","Final Testing (Client)","Closed"];
   function pipeIdx(stage){ var i=PIPE.indexOf(stage); return i; } // -1 = On Hold / not started
 
   // Baked-in snapshot — live pull from Notion Deployment Tracker (21 Aug 2026).
@@ -2213,7 +2213,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function classify(r){
     var st=r.stage||"", T=today();
     if(st==="Closed"||/^closed$/i.test(r.status||"")) return {cat:"closed"};
-    if(st==="On Hold") return {cat:"onhold"};
+    if(/^on hold/i.test(st)) return {cat:"onhold"};
     var ov=parse(r.overall), ac=parse(r.actual), slip=(ov&&ac&&ac>ov)?days(ov,ac):0;
     if(/^done$/i.test(r.status||"")) return {cat:"ontrack",doneStage:true,slip:slip};
     var due=parse(r.stageTimeline)||parse(r.actual)||parse(r.overall);
@@ -2270,10 +2270,9 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var DATA=null, SOURCE="snapshot", UPDATED="";
   var SEG="all", VIEW="board", Q="", OWN="", BUCK={};   // dashboard segment + view + filter state
   // left→right pipeline order for the stage board (unknown stages slot in just before Closed)
-  var STAGE_ORDER=["On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","Client Testing","Revised deployment pending","Test & Bug FIx PProd","Vendor Testing","Infra VAPT - Vendor","Closed"];
-  // a distinct colour per stage (gray → blues/purples → green as work progresses toward Closed)
-  // muted-but-distinct palette — each stage a soft, desaturated hue that's easy to tell apart
-  var STAGE_COLORS={"On Hold":"#7b8390","Requirement Gathering":"#5f88bd","Infra Prep (Client)":"#4f9cb5","Validate Infra (Client)":"#4ea597","Data Source Integration":"#5ba463","Deployment (irame)":"#7f9150","Workflow Creation":"#a98c4e","Client Testing":"#b57e52","Revised deployment pending":"#b87066","Test & Bug FIx PProd":"#b06f8c","Vendor Testing":"#8e72a8","Infra VAPT - Vendor":"#6f78b4","Closed":"#3f9e6e"};
+  var STAGE_ORDER=["On Hold / Not Started","On Hold","Requirement Gathering","Infra Prep (Client)","Validate Infra (Client)","Data Source Integration","Deployment (irame)","Workflow Creation","QA & Bug Fix","Test & Bug FIx PProd","Final Testing (Client)","Client Testing","Revised deployment pending","Vendor Testing","Infra VAPT - Vendor","Closed"];
+  // muted-but-distinct palette — each stage a soft, desaturated hue that's easy to tell apart (keys cover both current & legacy Notion stage names)
+  var STAGE_COLORS={"On Hold / Not Started":"#7b8390","On Hold":"#7b8390","Requirement Gathering":"#5f88bd","Infra Prep (Client)":"#4f9cb5","Validate Infra (Client)":"#4ea597","Data Source Integration":"#5ba463","Deployment (irame)":"#7f9150","Workflow Creation":"#a98c4e","QA & Bug Fix":"#b57e52","Test & Bug FIx PProd":"#b57e52","Final Testing (Client)":"#b06f8c","Client Testing":"#b06f8c","Revised deployment pending":"#b87066","Vendor Testing":"#8e72a8","Infra VAPT - Vendor":"#6f78b4","Closed":"#3f9e6e"};
   function stageColor(st){ return STAGE_COLORS[st]||"#64748b"; }
   // closure = the Overall Timeline date; show days remaining / overdue
   function closeInfo(r){
