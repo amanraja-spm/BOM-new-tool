@@ -310,8 +310,8 @@ body.app-bom>header{background:linear-gradient(120deg,#12336b 0%,#2563eb 55%,#3b
 .ug-empty{grid-column:1/-1;text-align:center;color:var(--ink-3);font-size:14px;padding:48px 20px;border:1.5px dashed var(--line-2);border-radius:14px;background:#fff}
 /* detail modal reuses .tk-modal */
 .ug-mhead{padding:18px 20px 14px;background:linear-gradient(120deg,#223047,#3b5979);color:#fff}
-.ug-mhead .mc{font-size:18px;font-weight:800}
-.ug-mhead .mp{font-size:12.5px;opacity:.85;margin-top:2px}
+.ug-mhead .ug-mc{font-size:18px;font-weight:800;color:#fff}
+.ug-mhead .ug-mp{font-size:12.5px;opacity:.85;margin-top:2px}
 .ug-mbody{padding:16px 20px 18px;max-height:62vh;overflow:auto}
 .ug-mkpis{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .ug-mkpi{background:var(--bg);border:1px solid var(--line-2);border-radius:11px;padding:11px 13px}
@@ -3163,7 +3163,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function openImportant(c){
     var m=$("ug_modal"); if(!m) return;
     var kp=(c.kpis||[]).map(function(k){ return "<div class='ug-mkpi'><div class='v'>"+esc(k.v)+"</div><div class='l'>"+esc(k.l)+(k.d?" · "+esc(k.d):"")+"</div></div>"; }).join("");
-    var html="<div class='ug-mhead'><div class='mc'>"+esc(c.client)+"</div><div class='mp'>"+esc(c.product||"")+" · "+esc(c.period||"")+"</div></div>"
+    var html="<div class='ug-mhead'><div class='ug-mc'>"+esc(c.client)+"</div><div class='ug-mp'>"+esc(c.product||"")+" · "+esc(c.period||"")+"</div></div>"
       +"<div class='ug-mbody'>"
       +(c.highlight?"<div style='font-size:13px;color:var(--ink-2);margin-bottom:12px'>"+esc(c.highlight)+"</div>":"")
       +"<div class='ug-mkpis'>"+kp+"</div>"
@@ -3180,7 +3180,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       var rows=(s.rows||[]).map(function(r){ return "<div class='dt-row'><span class='dt-k'>"+esc(r[0])+"</span><span class='dt-v'>"+esc(r[1])+"</span></div>"; }).join("");
       return "<div class='ug-sec'>"+esc(s.t)+"</div><div class='dt-rows'>"+rows+"</div>";
     }).join("");
-    var html="<div class='ug-mhead'><div class='mc'>"+esc(c.client)+"</div><div class='mp'>"+esc(c.product||"")+" · "+esc(c.period||"")+" · full report</div></div>"
+    var html="<div class='ug-mhead'><div class='ug-mc'>"+esc(c.client)+"</div><div class='ug-mp'>"+esc(c.product||"")+" · "+esc(c.period||"")+" · full report</div></div>"
       +"<div class='ug-mbody'>"
       +(c.trend?"<div class='ug-sec'>Active users trend</div><div style='margin-bottom:6px'>"+spark(c.trend,460,70)+"</div>":"")
       +secs
