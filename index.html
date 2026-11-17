@@ -300,9 +300,14 @@ body.app-bom>header{background:linear-gradient(120deg,#12336b 0%,#2563eb 55%,#3b
 .ug-pr{font-size:12px;color:var(--ink-3);margin-top:1px}
 .ug-period{font-size:10.5px;font-weight:700;color:#3b5979;background:#eef3f9;border-radius:999px;padding:3px 9px;white-space:nowrap}
 .ug-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.ug-kpi{padding:9px 11px;border-radius:10px;border:1px solid transparent}
 .ug-kpi .kv{font-size:19px;font-weight:800;color:var(--ink);line-height:1.1}
 .ug-kpi .kl{font-size:10.5px;color:var(--ink-3);font-weight:600;margin-top:2px}
-.ug-kpi .kd{font-size:10.5px;font-weight:700}
+.ug-kpi .kd{font-size:10.5px;font-weight:700;color:var(--ink-3);margin-top:1px}
+.ug-dl{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:#eef3f9;color:#3b5979;flex-shrink:0;text-decoration:none;margin-left:8px}
+.ug-dl:hover{background:#dce7f3}.ug-dl svg{width:15px;height:15px}
+.ug-dl-btn{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:750;color:#3b5979;background:#eef3f9;border:1px solid #d7e2ef;border-radius:9px;padding:9px 14px;text-decoration:none}
+.ug-dl-btn:hover{background:#dce7f3}.ug-dl-btn svg{width:15px;height:15px}
 .ug-up{color:#127a4a}.ug-down{color:var(--warn)}
 .ug-cta{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:750;color:#3b5979;margin-top:14px}
 .ug-cta svg{width:14px;height:14px}
@@ -3112,6 +3117,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var USAGE_AS_OF  = "17 Nov 2026";
   var USAGE = [
     { client:"AI Danube", product:"IRAME platform", period:"Sep–Nov 2026 · Nov = 1–17 only", updated:"Generated 17 Nov 2026",
+      source:"https://iramelai-my.sharepoint.com/:f:/g/personal/aman_raja_irame_ai/IgAeWkVNUrVyT5KEXkBlltAXAWZrvxG9D8W3hN1zktZQ6aQ?e=hbeycN",
       highlight:"Usage is concentrated in Sep–Oct and in one power user; activity tapered to near-zero in November so far.",
       kpis:[
         {l:"Chat questions",v:"136",d:"Sep–Nov"},
@@ -3204,11 +3210,16 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     var pts=trend.map(function(p,i){ var x=(i/(n-1))*(w-4)+2, y=h-2-((p.v-mn)/rng)*(h-6); return x.toFixed(1)+","+y.toFixed(1); });
     var last=pts[pts.length-1].split(",");
     return "<svg width='"+w+"' height='"+h+"' viewBox='0 0 "+w+" "+h+"' style='display:block'>"
-      +"<polyline fill='none' stroke='#5a7ea6' stroke-width='2' stroke-linejoin='round' stroke-linecap='round' points='"+pts.join(" ")+"'/>"
-      +"<circle cx='"+last[0]+"' cy='"+last[1]+"' r='3' fill='#334e68'/></svg>";
+      +"<polyline fill='none' stroke='#3762e3' stroke-width='2.2' stroke-linejoin='round' stroke-linecap='round' points='"+pts.join(" ")+"'/>"
+      +"<circle cx='"+last[0]+"' cy='"+last[1]+"' r='3.2' fill='#2f55c9'/></svg>";
   }
 
-  function kpiMini(k){ return "<div class='ug-kpi'><div class='kv'>"+esc(k.v)+"</div><div class='kl'>"+esc(k.l)+"</div>"+(k.d?"<div class='kd "+(k.up?"ug-up":"")+"'>"+esc(k.d)+"</div>":"")+"</div>"; }
+  // soft colour palette so each KPI reads distinctly (cycles if >6 KPIs)
+  var UG_PAL=[{bg:"#eef3ff",fg:"#2f55c9"},{bg:"#e7f6f3",fg:"#2f7f74"},{bg:"#f3ecfb",fg:"#6d4bb8"},{bg:"#fdf4e3",fg:"#b47900"},{bg:"#fdeef4",fg:"#b03a68"},{bg:"#e9f7ef",fg:"#2e9e63"}];
+  function pal(i){ return UG_PAL[i%UG_PAL.length]; }
+  function dlBtn(c){ return c.source ? "<a class='ug-dl-btn' href='"+esc(c.source)+"' target='_blank' rel='noopener'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 3v12M8 11l4 4 4-4M5 21h14'/></svg> Download PDF</a>" : "<span></span>"; }
+
+  function kpiMini(k,i){ var c=pal(i); return "<div class='ug-kpi' style='background:"+c.bg+";border-color:"+c.bg+"'><div class='kv' style='color:"+c.fg+"'>"+esc(k.v)+"</div><div class='kl'>"+esc(k.l)+"</div>"+(k.d?"<div class='kd "+(k.up?"ug-up":"")+"'>"+esc(k.d)+"</div>":"")+"</div>"; }
 
   // render a multi-column data table (numeric columns auto right-aligned)
   function tableHtml(t){
@@ -3222,9 +3233,10 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   function cardHtml(c,idx){
     var k=(c.kpis||[]).slice(0,4);
+    var dl=c.source ? "<a class='ug-dl' href='"+esc(c.source)+"' target='_blank' rel='noopener' title='Download PDF report'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 3v12M8 11l4 4 4-4M5 21h14'/></svg></a>" : "";
     return "<div class='ug-card' data-ug='"+idx+"'>"
-      +"<div class='ug-ch'><div><div class='ug-cl'>"+esc(c.client)+"</div><div class='ug-pr'>"+esc(c.product||"")+"</div></div><span class='ug-period'>"+esc(c.period||"")+"</span></div>"
-      +"<div class='ug-kpis'>"+k.map(kpiMini).join("")+"</div>"
+      +"<div class='ug-ch'><div><div class='ug-cl'>"+esc(c.client)+"</div><div class='ug-pr'>"+esc(c.product||"")+"</div></div><div style='display:flex;align-items:center'><span class='ug-period'>"+esc(c.period||"")+"</span>"+dl+"</div></div>"
+      +"<div class='ug-kpis'>"+k.map(function(kp,i){return kpiMini(kp,i);}).join("")+"</div>"
       +(c.trend?"<div class='ug-spark'>"+spark(c.trend,230,30)+"</div>":"")
       +"<div class='ug-cta'>View details <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M9 6l6 6-6 6'/></svg></div></div>";
   }
@@ -3241,7 +3253,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   // ── important view (card click): headline KPIs + trend ──
   function openImportant(c){
     var m=$("ug_modal"); if(!m) return;
-    var kp=(c.kpis||[]).map(function(k){ return "<div class='ug-mkpi'><div class='v'>"+esc(k.v)+"</div><div class='l'>"+esc(k.l)+(k.d?" · "+esc(k.d):"")+"</div></div>"; }).join("");
+    var kp=(c.kpis||[]).map(function(k,i){ var col=pal(i); return "<div class='ug-mkpi' style='background:"+col.bg+";border-color:"+col.bg+"'><div class='v' style='color:"+col.fg+"'>"+esc(k.v)+"</div><div class='l'>"+esc(k.l)+(k.d?" · "+esc(k.d):"")+"</div></div>"; }).join("");
     var html="<div class='ug-mhead'><div class='ug-mc'>"+esc(c.client)+"</div><div class='ug-mp'>"+esc(c.product||"")+" · "+esc(c.period||"")+"</div></div>"
       +"<div class='ug-mbody'>"
       +(c.highlight?"<div style='font-size:13px;color:var(--ink-2);margin-bottom:12px'>"+esc(c.highlight)+"</div>":"")
@@ -3249,7 +3261,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       +(c.trend?"<div class='ug-sec'>"+esc(c.trendLabel||"Trend")+"</div><div>"+spark(c.trend,460,70)+"</div>":"")
       +(c.summary&&c.summary.length?"<div class='ug-sec'>Summary</div><ul class='ug-bul'>"+c.summary.map(function(s){return "<li>"+esc(s)+"</li>";}).join("")+"</ul>":"")
       +"</div>"
-      +"<div class='ug-mfoot'><button class='ug-more' data-full>Full details <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M9 6l6 6-6 6'/></svg></button><button class='ug-close' data-close>Close</button></div>";
+      +"<div class='ug-mfoot'>"+dlBtn(c)+"<div style='display:flex;gap:10px'><button class='ug-more' data-full>Full details <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M9 6l6 6-6 6'/></svg></button><button class='ug-close' data-close>Close</button></div></div>";
     m.querySelector(".tk-modal-card").innerHTML=html; m.classList.add("on");
     CUR=c;
   }
@@ -3265,16 +3277,15 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       +"<div class='ug-mbody'>"
       +(c.trend?"<div class='ug-sec'>"+esc(c.trendLabel||"Trend")+"</div><div style='margin-bottom:6px'>"+spark(c.trend,460,70)+"</div>":"")
       +secs
-      +(c.source?"<div style='margin-top:14px'><a class='ug-src' href='"+esc(c.source)+"' target='_blank' rel='noopener'>Open source PDF ↗</a></div>":"")
       +"</div>"
-      +"<div class='ug-mfoot'><button class='ug-close' data-back>← Back</button><button class='ug-close' data-close>Close</button></div>";
+      +"<div class='ug-mfoot'>"+dlBtn(c)+"<div style='display:flex;gap:10px'><button class='ug-close' data-back>← Back</button><button class='ug-close' data-close>Close</button></div></div>";
     m.querySelector(".tk-modal-card").innerHTML=html; m.classList.add("on");
   }
   function closeModal(){ var m=$("ug_modal"); if(m) m.classList.remove("on"); }
   var CUR=null;
 
   // delegated clicks
-  if($("ug_grid")) $("ug_grid").addEventListener("click",function(e){ var card=e.target.closest("[data-ug]"); if(card){ var c=USAGE[+card.getAttribute("data-ug")]; if(c) openImportant(c); } });
+  if($("ug_grid")) $("ug_grid").addEventListener("click",function(e){ if(e.target.closest(".ug-dl")) return; var card=e.target.closest("[data-ug]"); if(card){ var c=USAGE[+card.getAttribute("data-ug")]; if(c) openImportant(c); } });
   if($("ug_modal")) $("ug_modal").addEventListener("click",function(e){
     if(e.target===this || e.target.closest("[data-close]")){ closeModal(); return; }
     if(e.target.closest("[data-full]")){ if(CUR) openFull(CUR); return; }
