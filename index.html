@@ -323,6 +323,16 @@ body.app-bom>header{background:linear-gradient(120deg,#12336b 0%,#2563eb 55%,#3b
 .ug-more:hover{background:#28415c}
 .ug-close{background:#fff;border:1px solid var(--line);color:var(--ink-2);font-family:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:9px 15px;cursor:pointer}
 .ug-src{font-size:12px;color:var(--brand);font-weight:700;text-decoration:none}.ug-src:hover{text-decoration:underline}
+.ug-bul{margin:2px 0 8px;padding:0;list-style:none}
+.ug-bul li{position:relative;font-size:12.5px;color:var(--ink-2);line-height:1.5;padding:4px 0 4px 16px}
+.ug-bul li::before{content:"";position:absolute;left:2px;top:11px;width:5px;height:5px;border-radius:50%;background:#5a7ea6}
+.ug-tnote{font-size:11px;color:var(--ink-3);margin:1px 0 7px}
+.ug-tbl{width:100%;border-collapse:collapse;margin:2px 0 6px;font-size:12px}
+.ug-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink-3);font-weight:800;padding:6px 9px;border-bottom:1.5px solid var(--line)}
+.ug-tbl td{padding:6px 9px;border-bottom:1px solid var(--line-2);color:var(--ink);vertical-align:top}
+.ug-tbl th.num,.ug-tbl td.num{text-align:right;white-space:nowrap}
+.ug-tbl tr:last-child td{border-bottom:none}
+.ug-tbl tbody tr:hover td{background:#f6f9fc}
 .tk-home{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:9px;color:#fff;cursor:pointer}
 .tk-home:hover{background:rgba(255,255,255,.26)}.tk-home svg{width:17px;height:17px}
 .tk-title{font-size:16px;font-weight:750;display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -3097,34 +3107,93 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var $=function(id){return document.getElementById(id);};
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
 
-  // ── Published usage data. Populated by Claude from the client PDFs, then deployed. ──
-  // Until real reports are read, these are illustrative samples so the layout is visible.
-  var USAGE_SAMPLE = true;
-  var USAGE_AS_OF  = "—";
+  // ── Published usage data. Read by Claude from the client PDFs in OneDrive, then deployed. ──
+  var USAGE_SAMPLE = false;
+  var USAGE_AS_OF  = "17 Nov 2026";
   var USAGE = [
-    { client:"Trident", product:"Auditify + Synaps", period:"Aug–Oct 2026 · 3 mo", highlight:"Steady growth — active users up 39% over the quarter.",
-      kpis:[{l:"Active users",v:"128",d:"+12% MoM",up:true},{l:"Sessions",v:"3,420",d:"last 30d"},{l:"Docs processed",v:"18.9K"},{l:"Adoption",v:"76%",d:"of licenses",up:true}],
-      trend:[{m:"Aug",v:92},{m:"Sep",v:110},{m:"Oct",v:128}],
-      sections:[
-        {t:"Usage summary", rows:[["Active users","128"],["New users this quarter","34"],["Total logins","5,110"],["Avg. session length","14 min"],["Licenses used","76% (128 / 168)"]]},
-        {t:"Feature adoption", rows:[["Workflows run","1,240"],["QnA queries","3,980"],["SQL QnA queries","910"],["Exports","410"]]},
-        {t:"Monthly breakdown", rows:[["Aug 2026","92 users · 1,510 sessions"],["Sep 2026","110 users · 1,980 sessions"],["Oct 2026","128 users · 2,420 sessions"]]}
-      ]},
-    { client:"PwC (internal)", product:"Auditify", period:"May–Oct 2026 · 6 mo", highlight:"High engagement; exports are the top action.",
-      kpis:[{l:"Active users",v:"210",d:"+4% MoM",up:true},{l:"Sessions",v:"6,100",d:"last 30d"},{l:"Docs processed",v:"41.2K"},{l:"Adoption",v:"88%",up:true}],
-      trend:[{m:"May",v:150},{m:"Jun",v:168},{m:"Jul",v:181},{m:"Aug",v:190},{m:"Sep",v:202},{m:"Oct",v:210}],
-      sections:[
-        {t:"Usage summary", rows:[["Active users","210"],["New users (6 mo)","72"],["Total logins","24,800"],["Avg. session length","19 min"],["Licenses used","88% (210 / 240)"]]},
-        {t:"Feature adoption", rows:[["Workflows run","5,310"],["QnA queries","14,200"],["Exports","2,980"],["Dashboards viewed","6,450"]]},
-        {t:"Monthly active users", rows:[["May","150"],["Jun","168"],["Jul","181"],["Aug","190"],["Sep","202"],["Oct","210"]]}
-      ]},
-    { client:"Indigo CCM", product:"CCM", period:"Aug–Oct 2026 · 3 mo", highlight:"Adoption ramping after rollout; room to grow on licenses.",
-      kpis:[{l:"Active users",v:"54",d:"+21% MoM",up:true},{l:"Sessions",v:"1,180",d:"last 30d"},{l:"Docs processed",v:"7.4K"},{l:"Adoption",v:"45%",d:"of licenses"}],
-      trend:[{m:"Aug",v:31},{m:"Sep",v:43},{m:"Oct",v:54}],
-      sections:[
-        {t:"Usage summary", rows:[["Active users","54"],["New users this quarter","23"],["Total logins","1,920"],["Avg. session length","11 min"],["Licenses used","45% (54 / 120)"]]},
-        {t:"Feature adoption", rows:[["Workflows run","380"],["QnA queries","1,240"],["Exports","96"]]},
-        {t:"Monthly breakdown", rows:[["Aug 2026","31 users · 420 sessions"],["Sep 2026","43 users · 760 sessions"],["Oct 2026","54 users · 1,180 sessions"]]}
+    { client:"AI Danube", product:"IRAME platform", period:"Sep–Nov 2026 · Nov = 1–17 only", updated:"Generated 17 Nov 2026",
+      highlight:"Usage is concentrated in Sep–Oct and in one power user; activity tapered to near-zero in November so far.",
+      kpis:[
+        {l:"Chat questions",v:"136",d:"Sep–Nov"},
+        {l:"Workflow runs",v:"39",d:"46% completed"},
+        {l:"Workflows created",v:"16"},
+        {l:"Files uploaded",v:"92",d:"46 distinct"},
+        {l:"Active accounts",v:"3 / 4",d:"used platform"},
+        {l:"Est. AI cost",v:"$26.19",d:"Sep–Nov"}
+      ],
+      trend:[{m:"Sep",v:92},{m:"Oct",v:44},{m:"Nov",v:0}],
+      trendLabel:"Chat questions by month",
+      summary:[
+        "Users: 3 of 4 active client accounts used the platform. Mohammed Yahkoob drove 104 of 136 chat questions, 33 of 39 workflow runs and 80 of 92 uploads.",
+        "Trend: chat questions fell 92 → 44 → 0 across Sep / Oct / Nov; workflow runs 32 → 6 → 1.",
+        "Top chat topics: related-party AR/AP reconciliation (49 questions) and sales & returns analysis (34).",
+        "Workflows: 10 of 16 created are related-party AR/AP reconciliations; 18 of 39 runs completed. Most common failure was an uploaded file not matching the workflow's expected inputs (13 runs).",
+        "Files: nearly all uploads are Excel; 53 of 92 processed successfully; 12 failed, including 4 PowerPoints (12 Nov) and a 147 MB Excel file."
+      ],
+      tables:[
+        {title:"Month by month", note:"November = 1–17 Nov (17 days). Client users only.",
+          cols:["Metric","Sep","Oct","Nov*","Total"], rows:[
+          ["Active users (any activity)","2","3","1","3"],
+          ["Users asking chat questions","2","3","0","3"],
+          ["Chat questions","92","44","0","136"],
+          ["Chat conversations","34","15","0","49"],
+          ["Workflows created","14","2","0","16"],
+          ["Workflow runs","32","6","1","39"],
+          ["Runs completed","14","3","1","18"],
+          ["Run completion rate","44%","50%","100%","46%"],
+          ["Files uploaded","70","17","5","92"],
+          ["Uploads processed successfully","37","16","0","53"],
+          ["Estimated AI cost (USD)","$13.30","$11.77","$1.13","$26.19"]
+        ]},
+        {title:"Questions by user", note:"All 136 chat questions, Sep–Nov.",
+          cols:["User","Questions","Main topics"], rows:[
+          ["Mohammed Yahkoob","104","AR/AP reconciliation, sales & returns, non-submitted invoices"],
+          ["Paulson Francis","31","Sales & returns, credit notes, payment tenders, customer master"],
+          ["Anuraj KS","1","Platform how-to"]
+        ]},
+        {title:"Type of message", note:"131 questions, by what the message asks for.",
+          cols:["Message type","Count","Share"], rows:[
+          ["New analysis request","58","44%"],
+          ["Output layout / Excel format request","30","23%"],
+          ["Short follow-up (e.g. \"Yes\", \"ok?\")","26","20%"],
+          ["Save or change a workflow / engagement","15","11%"],
+          ["Retry after an error","2","2%"]
+        ]},
+        {title:"Workflows by business topic", note:"16 created, 39 runs, Sep–Nov.",
+          cols:["Topic","Created","Runs","Completed"], rows:[
+          ["Related-party AR/AP reconciliation","10","28","12"],
+          ["Sales & returns analysis","4","6","3"],
+          ["Payment / tender summaries","1","4","2"],
+          ["Customer master data checks","1","1","1"]
+        ]},
+        {title:"Why runs did not complete", note:"21 of 39 runs did not complete (10 failed, 9 blocked, 2 stopped).",
+          cols:["Reason recorded","Runs"], rows:[
+          ["Uploaded file missing or not matching expected inputs","13"],
+          ["Data did not cover the workflow's configured 12-month period","3"],
+          ["Workbook read timed out (849ARAP.xlsx)","3"],
+          ["Data differed from what the saved workflow logic allows","1"],
+          ["Processing workspace stopped mid-run","1"]
+        ]},
+        {title:"Files used per question / run",
+          cols:["Files","Chat conversations","Workflow runs"], rows:[
+          ["None","4","2"],["1 file","34","26"],["2 files","5","11"],["3 files","3","0"],["Total","46","39"]
+        ]},
+        {title:"What files users upload", note:"92 uploads, by content (based on file names).",
+          cols:["Category","Uploads"], rows:[
+          ["Trial balances (division-wise, AR/AP)","24"],
+          ["Sales & returns reports","23"],
+          ["Invoice & outstanding reports","20"],
+          ["Payments & collections","11"],
+          ["Expected-output templates","7"],
+          ["Credit note register","1"]
+        ]},
+        {title:"File formats", note:"Typical upload 0.2 MB (median); largest GP-All.xlsx at 147 MB (failed twice).",
+          cols:["Format","Uploads","Processed","Failed","Later deleted"], rows:[
+          ["Excel .xlsx","67","52","2","13"],
+          ["Excel .xls (older format)","19","0","6","13"],
+          ["PowerPoint .pptx","5","0","4","1"],
+          ["PDF","1","1","0","0"]
+        ]}
       ]}
   ];
 
@@ -3140,6 +3209,16 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   }
 
   function kpiMini(k){ return "<div class='ug-kpi'><div class='kv'>"+esc(k.v)+"</div><div class='kl'>"+esc(k.l)+"</div>"+(k.d?"<div class='kd "+(k.up?"ug-up":"")+"'>"+esc(k.d)+"</div>":"")+"</div>"; }
+
+  // render a multi-column data table (numeric columns auto right-aligned)
+  function tableHtml(t){
+    var cols=t.cols||[], rows=t.rows||[];
+    var isNum=cols.map(function(_,ci){ if(ci===0) return false; return rows.length>0 && rows.every(function(r){ return /^[-$]?[\d.,%\/\s]+$/.test(String(r[ci]==null?"":r[ci]).trim()); }); });
+    var head="<tr>"+cols.map(function(c,ci){ return "<th class='"+(isNum[ci]?"num":"")+"'>"+esc(c)+"</th>"; }).join("")+"</tr>";
+    var body=rows.map(function(r){ return "<tr>"+r.map(function(v,ci){ return "<td class='"+(isNum[ci]?"num":"")+"'>"+esc(v)+"</td>"; }).join("")+"</tr>"; }).join("");
+    return "<div class='ug-sec'>"+esc(t.title)+"</div>"+(t.note?"<div class='ug-tnote'>"+esc(t.note)+"</div>":"")
+      +"<table class='ug-tbl'><thead>"+head+"</thead><tbody>"+body+"</tbody></table>";
+  }
 
   function cardHtml(c,idx){
     var k=(c.kpis||[]).slice(0,4);
@@ -3167,7 +3246,8 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       +"<div class='ug-mbody'>"
       +(c.highlight?"<div style='font-size:13px;color:var(--ink-2);margin-bottom:12px'>"+esc(c.highlight)+"</div>":"")
       +"<div class='ug-mkpis'>"+kp+"</div>"
-      +(c.trend?"<div class='ug-sec'>Active users trend</div><div>"+spark(c.trend,460,70)+"</div>":"")
+      +(c.trend?"<div class='ug-sec'>"+esc(c.trendLabel||"Trend")+"</div><div>"+spark(c.trend,460,70)+"</div>":"")
+      +(c.summary&&c.summary.length?"<div class='ug-sec'>Summary</div><ul class='ug-bul'>"+c.summary.map(function(s){return "<li>"+esc(s)+"</li>";}).join("")+"</ul>":"")
       +"</div>"
       +"<div class='ug-mfoot'><button class='ug-more' data-full>Full details <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M9 6l6 6-6 6'/></svg></button><button class='ug-close' data-close>Close</button></div>";
     m.querySelector(".tk-modal-card").innerHTML=html; m.classList.add("on");
@@ -3176,13 +3256,14 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   // ── full view (CTA): every section from the PDF ──
   function openFull(c){
     var m=$("ug_modal"); if(!m) return;
-    var secs=(c.sections||[]).map(function(s){
+    var tbls=(c.tables||[]).map(tableHtml).join("");
+    var secs=tbls || (c.sections||[]).map(function(s){
       var rows=(s.rows||[]).map(function(r){ return "<div class='dt-row'><span class='dt-k'>"+esc(r[0])+"</span><span class='dt-v'>"+esc(r[1])+"</span></div>"; }).join("");
       return "<div class='ug-sec'>"+esc(s.t)+"</div><div class='dt-rows'>"+rows+"</div>";
     }).join("");
     var html="<div class='ug-mhead'><div class='ug-mc'>"+esc(c.client)+"</div><div class='ug-mp'>"+esc(c.product||"")+" · "+esc(c.period||"")+" · full report</div></div>"
       +"<div class='ug-mbody'>"
-      +(c.trend?"<div class='ug-sec'>Active users trend</div><div style='margin-bottom:6px'>"+spark(c.trend,460,70)+"</div>":"")
+      +(c.trend?"<div class='ug-sec'>"+esc(c.trendLabel||"Trend")+"</div><div style='margin-bottom:6px'>"+spark(c.trend,460,70)+"</div>":"")
       +secs
       +(c.source?"<div style='margin-top:14px'><a class='ug-src' href='"+esc(c.source)+"' target='_blank' rel='noopener'>Open source PDF ↗</a></div>":"")
       +"</div>"
