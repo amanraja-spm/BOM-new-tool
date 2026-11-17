@@ -3296,6 +3296,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   // ── Refresh: look for newly-published reports (served at /api/usage); fall back to baked data ──
   function refresh(){
     var rb=$("ug_refresh"); if(rb) rb.classList.add("spin");
+    render();   // show current data immediately; the fetch below overrides it if newer data is published
     fetch("/api/usage",{cache:"no-store"}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){
       if(j && j.clients && j.clients.length){ USAGE=j.clients; USAGE_SAMPLE=!!j.sample; USAGE_AS_OF=j.updated||USAGE_AS_OF; }
       render();
