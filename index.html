@@ -295,6 +295,9 @@ body.app-bom>header{background:linear-gradient(120deg,#12336b 0%,#2563eb 55%,#3b
 .ug-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s ease,transform .15s ease,border-color .15s ease;position:relative;overflow:hidden}
 .ug-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#334e68,#5a7ea6)}
 .ug-card:hover{box-shadow:0 12px 30px rgba(16,24,40,.12);transform:translateY(-3px);border-color:#c7d6e8}
+.ug-card.pf{background:linear-gradient(180deg,#fbfcff,#f2f5fe);border-color:#dbe3f7}
+.ug-card.pf::before{background:linear-gradient(#3762e3,#8e72a8)}
+.ug-pfchip{display:inline-block;margin-left:8px;font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#3762e3;background:#e6ecff;border-radius:999px;padding:2px 8px;vertical-align:middle}
 .ug-ch{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .ug-cl{font-size:15.5px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
 .ug-pr{font-size:12px;color:var(--ink-3);margin-top:1px}
@@ -3117,6 +3120,26 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var USAGE_SAMPLE = false;
   var USAGE_AS_OF  = "18 Nov 2026";
   var USAGE = [
+    { client:"All clients", portfolio:true, product:"Portfolio overview · 12 tenants", period:"Sep–Nov 2026 · to 18 Nov", updated:"Generated 18 Nov 2026",
+      source:"https://iramelai-my.sharepoint.com/:b:/g/personal/aman_raja_irame_ai/IQADG9kbYQl2QrYh4F5BM440AdK5ZhRxX2gMogi-f16hJ3o?e=buIFNp",
+      highlight:"Highly concentrated portfolio — PWC drives 93% of workflow runs and 64% of chat questions; overall activity peaked in September and has tapered since.",
+      kpis:[
+        {l:"Clients with activity",v:"11 / 12",d:"28 of 48 users"},
+        {l:"Chat questions",v:"1,477",d:"818 conversations"},
+        {l:"Workflow runs",v:"2,804",d:"54% completed"},
+        {l:"Hours saved",v:"≈1,451",d:"≈181 work-days"},
+        {l:"Workflows built",v:"379",d:"across clients"},
+        {l:"AI cost",v:"$1,746",d:"Sep–Nov total"}
+      ],
+      trend:[{m:"Sep",v:2524},{m:"Oct",v:254},{m:"Nov",v:26}],
+      trendLabel:"Workflow runs by month (all clients)",
+      summary:[
+        "Concentration: PWC accounts for 93% of all workflow runs and 64% of chat questions — one PWC user ran 2,319 of its 2,620 runs. Titan and PWC Dubai are next.",
+        "Trend: activity peaked in September (2,524 runs, 1,084 questions), dropped in October (254 runs) and November so far (26). Only PWC Dubai and Apollo Tyres are busier in Nov than Oct.",
+        "Reliability: 54% of runs completed, 38.9% failed — mostly client databases unreachable or timing out (689 runs, nearly all PWC's 'JCPL KRI' and 'Nuvoco' connections), then agent-could-not-finish (245) and server restarts (144).",
+        "Low or no use: Polycab has no client-user activity (IRAME staff only); Mubadala, AFG and GR Infra each have 12 or fewer questions and no workflow runs.",
+        "Value: ≈1,451 hours saved across clients, 79% of it at PWC. Total AI cost $1,746.13."
+      ]},
     { client:"AI Danube", product:"IRAME platform", period:"Sep–Nov 2026 · Nov = 1–17 only", updated:"Generated 17 Nov 2026",
       source:"https://iramelai-my.sharepoint.com/:b:/g/personal/aman_raja_irame_ai/IQBQKxJG3XJMQ59k1EO9t-WVAXh9ul2veQDrYgpEj9tIXzQ?e=sR1ic5",
       highlight:"Usage is concentrated in Sep–Oct and in one power user; activity tapered to near-zero in November so far.",
@@ -3273,8 +3296,9 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   function cardHtml(c,idx){
     var k=(c.kpis||[]).slice(0,4);
     var dl=c.source ? "<a class='ug-dl' href='"+esc(c.source)+"' target='_blank' rel='noopener' title='Download PDF report'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 3v12M8 11l4 4 4-4M5 21h14'/></svg></a>" : "";
-    return "<div class='ug-card' data-ug='"+idx+"'>"
-      +"<div class='ug-ch'><div><div class='ug-cl'>"+esc(c.client)+"</div><div class='ug-pr'>"+esc(c.product||"")+"</div></div><div style='display:flex;align-items:center'><span class='ug-period'>"+esc(c.period||"")+"</span>"+dl+"</div></div>"
+    var chip=c.portfolio?"<span class='ug-pfchip'>Portfolio</span>":"";
+    return "<div class='ug-card"+(c.portfolio?" pf":"")+"' data-ug='"+idx+"'>"
+      +"<div class='ug-ch'><div><div class='ug-cl'>"+esc(c.client)+chip+"</div><div class='ug-pr'>"+esc(c.product||"")+"</div></div><div style='display:flex;align-items:center'><span class='ug-period'>"+esc(c.period||"")+"</span>"+dl+"</div></div>"
       +"<div class='ug-kpis'>"+k.map(function(kp,i){return kpiMini(kp,i);}).join("")+"</div>"
       +(c.trend?"<div class='ug-spark'>"+spark(c.trend,230,30)+"</div>":"")
       +"<div class='ug-cta'>View details <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M9 6l6 6-6 6'/></svg></div></div>";
