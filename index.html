@@ -3117,7 +3117,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   var USAGE_AS_OF  = "17 Nov 2026";
   var USAGE = [
     { client:"AI Danube", product:"IRAME platform", period:"Sep–Nov 2026 · Nov = 1–17 only", updated:"Generated 17 Nov 2026",
-      source:"https://iramelai-my.sharepoint.com/:f:/g/personal/aman_raja_irame_ai/IgAeWkVNUrVyT5KEXkBlltAXAWZrvxG9D8W3hN1zktZQ6aQ?e=hbeycN",
+      source:"https://iramelai-my.sharepoint.com/:b:/g/personal/aman_raja_irame_ai/IQBQKxJG3XJMQ59k1EO9t-WVAXh9ul2veQDrYgpEj9tIXzQ?e=sR1ic5",
       highlight:"Usage is concentrated in Sep–Oct and in one power user; activity tapered to near-zero in November so far.",
       kpis:[
         {l:"Chat questions",v:"136",d:"Sep–Nov"},
@@ -3261,7 +3261,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       +(c.trend?"<div class='ug-sec'>"+esc(c.trendLabel||"Trend")+"</div><div>"+spark(c.trend,460,70)+"</div>":"")
       +(c.summary&&c.summary.length?"<div class='ug-sec'>Summary</div><ul class='ug-bul'>"+c.summary.map(function(s){return "<li>"+esc(s)+"</li>";}).join("")+"</ul>":"")
       +"</div>"
-      +"<div class='ug-mfoot'>"+dlBtn(c)+"<div style='display:flex;gap:10px'><button class='ug-more' data-full>Full details <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M9 6l6 6-6 6'/></svg></button><button class='ug-close' data-close>Close</button></div></div>";
+      +"<div class='ug-mfoot'>"+dlBtn(c)+"<div style='display:flex;gap:10px'><button class='ug-more' data-full>"+(c.source?"Open full report":"Full details")+" <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'>"+(c.source?"<path d='M7 17L17 7M17 7H8M17 7v9'/>":"<path d='M9 6l6 6-6 6'/>")+"</svg></button><button class='ug-close' data-close>Close</button></div></div>";
     m.querySelector(".tk-modal-card").innerHTML=html; m.classList.add("on");
     CUR=c;
   }
@@ -3288,7 +3288,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
   if($("ug_grid")) $("ug_grid").addEventListener("click",function(e){ if(e.target.closest(".ug-dl")) return; var card=e.target.closest("[data-ug]"); if(card){ var c=USAGE[+card.getAttribute("data-ug")]; if(c) openImportant(c); } });
   if($("ug_modal")) $("ug_modal").addEventListener("click",function(e){
     if(e.target===this || e.target.closest("[data-close]")){ closeModal(); return; }
-    if(e.target.closest("[data-full]")){ if(CUR) openFull(CUR); return; }
+    if(e.target.closest("[data-full]")){ if(CUR){ if(CUR.source){ window.open(CUR.source,"_blank","noopener"); } else { openFull(CUR); } } return; }
     if(e.target.closest("[data-back]")){ if(CUR) openImportant(CUR); return; }
   });
   document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeModal(); });
