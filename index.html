@@ -3115,7 +3115,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   // ── Published usage data. Read by Claude from the client PDFs in OneDrive, then deployed. ──
   var USAGE_SAMPLE = false;
-  var USAGE_AS_OF  = "17 Nov 2026";
+  var USAGE_AS_OF  = "18 Nov 2026";
   var USAGE = [
     { client:"AI Danube", product:"IRAME platform", period:"Sep–Nov 2026 · Nov = 1–17 only", updated:"Generated 17 Nov 2026",
       source:"https://iramelai-my.sharepoint.com/:b:/g/personal/aman_raja_irame_ai/IQBQKxJG3XJMQ59k1EO9t-WVAXh9ul2veQDrYgpEj9tIXzQ?e=sR1ic5",
@@ -3201,6 +3201,24 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
           ["PowerPoint .pptx","5","0","4","1"],
           ["PDF","1","1","0","0"]
         ]}
+      ]},
+    { client:"PwC", product:"IRAME platform", period:"Nov 2026 · 1–18 Nov", updated:"Generated 18 Nov 2026",
+      source:"https://iramelai-my.sharepoint.com/:b:/g/personal/aman_raja_irame_ai/IQD3h46vVgHTT69ygE-1ftYTAQA2LKbDUYjRU7slmcOysdY?e=15fZVW",
+      highlight:"High volume but concentrated — 80 of 708 licensed users active, and a handful of power users drive most of it.",
+      kpis:[
+        {l:"Active users",v:"80",d:"of 708 · 11%"},
+        {l:"Chat questions",v:"943",d:"436 conversations"},
+        {l:"Workflow runs",v:"277",d:"80.5% delivered"},
+        {l:"Files uploaded",v:"2,029",d:"36.3 GB · 98.3% ok"},
+        {l:"Hours saved",v:"≈445",d:"vs manual"},
+        {l:"AI cost (Nov)",v:"$1,273",d:"chat-heavy"}
+      ],
+      summary:[
+        "Users: 80 of 708 licensed accounts active. Activity is concentrated — 8 users had 50+ questions/runs each, while 45 had 5 or fewer.",
+        "Chat: 943 questions across 436 conversations; 615 (65%) returned a result, 85 (9%) errored. Top areas: vendor master & AP (259) and payroll, HR & attendance (205).",
+        "Workflows: 143 built, 277 runs, 223 delivered an output. Of 54 incomplete runs, 25 were user-stopped and 24 had input-file mapping problems.",
+        "Files: 2,029 uploaded (36.3 GB), 98.3% processed; payroll/statutory docs (683) and SAP extracts (315) are the largest groups.",
+        "AI cost: $1,273.47 in November — chat $1,075.63, workflows $188.99, file processing $8.85. Est. ~445 hours saved vs manual."
       ]}
   ];
 
