@@ -298,6 +298,36 @@ body.app-bom>header{background:linear-gradient(120deg,#12336b 0%,#2563eb 55%,#3b
 .ug-card.pf{background:linear-gradient(180deg,#fbfcff,#f2f5fe);border-color:#dbe3f7}
 .ug-card.pf::before{background:linear-gradient(#3762e3,#8e72a8)}
 .ug-pfchip{display:inline-block;margin-left:8px;font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#3762e3;background:#e6ecff;border-radius:999px;padding:2px 8px;vertical-align:middle}
+/* Usage Tracker tabs + analysis view */
+.ug-tabs{display:inline-flex;gap:4px;background:#eef1f6;border-radius:11px;padding:4px;margin-bottom:16px}
+.ug-tab{border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:750;color:var(--ink-3);padding:8px 18px;border-radius:8px;cursor:pointer}
+.ug-tab.on{background:#fff;color:#28415c;box-shadow:0 1px 3px rgba(16,24,40,.12)}
+.ua-wrap{max-width:900px}
+.ua-alerts{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow)}
+.ua-alerts-h{font-size:12px;font-weight:800;color:#c0392b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
+.ua-alert{display:flex;align-items:center;gap:10px;padding:9px 11px;border-left:3px solid #e05353;background:#fbfbfc;border-radius:0 8px 8px 0;margin-bottom:6px;font-size:12.5px}
+.ua-alert:last-child{margin-bottom:0}
+.ua-al-sev{font-size:9.5px;font-weight:800;border-radius:999px;padding:2px 8px;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0}
+.ua-al-c{font-weight:800;color:var(--ink);flex-shrink:0}
+.ua-al-t{font-weight:700;color:#3b5979;flex-shrink:0}
+.ua-al-x{color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ua-noalert{color:var(--ink-3);font-size:13px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:16px}
+.ua-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:14px}
+.ua-card.pf{background:linear-gradient(180deg,#fbfcff,#f4f7fe);border-color:#dbe3f7}
+.ua-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ua-name{font-size:16px;font-weight:800;color:var(--ink)}
+.ua-badge{font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.ua-badge.big{font-size:11px;padding:4px 12px}
+.ua-h{font-size:11px;font-weight:800;color:#3b5979;text-transform:uppercase;letter-spacing:.4px;margin:14px 0 5px}
+.ua-sub{font-size:11px;font-weight:800;color:var(--ink-3);margin:9px 0 3px}
+.ua-p{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin:0}
+.ua-act{margin:4px 0 2px;padding:0;list-style:none}
+.ua-act li{position:relative;font-size:12.5px;color:var(--ink);line-height:1.5;padding:3px 0 3px 20px}
+.ua-act li::before{content:"✓";position:absolute;left:2px;top:3px;color:#2e9e63;font-weight:800}
+.ua-risk{border-top:1px solid var(--line-2);padding:11px 0 2px;margin-top:9px}
+.ua-risk-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.ua-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ua-risk-t{font-size:13px;font-weight:750;color:var(--ink);flex:1}
 .ug-ch{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .ug-cl{font-size:15.5px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
 .ug-pr{font-size:12px;color:var(--ink-3);margin-top:1px}
@@ -1182,9 +1212,14 @@ body.cf-edit .cf-addsec{display:block;margin:4px 0 20px}
   </div>
   <div class="ug-body">
     <div class="ug-wrap">
-      <div class="ug-intro">Per-client usage from the uploaded reports. Click a client for the key numbers; use <b>Full details</b> for everything in the PDF.</div>
+      <div class="ug-tabs">
+        <button class="ug-tab on" data-tab="overview" type="button">Overview</button>
+        <button class="ug-tab" data-tab="analysis" type="button">Analysis &amp; Alerts</button>
+      </div>
+      <div class="ug-intro" id="ug_intro">Per-client usage from the uploaded reports. Click a client for the key numbers; use <b>Full details</b> for everything in the PDF.</div>
       <div class="ug-note" id="ug_note" style="display:none"></div>
       <div class="ug-grid" id="ug_grid"></div>
+      <div id="ug_analysis" style="display:none"></div>
     </div>
   </div>
   <div class="tk-modal" id="ug_modal"><div class="tk-modal-card"></div></div>
@@ -3265,6 +3300,56 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       ]}
   ];
 
+  // ── Per-client analysis & alerts (derived from the report data) ──
+  var ANALYSIS={
+    "AI Danube":{ churn:"high",
+      churnWhy:"Usage collapsed this month — chat questions fell 92 → 44 → 0 and workflow runs 32 → 6 → 1 across Sep/Oct/Nov. Near-zero activity in the current month is a strong disengagement signal.",
+      churnActions:[
+        "Book a check-in with the Danube sponsor this week to understand the November drop (blocker, seasonality, or did the champion leave?).",
+        "Share a value recap (53 files processed, workflows run) and agree 2–3 quick-win workflows to restart momentum.",
+        "Reduce single-person dependency — onboard 2–3 more users beyond the current power user."
+      ],
+      risks:[
+        {t:"Single-user dependency", sev:"high", why:"One user drove 104 of 136 questions, 33 of 39 runs and 80 of 92 uploads. If they disengage, usage goes to zero.", actions:["Run a short team training to spread usage.","Identify and enable a second champion in the account."]},
+        {t:"Failed uploads & runs", sev:"med", why:"12 of 92 uploads failed (4 PowerPoints + a 147 MB Excel) and only 18 of 39 runs completed — often input files not matching the workflow.", actions:["Send an upload format guide (supported types, size limits).","Fix the workflow input-mapping behind the 13 incomplete runs."]}
+      ]},
+    "PwC":{ churn:"low",
+      churnWhy:"Strong, sustained volume (943 questions, 277 runs) — the most active account, so churn risk is low. The real exposure is that value is concentrated in a few users, which is a renewal/expansion risk rather than churn.",
+      churnActions:[
+        "Protect the renewal by widening adoption beyond the current 8 power users.",
+        "Capture an ROI story (≈445 hours saved) for the sponsor ahead of renewal."
+      ],
+      risks:[
+        {t:"Low seat adoption", sev:"high", why:"Only 80 of 708 licensed accounts were active (11%); 45 users asked 5 or fewer questions. A large unused license base weakens renewal and expansion.", actions:["Run a department-by-department adoption push.","Target the 45 dormant/low users with onboarding.","Report adoption % to the PwC sponsor monthly."]},
+        {t:"Reliability / failed runs", sev:"med", why:"19.5% of runs did not complete; 24 had input-file mapping problems, plus client-database connection timeouts.", actions:["Fix input-file mapping and the DB connection issues (JCPL KRI, Nuvoco).","Add retry and clearer error messages for failed runs."]},
+        {t:"Power-user concentration", sev:"med", why:"A small group (8 users) drives most activity; broad teams aren't using the platform yet.", actions:["Expand to adjacent teams (tax, audit) with tailored workflows."]}
+      ]},
+    "Tata AutoComp (TACO)":{ churn:"medium",
+      churnWhy:"All 6 accounts are active, but activity dropped sharply in November (runs 36 → 36 → 2; chat 15 → 4 → 1) and users build nothing themselves — they only run IRAME-made workflows. The November drop plus full dependency on IRAME is an engagement risk.",
+      churnActions:[
+        "Check in on the November drop-off (runs fell to 2) — confirm it's seasonal, not a blocker.",
+        "Enable self-serve: train TACO users to build and modify their own workflows so usage isn't dependent on IRAME.",
+        "Encourage attaching source files to runs (currently none) to deepen the workflow habit."
+      ],
+      risks:[
+        {t:"Dependency on IRAME-built workflows", sev:"med", why:"TACO built 0 of its own workflows; all 74 runs used library workflows IRAME created. Low self-sufficiency limits stickiness.", actions:["Run a workflow-builder enablement session.","Hand over 2–3 workflows for the team to own and extend."]},
+        {t:"Narrow, shallow usage", sev:"med", why:"Chat use is light (20 questions) and uploaded files aren't attached to any workflow run, suggesting limited integration into daily work.", actions:["Map 2–3 high-value audit use cases to expand beyond procure-to-pay."]}
+      ]},
+    "All clients":{ churn:"na",
+      churnWhy:"Portfolio view — see the individual client cards for churn. The portfolio-level risks below matter most for the overall book of business.",
+      churnActions:[],
+      risks:[
+        {t:"Revenue / usage concentration", sev:"high", why:"PWC accounts for 93% of all workflow runs and 64% of chat questions — one user ran 2,319 of PWC's 2,620 runs. The book depends heavily on one account (and one person).", actions:["Grow 2–3 other accounts to reduce dependence on PWC.","De-risk the PWC single-user dependency with broader adoption."]},
+        {t:"Dormant / at-risk clients", sev:"high", why:"Polycab has no client-user activity (IRAME staff only); Mubadala, AFG and GR Infra each had 12 or fewer questions and no workflow runs.", actions:["Flag these four for CSM re-engagement or a save play.","Run onboarding refreshers and confirm each still has a sponsor."]},
+        {t:"Platform reliability", sev:"med", why:"38.9% of all runs failed — mostly client databases unreachable or timing out (689 runs, nearly all PWC connections), then agent-could-not-finish (245) and server restarts (144).", actions:["Prioritise fixing DB/connection reliability (the biggest failure cause).","Add alerting on connection health."]},
+        {t:"Broad activity decline", sev:"med", why:"Portfolio activity peaked in September (2,524 runs) and fell to 254 in October and 26 in November so far.", actions:["Investigate the Sep→Nov decline and launch a re-engagement campaign."]}
+      ]}
+  };
+  function sevColor(s){ return s==="high"?{bg:"#fdeaea",fg:"#c0392b",dot:"#e05353"}:s==="med"||s==="medium"?{bg:"#fff4e3",fg:"#b47900",dot:"#e0a200"}:{bg:"#e9f7ef",fg:"#1e7a46",dot:"#2e9e63"}; }
+  function sevLabel(s){ return s==="high"?"High":(s==="med"||s==="medium")?"Medium":"Low"; }
+  function churnBadge(level){ var c=sevColor(level); return "<span class='ua-badge big' style='background:"+c.bg+";color:"+c.fg+"'>"+sevLabel(level)+" churn risk</span>"; }
+  function clip(s){ s=String(s); return s.length>110? s.slice(0,108)+"…":s; }
+
   function spark(trend, w, h){
     if(!trend||trend.length<2) return "";
     var vals=trend.map(function(p){return p.v;}); var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
@@ -3313,6 +3398,43 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
     g.innerHTML=USAGE.map(cardHtml).join("");
   }
 
+  // ── Analysis & Alerts tab ──
+  function renderAnalysis(){
+    var host=$("ug_analysis"); if(!host) return;
+    var alerts=[];
+    USAGE.forEach(function(c){ var a=ANALYSIS[c.client]; if(!a) return;
+      if(a.churn==="high"||a.churn==="medium") alerts.push({client:c.client, sev:a.churn, type:"Churn risk", text:a.churnWhy});
+      (a.risks||[]).forEach(function(r){ if(r.sev==="high") alerts.push({client:c.client, sev:"high", type:r.t, text:r.why}); });
+    });
+    alerts.sort(function(a,b){ return (a.sev==="high"?0:1)-(b.sev==="high"?0:1); });
+    var alertsHtml = alerts.length
+      ? "<div class='ua-alerts'><div class='ua-alerts-h'>⚠ Alerts · "+alerts.length+"</div>"+alerts.map(function(al){ var col=sevColor(al.sev);
+          return "<div class='ua-alert' style='border-left-color:"+col.dot+"'><span class='ua-al-sev' style='background:"+col.bg+";color:"+col.fg+"'>"+sevLabel(al.sev)+"</span><span class='ua-al-c'>"+esc(al.client)+"</span><span class='ua-al-t'>"+esc(al.type)+"</span><span class='ua-al-x'>"+esc(clip(al.text))+"</span></div>";
+        }).join("")+"</div>"
+      : "<div class='ua-noalert'>No active alerts.</div>";
+    var cards=USAGE.map(function(c){ var a=ANALYSIS[c.client]; if(!a) return "";
+      var head="<div class='ua-top'><div class='ua-name'>"+esc(c.client)+(c.portfolio?"<span class='ug-pfchip'>Portfolio</span>":"")+"</div>"+(a.churn==="na"?"":churnBadge(a.churn))+"</div>";
+      var churn=a.churn==="na" ? "<p class='ua-p' style='margin-top:4px'>"+esc(a.churnWhy)+"</p>"
+        : "<div class='ua-h'>Churn risk</div><p class='ua-p'>"+esc(a.churnWhy)+"</p>"
+          +(a.churnActions&&a.churnActions.length?"<div class='ua-sub'>Recommended actions</div><ul class='ua-act'>"+a.churnActions.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+"</ul>":"");
+      var risks=(a.risks&&a.risks.length)?"<div class='ua-h'>Other risks</div>"+a.risks.map(function(r){ var col=sevColor(r.sev);
+        return "<div class='ua-risk'><div class='ua-risk-top'><span class='ua-dot' style='background:"+col.dot+"'></span><span class='ua-risk-t'>"+esc(r.t)+"</span><span class='ua-badge' style='background:"+col.bg+";color:"+col.fg+"'>"+sevLabel(r.sev)+"</span></div><p class='ua-p'>"+esc(r.why)+"</p>"+((r.actions&&r.actions.length)?"<ul class='ua-act'>"+r.actions.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+"</ul>":"")+"</div>";
+      }).join(""):"";
+      return "<div class='ua-card"+(c.portfolio?" pf":"")+"'>"+head+churn+risks+"</div>";
+    }).join("");
+    host.innerHTML="<div class='ua-wrap'>"+alertsHtml+cards+"</div>";
+  }
+  function setTab(t){
+    var isAn=(t==="analysis");
+    var g=$("ug_grid"), an=$("ug_analysis"), intro=$("ug_intro"), note=$("ug_note");
+    if(g) g.style.display=isAn?"none":"";
+    if(an) an.style.display=isAn?"":"none";
+    if(intro) intro.style.display=isAn?"none":"";
+    if(note && isAn) note.style.display="none";
+    Array.prototype.forEach.call(document.querySelectorAll(".ug-tab"),function(b){ b.classList.toggle("on", b.getAttribute("data-tab")===t); });
+    if(isAn) renderAnalysis();
+  }
+
   // ── important view (card click): headline KPIs + trend ──
   function openImportant(c){
     var m=$("ug_modal"); if(!m) return;
@@ -3349,6 +3471,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   // delegated clicks
   if($("ug_grid")) $("ug_grid").addEventListener("click",function(e){ if(e.target.closest(".ug-dl")) return; var card=e.target.closest("[data-ug]"); if(card){ var c=USAGE[+card.getAttribute("data-ug")]; if(c) openImportant(c); } });
+  Array.prototype.forEach.call(document.querySelectorAll(".ug-tab"),function(b){ b.addEventListener("click",function(){ setTab(b.getAttribute("data-tab")); }); });
   if($("ug_modal")) $("ug_modal").addEventListener("click",function(e){
     if(e.target===this || e.target.closest("[data-close]")){ closeModal(); return; }
     if(e.target.closest("[data-full]")){ if(CUR){ if(CUR.source){ window.open(CUR.source,"_blank","noopener"); } else { openFull(CUR); } } return; }
