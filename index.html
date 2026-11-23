@@ -3153,7 +3153,7 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
 
   // ── Published usage data. Read by Claude from the client PDFs in OneDrive, then deployed. ──
   var USAGE_SAMPLE = false;
-  var USAGE_AS_OF  = "18 Nov 2026";
+  var USAGE_AS_OF  = "20 Nov 2026";
   var USAGE = [
     { client:"All clients", portfolio:true, product:"Portfolio overview · 12 tenants", period:"Sep–Nov 2026 · to 18 Nov", updated:"Generated 18 Nov 2026",
       source:"https://iramelai-my.sharepoint.com/:b:/g/personal/aman_raja_irame_ai/IQADG9kbYQl2QrYh4F5BM440AdK5ZhRxX2gMogi-f16hJ3o?e=buIFNp",
@@ -3297,6 +3297,26 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
         "Workflows: TACO built none themselves — they ran from the library (IRAME created 242). 65 of 74 runs completed (88%); all 5 failures were in September. Procure-to-pay & vendor checks make up 46 runs.",
         "Chat topics: MB51 inventory movements, split-PO detection, forensic reviews, invoice reconciliation and RACM drafting.",
         "Files: 189 uploaded, almost all in September — mostly contract-labour payroll / PF-ESIC docs (105) and Slovak staffing-agency invoices (48). None were attached to a workflow run."
+      ]},
+    { client:"HCLTech", product:"IRAME platform", period:"Oct–Nov 2026 · to 20 Nov", updated:"Generated 20 Nov 2026",
+      source:"https://iramelai-my.sharepoint.com/:b:/g/personal/aman_raja_irame_ai/IQDgBYDMoQ49SZsq568C-aELAbGVmId-SyH5cbMDV9zpCMM?e=0ariV0",
+      highlight:"Heavy recruitment / HR-audit use with strong delivery (94%), but active users slipped Oct→Nov, failures rose, and AI cost spiked sharply in November.",
+      kpis:[
+        {l:"Active users",v:"19 / 23",d:"fell 19 → 13 in Nov"},
+        {l:"Chat questions",v:"1,771",d:"777 conversations"},
+        {l:"Workflow runs",v:"503",d:"94% delivered"},
+        {l:"Hours saved",v:"≈1,350",d:"vs manual"},
+        {l:"Workflows built",v:"123",d:"8 builders"},
+        {l:"AI cost",v:"$1,259",d:"Oct–Nov · spiking"}
+      ],
+      trend:[{m:"Oct",v:19},{m:"Nov",v:13}],
+      trendLabel:"Active users (Oct → Nov)",
+      summary:[
+        "Focus: HCL uses IRAME mainly for recruitment and HR audit — 1,040 of 1,771 chat questions and 443 of 503 workflow runs are about recruitment and hiring.",
+        "Users: 19 of 23 licensed accounts were active, but usage is concentrated — the top 3 users asked 1,451 questions and ran 459 workflows (91%). Active users fell from 19 in October to 13 in November.",
+        "Workflows: 123 built and 503 runs, 94% delivered. Failures rose from 5 in October to 21 in November so far.",
+        "Speed: half of chat answers arrive within 2.5 min; the slowest 5% take more than 14.5 min.",
+        "Cost: AI cost rose from $208 in October to $1,050 in November — chat cost per answer rose ~6× (≈$0.12 → ≈$0.70); one account drove ~$715 of November's chat cost."
       ]}
   ];
 
@@ -3334,6 +3354,18 @@ var AWSREGION = {"southafricanorth":"af-south-1","southafricawest":"af-south-1",
       risks:[
         {t:"Dependency on IRAME-built workflows", sev:"med", why:"TACO built 0 of its own workflows; all 74 runs used library workflows IRAME created. Low self-sufficiency limits stickiness.", actions:["Run a workflow-builder enablement session.","Hand over 2–3 workflows for the team to own and extend."]},
         {t:"Narrow, shallow usage", sev:"med", why:"Chat use is light (20 questions) and uploaded files aren't attached to any workflow run, suggesting limited integration into daily work.", actions:["Map 2–3 high-value audit use cases to expand beyond procure-to-pay."]}
+      ]},
+    "HCLTech":{ churn:"medium",
+      churnWhy:"Strong overall usage (1,771 questions, 503 runs, 94% delivered), but the leading indicators are turning down — active users fell from 19 in October to 13 in November and failures rose from 5 to 21. Worth watching before it becomes a problem.",
+      churnActions:[
+        "Check in on why active users dropped from 19 to 13 in November and re-engage the lapsed recruiters.",
+        "Fix the November reliability dip before it erodes trust — the Microsoft Fabric connection was unreachable for 12 runs.",
+        "Broaden usage beyond the top 3 users (91% of runs) so the account isn't dependent on a few people."
+      ],
+      risks:[
+        {t:"AI cost spike", sev:"high", why:"AI cost jumped from $208 in October to $1,050 in November — chat cost per answer rose ~6× (≈$0.12 → ≈$0.70) on roughly double the tokens per answer, and one account alone drove ~$715 of November's chat cost.", actions:["Investigate the account driving ~$715 of chat cost for runaway or inefficient prompts.","Review prompt/token settings to bring per-answer cost back down.","Set a usage/cost alert on that account."]},
+        {t:"Reliability — November failures", sev:"med", why:"Failures rose from 5 (Oct) to 21 (Nov); 8.3% of November runs failed, mainly the Microsoft Fabric connection being unreachable (12 runs).", actions:["Fix and monitor the Microsoft Fabric connection.","Add retry and clearer error messages for connection failures."]},
+        {t:"User concentration", sev:"med", why:"The top 3 users asked 1,451 questions and ran 459 of 503 workflows (91%) — heavy dependence on a few people.", actions:["Spread usage across more recruiters / HR auditors with targeted onboarding."]}
       ]},
     "All clients":{ churn:"na",
       churnWhy:"Portfolio view — see the individual client cards for churn. The portfolio-level risks below matter most for the overall book of business.",
